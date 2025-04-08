@@ -74,6 +74,11 @@ def signup():
         if not handle.startswith("@"):
             handle = "@" + handle
         password = request.form['password']
+        dob = request.form['dob'].strip()
+        consent = 1 if request.form.get('consent') == 'on' else 0
+
+        pronouns = request.form.get('pronouns', '').strip()
+        avatar = None  # Placeholder — add file upload logic later
 
         db = get_db()
         email_exists = db.execute('SELECT 1 FROM users WHERE email = ?', (email,)).fetchone()
@@ -83,10 +88,16 @@ def signup():
             flash('That email is already registered.', 'email_exists')
         elif handle_exists:
             flash('That handle is already taken.', 'handle_exists')
+        elif not dob:
+            flash('Date of birth is required.', 'dob_required')
+        elif not consent:
+            flash('You must agree to the terms and privacy policy.', 'consent_required')
         else:
             hashed = generate_password_hash(password)
-            db.execute('INSERT INTO users (email, handle, password_hash) VALUES (?, ?, ?)',
-                       (email, handle, hashed))
+            db.execute('''
+                INSERT INTO users (email, handle, password_hash, dob, pronouns, avatar, consent)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            ''', (email, handle, hashed, dob, pronouns, avatar, consent))
             db.commit()
             flash('Signup successful! Please log in.', 'success')
             return redirect('/login')
