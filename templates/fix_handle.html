@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block title %}Fix Handle - Neonrest{% endblock %}
+
+{% block content %}
+  <div class="auth-box">
+    <div class="glow">Fix Handle for User ID 1</div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-container">
+          {% for category, message in messages %}
+            <div class="flash flash-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <p>Current handle: {{ user.handle or 'No handle set' }}</p>
+    <p>This will assign the handle <strong>@brendo</strong> to your account.</p>
+
+    <form method="POST">
+      <button type="submit">Set Handle to @brendo</button>
+    </form>
+  </div>
+{% endblock %}

@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% block title %}Your Feed - Neonrest{% endblock %}
+
+{% block content %}
+  <div class="user-page">
+    <div class="user-header">
+      <div class="glow large">Your Feed</div>
+      <p>Recent posts from you and others.</p>
+    </div>
+
+    {% for post in posts %}
+  <div class="user-section {% if post['vibes'] %}vibe-{{ post['vibes'].split(',')[0] | lower | replace(' ', '-') }}{% endif %}">
+    <h3>
+      <strong>@{{ post['handle'].lstrip('@') }}</strong>
+      {% if session.get('user_id') == post['user_id'] %}
+        <a href="/edit_post/{{ post['id'] }}" class="edit-link">(edit)</a>
+      {% endif %}
+    </h3>
+
+    <p class="post-meta">
+      <strong>Vibes:</strong>
+      {% if post['vibes'] %}
+        {% for vibe in post['vibes'].split(',') %}
+          <a href="/vibe/{{ vibe.strip() | urlencode }}">
+            <span class="vibe-label">{{ vibe.strip() }}</span>
+          </a>
+        {% endfor %}
+      {% else %}
+        <span>—</span>
+      {% endif %}
+      |
+      <strong>Circle:</strong> {{ post['circle'] or "—" }}
+    </p>
+
+    <p>{{ post['content'] }}</p>
+    {% if post['updated_at'] %}
+      <p class="post-timestamp">Last edited: {{ post['updated_at'] }}</p>
+    {% endif %}
+    <hr>
+  </div>
+{% else %}
+  <p>No posts yet.</p>
+{% endfor %}
+
+  </div>
+{% endblock %}

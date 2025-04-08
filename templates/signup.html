@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% block title %}Sign Up - Neonrest{% endblock %}
+
+{% block content %}
+  <div class="auth-box">
+    <div class="glow">Sign Up</div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-container">
+          {% for category, message in messages %}
+            <div class="flash flash-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST" onsubmit="return validateHandle()">
+      <input type="text" id="handle" name="handle" placeholder="Handle (e.g. @cassettegirl)" required><br>
+      <div class="flash-container"></div>
+      <input type="email" name="email" placeholder="Email" required><br>
+      <input type="password" name="password" placeholder="Password" required><br>
+      <button type="submit">Sign Up</button>
+    </form>
+
+    <p class="auth-link">Already have an account? <a href="/login">Log in</a></p>
+  </div>
+
+  <script>
+    function validateHandle() {
+      const handleInput = document.getElementById("handle");
+      let val = handleInput.value.trim();
+
+      if (!val.startsWith("@")) {
+        val = "@" + val;
+      }
+
+      const valid = /^@[a-zA-Z0-9_.+-]+$/.test(val);
+      if (!valid) {
+        alert("Handles can only contain letters, numbers, underscores, hyphens, dots, or plus signs.");
+        return false;
+      }
+
+      handleInput.value = val;
+      return true;
+    }
+  </script>
+
+  <script>
+  const handleInput = document.getElementById("handle");
+  const flashContainer = document.querySelector(".flash-container");
+  let debounceTimer;
+
+  handleInput.addEventListener("input", () => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(checkHandle, 400);
+  });
+
+  async function checkHandle() {
+    const val = handleInput.value.trim();
+    if (val.length < 3) return;
+
+    let handle = val.startsWith("@") ? val : "@" + val;
+    try {
+      const response = await fetch(`/check_handle?handle=${encodeURIComponent(handle)}`);
+      const data = await response.json();
+
+      document.querySelector("#handle-check")?.remove();
+      document.querySelector(".suggestions")?.remove();
+
+      const msg = document.createElement("div");
+      msg.id = "handle-check";
+      msg.className = "flash";
+      msg.textContent = data.available
+        ? "✓ Handle is available"
+        : "✖ That handle is already taken";
+
+      msg.classList.add(data.available ? "flash-success" : "flash-error");
+      flashContainer?.appendChild(msg);
+
+      if (!data.available && data.suggestions?.length) {
+        const suggestionBox = document.createElement("div");
+        suggestionBox.className = "suggestions";
+        suggestionBox.innerHTML = `Try: ${data.suggestions.map(h => `<span>${h}</span>`).join(" ")}`;
+        flashContainer?.appendChild(suggestionBox);
+
+        document.querySelectorAll(".suggestions span").forEach(span => {
+          span.addEventListener("click", () => {
+            handleInput.value = span.textContent;
+            checkHandle();
+          });
+        });
+      }
+    } catch (err) {
+      console.error("Error checking handle availability:", err);
+    }
+  }
+  </script>
+{% endblock %}

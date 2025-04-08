@@ -1,0 +1,402 @@
+from flask import Flask, render_template, request, redirect, session, flash, g, jsonify
+import sqlite3
+from werkzeug.security import generate_password_hash, check_password_hash
+import os
+import logging
+import re
+from utils import generate_unique_handle
+
+logging.basicConfig(level=logging.DEBUG)
+
+app = Flask(__name__)
+app.secret_key = os.urandom(24)
+
+DATABASE = '/home/sinbot/db/neonrest.db'
+
+def get_db():
+    if 'db' not in g:
+        g.db = sqlite3.connect(DATABASE)
+        g.db.row_factory = sqlite3.Row
+    return g.db
+
+@app.teardown_appcontext
+def close_db(exception):
+    db = g.pop('db', None)
+    if db is not None:
+        db.close()
+
+def init_db():
+    db = get_db()
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT UNIQUE NOT NULL,
+            handle TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            bio TEXT
+        );
+    ''')
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS posts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            content TEXT NOT NULL,
+            vibe TEXT CHECK (length(vibe) <= 100),
+            circle TEXT CHECK (length(circle) <= 100),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        );
+    ''')
+    db.commit()
+
+
+with app.app_context():
+    os.makedirs('db', exist_ok=True)
+    init_db()
+
+@app.route("/test")
+def test():
+    return "It works!"
+
+@app.route('/')
+def home():
+    return render_template('index.html')
+
+@app.route('/about')
+def about():
+    return render_template('about.html')
+
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    if request.method == 'POST':
+        email = request.form['email'].strip()
+        handle = request.form['handle'].strip()
+        if not handle.startswith("@"):
+            handle = "@" + handle
+        password = request.form['password']
+
+        db = get_db()
+        email_exists = db.execute('SELECT 1 FROM users WHERE email = ?', (email,)).fetchone()
+        handle_exists = db.execute('SELECT 1 FROM users WHERE handle = ?', (handle,)).fetchone()
+
+        if email_exists:
+            flash('That email is already registered.', 'email_exists')
+        elif handle_exists:
+            flash('That handle is already taken.', 'handle_exists')
+        else:
+            hashed = generate_password_hash(password)
+            db.execute('INSERT INTO users (email, handle, password_hash) VALUES (?, ?, ?)',
+                       (email, handle, hashed))
+            db.commit()
+            flash('Signup successful! Please log in.', 'success')
+            return redirect('/login')
+
+    return render_template('signup.html')
+
+@app.route('/check_handle')
+def check_handle():
+    handle = request.args.get('handle', '').strip()
+    if not handle.startswith("@"):
+        handle = "@" + handle
+    db = get_db()
+    exists = db.execute('SELECT 1 FROM users WHERE handle = ?', (handle,)).fetchone()
+    return jsonify({'available': not bool(exists)})
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+        db = get_db()
+        user = db.execute('SELECT * FROM users WHERE email = ?', (email,)).fetchone()
+
+        if user and check_password_hash(user['password_hash'], password):
+            session['user_id'] = user['id']
+            session['user_email'] = user['email']
+            session['user_handle'] = user['handle'] if 'handle' in user.keys() else ''
+
+            flash('Logged in successfully.', 'success')
+
+            if not session['user_handle']:
+                flash("Please choose a handle to complete your profile.", 'info')
+                return redirect('/account')
+
+            return redirect(f"/user/{user['id']}")
+
+        else:
+            flash('Invalid email or password.', 'error')
+    return render_template('login.html')
+
+@app.route('/@<handle>')
+def user_by_handle(handle):
+    if not handle.startswith("@"):
+        handle = "@" + handle
+
+    db = get_db()
+    user = db.execute('SELECT * FROM users WHERE handle = ?', (handle,)).fetchone()
+    if not user:
+        flash("User not found.", "error")
+        return redirect("/")
+
+    posts = db.execute('''
+        SELECT * FROM posts
+        WHERE user_id = ?
+        ORDER BY created_at DESC
+    ''', (user['id'],)).fetchall()
+
+    return render_template("user.html", user=user, posts=posts)
+
+
+@app.route('/user/<int:user_id>')
+def user_page(user_id):
+    db = get_db()
+    user = db.execute('SELECT * FROM users WHERE id = ?', (user_id,)).fetchone()
+    if not user:
+        flash('User not found.', 'error')
+        return redirect('/')
+
+    posts = db.execute('''
+        SELECT posts.id, posts.user_id, posts.content, posts.circle, posts.created_at,
+               GROUP_CONCAT(vibes.name, ', ') AS vibes
+        FROM posts
+        LEFT JOIN post_vibes ON posts.id = post_vibes.post_id
+        LEFT JOIN vibes ON post_vibes.vibe_id = vibes.id
+        WHERE posts.user_id = ?
+        GROUP BY posts.id
+        ORDER BY posts.created_at DESC
+    ''', (user_id,)).fetchall()
+
+    return render_template('user.html', user=user, posts=posts)
+
+
+@app.route('/update_bio', methods=['POST'])
+def update_bio():
+    if 'user_id' not in session:
+        flash("You must be logged in to edit your bio.", "error")
+        return redirect("/login")
+
+    new_bio = request.form.get("bio", "").strip()
+    db = get_db()
+    db.execute('UPDATE users SET bio = ? WHERE id = ?', (new_bio, session['user_id']))
+    db.commit()
+    flash("Bio updated!", "success")
+    return redirect(f"/@{session['user_handle'].lstrip('@')}")
+
+
+@app.route('/account', methods=['GET', 'POST'])
+def account():
+    if 'user_id' not in session:
+        flash("Please log in to access your account.", 'error')
+        return redirect('/login')
+
+    db = get_db()
+    user = db.execute('SELECT * FROM users WHERE id = ?', (session['user_id'],)).fetchone()
+
+    if request.method == 'POST':
+        if 'handle' in request.form:
+            new_handle = request.form['handle'].strip()
+            if not new_handle.startswith("@"):
+                new_handle = "@" + new_handle
+
+            if not re.match(r'^@[\w.+-]+$', new_handle) or any(char in new_handle for char in "\\/()[]=!"):
+                flash("That handle contains invalid characters.", 'error')
+            else:
+                existing = db.execute('SELECT * FROM users WHERE handle = ? AND id != ?',
+                                      (new_handle, user['id'])).fetchone()
+                if existing:
+                    flash("That handle is already taken.", 'error')
+                else:
+                    db.execute('UPDATE users SET handle = ? WHERE id = ?', (new_handle, user['id']))
+                    db.commit()
+                    session['user_handle'] = new_handle
+                    flash("Handle updated successfully.", 'success')
+
+        if 'new_password' in request.form:
+            new_password = request.form['new_password'].strip()
+            if new_password:
+                new_hash = generate_password_hash(new_password)
+                db.execute('UPDATE users SET password_hash = ? WHERE id = ?', (new_hash, user['id']))
+                db.commit()
+                flash("Password updated successfully.", 'success')
+
+    return render_template('account.html', user=user)
+
+@app.route('/create_post', methods=['GET', 'POST'])
+def create_post():
+    print("🟢 This is the updated /create_post route")
+    if 'user_id' not in session:
+        flash("Please log in to post.", 'error')
+        return redirect('/login')
+
+    if request.method == 'POST':
+        content = request.form['content'].strip()
+        vibes_input = request.form['vibes'].strip()  # Fix: using 'vibes' instead of 'vibe'
+        circle = request.form['circle'].strip()
+
+        if not content:
+            flash("Post content cannot be empty.", 'error')
+        else:
+            db = get_db()
+            # Insert post (no post_vibe column anymore)
+            db.execute('''
+                INSERT INTO posts (user_id, content, circle)
+                VALUES (?, ?, ?)
+            ''', (session['user_id'], content, circle))
+            db.commit()
+
+            post_id = db.execute('SELECT last_insert_rowid()').fetchone()[0]
+
+            # Associate vibes
+            vibe_names = [v.strip() for v in vibes_input.split(',') if v.strip()]
+            for vibe_name in vibe_names:
+                vibe = db.execute('SELECT id FROM vibes WHERE name = ?', (vibe_name,)).fetchone()
+                if not vibe:
+                    db.execute('INSERT INTO vibes (name) VALUES (?)', (vibe_name,))
+                    db.commit()
+                    vibe = db.execute('SELECT id FROM vibes WHERE name = ?', (vibe_name,)).fetchone()
+                db.execute('INSERT INTO post_vibes (post_id, vibe_id) VALUES (?, ?)', (post_id, vibe['id']))
+            db.commit()
+
+            flash("Post created!", 'success')
+            return redirect('/feed')
+
+    return render_template('create_post.html')
+
+
+@app.route('/markdown-guide')
+def markdown_guide():
+    return render_template('markdown-guide.html')
+
+@app.route('/feed')
+def feed():
+    if 'user_id' not in session:
+        flash("Please log in to view your feed.", "error")
+        return redirect('/login')
+
+    db = get_db()
+    posts = db.execute('''
+        SELECT posts.id, posts.user_id, posts.content, posts.circle, posts.created_at, posts.updated_at, users.handle,
+               GROUP_CONCAT(vibes.name, ', ') AS vibes
+        FROM posts
+        JOIN users ON users.id = posts.user_id
+        LEFT JOIN post_vibes ON posts.id = post_vibes.post_id
+        LEFT JOIN vibes ON post_vibes.vibe_id = vibes.id
+        GROUP BY posts.id
+        ORDER BY posts.created_at DESC
+    ''').fetchall()
+
+    return render_template('feed.html', posts=posts, vibe_slug='mixed')
+
+@app.route('/edit_post/<int:post_id>', methods=['GET', 'POST'])
+def edit_post(post_id):
+    if 'user_id' not in session:
+        flash("Please log in to edit posts.", 'error')
+        return redirect('/login')
+
+    db = get_db()
+    post = db.execute('SELECT * FROM posts WHERE id = ?', (post_id,)).fetchone()
+
+    if not post or post['user_id'] != session['user_id']:
+        flash("You don't have permission to edit this post.", 'error')
+        return redirect('/feed')
+
+    if request.method == 'POST':
+        new_content = request.form['content'].strip()
+        new_vibe = request.form['vibes'].strip()
+        new_circle = request.form['circle'].strip()
+
+        if not new_content:
+            flash("Post content cannot be empty.", 'error')
+        else:
+            db.execute('''
+                UPDATE posts
+                SET content = ?, vibe = ?, circle = ?, last_edited = CURRENT_TIMESTAMP
+                WHERE id = ?
+            ''', (new_content, new_vibe, new_circle, post_id))
+            db.commit()
+            flash("Post updated successfully!", 'success')
+            return redirect('/feed')
+
+    return render_template('edit_post.html', post=post)
+
+@app.route('/delete_post/<int:post_id>', methods=['POST'])
+def delete_post(post_id):
+    if 'user_id' not in session:
+        flash("Please log in to delete posts.", "error")
+        return redirect('/login')
+
+    db = get_db()
+    post = db.execute('SELECT * FROM posts WHERE id = ?', (post_id,)).fetchone()
+
+    if not post or post['user_id'] != session['user_id']:
+        flash("You do not have permission to delete this post.", "error")
+        return redirect('/feed')
+
+    db.execute('DELETE FROM posts WHERE id = ?', (post_id,))
+    db.commit()
+    flash("Post deleted successfully.", "success")
+    return redirect('/feed')
+
+@app.route('/vibe/<vibe_name>')
+def vibe_page(vibe_name):
+    db = get_db()
+    vibe = db.execute('SELECT * FROM vibes WHERE name = ?', (vibe_name,)).fetchone()
+    if not vibe:
+        flash("That vibe doesn't exist yet.", "error")
+        return redirect('/feed')
+
+    posts = db.execute('''
+        SELECT posts.*, users.handle,
+               MAX(posts.updated_at) AS updated_at,
+               GROUP_CONCAT(vibes.name, ', ') AS vibes
+        FROM posts
+        JOIN users ON posts.user_id = users.id
+        LEFT JOIN post_vibes ON posts.id = post_vibes.post_id
+        LEFT JOIN vibes ON post_vibes.vibe_id = vibes.id
+        WHERE posts.id IN (
+            SELECT post_id FROM post_vibes WHERE vibe_id = ?
+        )
+        GROUP BY posts.id
+        ORDER BY posts.created_at DESC
+    ''', (vibe['id'],)).fetchall()
+
+    vibe_slug = vibe_name.lower().replace(" ", "-")
+    return render_template('vibe_page.html', vibe_name=vibe_name, vibe_slug=vibe_slug, posts=posts)
+
+
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    flash('You have been logged out.', 'info')
+    return redirect('/')
+
+@app.route('/fix', methods=['GET', 'POST'])
+def fix_handle():
+    if 'user_id' not in session or session['user_id'] != 1:
+        flash("You do not have permission to access this page.", 'error')
+        return redirect('/')
+
+    db = get_db()
+    user = db.execute('SELECT * FROM users WHERE id = ?', (1,)).fetchone()
+
+    if not user:
+        flash('User not found.', 'error')
+        return redirect('/')
+
+    if request.method == 'POST':
+        new_handle = '@brendo'
+
+        try:
+            db.execute('UPDATE users SET handle = ? WHERE id = ?', (new_handle, 1))
+            db.commit()
+            session['user_handle'] = new_handle
+            flash(f'Handle successfully updated to {new_handle}.', 'success')
+            return redirect(f"/user/{user['id']}")
+        except Exception as e:
+            flash(f"Error while updating handle: {str(e)}", 'error')
+
+    return render_template('fix_handle.html', user=user)
+
+if __name__ == '__main__':
+    app.run(debug=True)

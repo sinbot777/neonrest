@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Neonrest{% endblock %}</title>
+<!-- Existing font -->
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600&display=swap" rel="stylesheet">
+
+<!-- Add this new one for the retro header -->
+<link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="{% if vibe_slug %}vibe-{{ vibe_slug }} vibe-{{ vibe_slug }}--day{% else %}default-theme{% endif %}">
+  {% if request.path != '/' %}
+    {% if session.get('user_email') %}
+      <div class="session-info">
+        <a href="/account" class="account-link">{{ session['user_email'] }}</a> |
+        <a href="/logout" class="logout-link">Log out</a>
+      </div>
+    {% else %}
+      <a class="button" href="/login">Log In</a>
+    {% endif %}
+  {% endif %}
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flash-container">
+        {% for category, message in messages %}
+          <div class="flash flash-{{ category }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+      <div id="main-content">
+    {% block content %}{% endblock %}
+  </div>
+
+</body> <!-- CLOSE the body first -->
+
+<footer id="footer-tagline">✨ Stay human, stay weird ✨</footer> <!-- OUTSIDE body -->
+
+<script>
+  const taglines = [
+    "✨ Stay human, stay weird ✨",
+    "🎵 Mixtapes not metrics",
+    "🛋️ Come vibe with us",
+    "📼 Rewind your feed",
+    "💬 Honest posts, real people",
+    "💀 I want to get off Mr. Bones's Wild Ride!",
+    "🗺 ️Splicing Reticulations 🦙."
+  ];
+
+  const footer = document.getElementById("footer-tagline");
+  if (footer) {
+    let index = 0;
+    setInterval(() => {
+      index = (index + 1) % taglines.length;
+      footer.textContent = taglines[index];
+    }, 4000);
+  }
+</script>
+
+<script>
+  window.addEventListener('DOMContentLoaded', () => {
+    const flashBox = document.querySelector('.flash-container');
+    if (flashBox) {
+      setTimeout(() => {
+        flashBox.style.transition = "opacity 1s ease-out";
+        flashBox.style.opacity = 0;
+        setTimeout(() => flashBox.remove(), 1000);
+      }, 3000);
+    }
+  });
+</script>
+</html>
