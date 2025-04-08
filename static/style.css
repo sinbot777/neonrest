@@ -725,3 +725,33 @@ body::after {
   text-shadow: 0 0 1px #fff;
 }
 
+/* 🔧 Under Construction GIF – front page only */
+.under-construction {
+  position: fixed;
+  bottom: 10px;
+  right: 10px;
+  z-index: 999;
+}
+
+.under-construction img {
+  width: 120px;
+  opacity: 0.85;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.under-construction img:hover {
+  transform: scale(1.05);
+  opacity: 1;
+}
+
+.dev-link {
+  color: #ffcc00;
+  font-weight: bold;
+  text-decoration: underline dotted;
+  transition: color 0.2s ease, text-shadow 0.2s ease;
+}
+
+.dev-link:hover {
+  color: #ffffff;
+  text-shadow: 0 0 6px #ffcc00;
+}

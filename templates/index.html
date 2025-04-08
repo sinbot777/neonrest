@@ -16,4 +16,10 @@
     {% endif %}
     <a class="button" href="/about">About</a>
   </div>
+  <div class="under-construction">
+  <a href="{{ url_for('dev_summary') }}">
+    <img src="{{ url_for('static', filename='img/underconstruction.gif') }}" alt="Under Construction">
+  </a>
+</div>
+
 {% endblock %}
