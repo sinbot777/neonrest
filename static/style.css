@@ -761,3 +761,22 @@ body::after {
   display: inline-block;
   margin-top: 0.2em;
 }
+
+.legal-page {
+  max-width: 700px;
+  margin: 2rem auto;
+  padding: 1rem;
+  background: var(--background);
+  border-radius: 8px;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.legal-page h1 {
+  font-size: 1.75rem;
+  margin-bottom: 1rem;
+}
+
+.legal-page ul {
+  padding-left: 1.5rem;
+}
