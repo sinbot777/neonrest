@@ -2,51 +2,60 @@
 {% block title %}Sign Up - Neonrest{% endblock %}
 
 {% block content %}
-  <div class="auth-box">
-    <div class="glow">Sign Up</div>
+<div class="auth-box">
+  <div class="glow">Sign Up</div>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        <div class="flash-container">
-          {% for category, message in messages %}
-            <div class="flash flash-{{ category }}">{{ message }}</div>
-          {% endfor %}
-        </div>
-      {% endif %}
-    {% endwith %}
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flash-container">
+        {% for category, message in messages %}
+          <div class="flash flash-{{ category }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
 
-    <form method="POST" onsubmit="return validateHandle()">
-      <input type="text" id="handle" name="handle" placeholder="Handle (e.g. @cassettegirl)" required><br>
-      <div class="flash-container"></div>
-      <input type="email" name="email" placeholder="Email" required><br>
-      <input type="password" name="password" placeholder="Password" required><br>
-      <button type="submit">Sign Up</button>
-    </form>
+  <form method="POST" enctype="multipart/form-data" onsubmit="return validateHandle()">
+    <input type="text" id="handle" name="handle" placeholder="Handle (e.g. @cassettegirl)" required><br>
+    <div class="flash-container"></div>
 
-    <p class="auth-link">Already have an account? <a href="/login">Log in</a></p>
-  </div>
+    <input type="email" name="email" placeholder="Email" required><br>
+    <input type="password" name="password" placeholder="Password" required><br>
 
-  <script>
-    function validateHandle() {
-      const handleInput = document.getElementById("handle");
-      let val = handleInput.value.trim();
+    <input type="date" name="dob" required><br>
+    <input type="text" name="pronouns" placeholder="Preferred pronouns (optional)"><br>
+    <input type="file" name="avatar" accept="image/*"><br>
 
-      if (!val.startsWith("@")) {
-        val = "@" + val;
-      }
+    <label>
+      <input type="checkbox" name="consent" required>
+      I agree to the <a href="/terms" target="_blank">Terms</a> and <a href="/privacy" target="_blank">Privacy Policy</a>
+    </label><br>
 
-      const valid = /^@[a-zA-Z0-9_.+-]+$/.test(val);
-      if (!valid) {
-        alert("Handles can only contain letters, numbers, underscores, hyphens, dots, or plus signs.");
-        return false;
-      }
+    <button type="submit">Sign Up</button>
+  </form>
 
-      handleInput.value = val;
-      return true;
+  <p class="auth-link">Already have an account? <a href="/login">Log in</a></p>
+</div>
+
+<script>
+  function validateHandle() {
+    const handleInput = document.getElementById("handle");
+    let val = handleInput.value.trim();
+
+    if (!val.startsWith("@")) {
+      val = "@" + val;
     }
-  </script>
 
-  <script>
+    const valid = /^@[a-zA-Z0-9_.+-]+$/.test(val);
+    if (!valid) {
+      alert("Handles can only contain letters, numbers, underscores, hyphens, dots, or plus signs.");
+      return false;
+    }
+
+    handleInput.value = val;
+    return true;
+  }
+
   const handleInput = document.getElementById("handle");
   const flashContainer = document.querySelector(".flash-container");
   let debounceTimer;
@@ -95,5 +104,5 @@
       console.error("Error checking handle availability:", err);
     }
   }
-  </script>
+</script>
 {% endblock %}
