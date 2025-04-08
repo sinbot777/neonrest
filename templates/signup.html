@@ -16,14 +16,14 @@
   {% endwith %}
 
   <form method="POST" enctype="multipart/form-data" onsubmit="return validateHandle()">
-    <input type="text" id="handle" name="handle" placeholder="Handle (e.g. @cassettegirl)" required><br>
+    <input type="text" id="handle" name="handle" placeholder="Handle (e.g. @cassettegirl)" required class="glow-input">
     <div class="flash-container"></div>
 
     <input type="email" name="email" placeholder="Email" required><br>
     <input type="password" name="password" placeholder="Password" required><br>
 
-    <input type="date" name="dob" required><br>
-    <input type="text" name="pronouns" placeholder="Preferred pronouns (optional)"><br>
+    <input type="text" name="dob" id="dob" placeholder="mm/dd/yyyy" class="glow-input" required><br>
+    <input type="text" name="pronouns" id="pronouns" placeholder="Preferred pronouns (optional)" class="glow-input"><br>
     <input type="file" name="avatar" accept="image/*"><br>
 
     <label>

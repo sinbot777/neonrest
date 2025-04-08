@@ -168,7 +168,31 @@ a.button:hover {
   height: calc(100vh - 6rem); /* keeps it vertical centered */
   margin-top: 0;
   animation: fadeIn 0.8s ease-in-out;
+  color: #FFD9EC; /* light pink glow */
+  text-decoration: underline;
 }
+
+.auth-box a {
+  color: #FFD9EC;
+  font-weight: bold;
+  text-shadow: 0 0 4px #FFB8E1, 0 0 6px #ff92c2;
+  text-decoration: underline;
+  transition: all 0.2s ease-in-out;
+}
+
+.auth-box a:hover {
+  color: #ffffff;
+  text-shadow: 0 0 6px #FFB8E1, 0 0 10px #ff79b0;
+}
+
+.auth-box label a,
+.auth-box p.auth-link a {
+  color: #FFD9EC;
+  font-weight: bold;
+  text-shadow: 0 0 4px #FFB8E1, 0 0 6px #ff92c2;
+  text-decoration: underline;
+}
+
 
 .auth-box input[type="email"],
 .auth-box input[type="password"] {
@@ -190,6 +214,11 @@ a.button:hover {
   font-weight: bold;
   cursor: pointer;
   font-family: 'Space Grotesk', sans-serif;
+}
+
+.auth-box a:hover {
+  color: #fff;
+  text-shadow: 0 0 3px #FFD9EC;
 }
 
 .auth-box button:hover {
@@ -779,4 +808,23 @@ body::after {
 
 .legal-page ul {
   padding-left: 1.5rem;
+}
+
+input.glow-input {
+    width: 100%;
+    padding: 0.8rem;
+    margin: 0.5rem 0;
+    font-size: 1rem;
+    font-family: 'Space Grotesk', sans-serif;
+    border: 2px solid #888;
+    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.9);  /* Make the background slightly more opaque */
+    color: #fff;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+input.glow-input:focus {
+    background-color: rgba(255, 255, 255, 1);  /* Fully opaque on focus */
+    border-color: #ff00ff; /* Bright border color for focus */
+    outline: none;
 }
