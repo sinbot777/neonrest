@@ -36,7 +36,11 @@
 
   <p class="auth-link">Already have an account? <a href="/login">Log in</a></p>
 </div>
-
+  <div class="under-construction">
+  <a href="{{ url_for('dev_summary') }}">
+    <img src="{{ url_for('static', filename='img/underconstruction.gif') }}" alt="Under Construction">
+  </a>
+</div>
 <script>
   function validateHandle() {
     const handleInput = document.getElementById("handle");
