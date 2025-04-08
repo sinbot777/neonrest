@@ -371,32 +371,10 @@ def logout():
     flash('You have been logged out.', 'info')
     return redirect('/')
 
-@app.route('/fix', methods=['GET', 'POST'])
-def fix_handle():
-    if 'user_id' not in session or session['user_id'] != 1:
-        flash("You do not have permission to access this page.", 'error')
-        return redirect('/')
+@app.route("/dev")
+def dev_summary():
+    return render_template("dev_summary.html")
 
-    db = get_db()
-    user = db.execute('SELECT * FROM users WHERE id = ?', (1,)).fetchone()
-
-    if not user:
-        flash('User not found.', 'error')
-        return redirect('/')
-
-    if request.method == 'POST':
-        new_handle = '@brendo'
-
-        try:
-            db.execute('UPDATE users SET handle = ? WHERE id = ?', (new_handle, 1))
-            db.commit()
-            session['user_handle'] = new_handle
-            flash(f'Handle successfully updated to {new_handle}.', 'success')
-            return redirect(f"/user/{user['id']}")
-        except Exception as e:
-            flash(f"Error while updating handle: {str(e)}", 'error')
-
-    return render_template('fix_handle.html', user=user)
 
 if __name__ == '__main__':
     app.run(debug=True)

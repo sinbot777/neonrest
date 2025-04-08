@@ -18,7 +18,8 @@
       {% endif %}
     {% endwith %}
 
-    <form method="POST">
+    <!-- ✅ Update form -->
+    <form method="POST" action="/edit_post/{{ post['id'] }}">
       <div class="user-section">
         <label for="content">Post Content</label><br>
         <textarea name="content" id="content" class="post-textarea" rows="6" required>{{ post['content'] }}</textarea>
@@ -28,24 +29,25 @@
       </div>
 
       <div class="user-section">
-        <label for="vibe">Vibe</label><br>
-        <input type="text" id="vibe" name="vibe" maxlength="100" value="{{ post['vibe'] }}" class="glow-input">
+        <label for="vibes">Vibes</label><br>
+        <input type="text" id="vibes" name="vibes" maxlength="200" value="{{ post['vibes'] or '' }}" class="glow-input">
       </div>
 
       <div class="user-section">
         <label for="circle">Circle</label><br>
-        <input type="text" id="circle" name="circle" maxlength="100" value="{{ post['circle'] }}" class="glow-input">
+        <input type="text" id="circle" name="circle" maxlength="100" value="{{ post['circle'] or '' }}" class="glow-input">
       </div>
 
       <div class="user-section">
-  <button type="submit" class="post-action update-post">Update Post</button>
-</div>
+        <button type="submit" class="post-action update-post">Update Post</button>
+      </div>
+    </form>
 
-<div class="user-section">
-  <form method="POST" action="/delete_post/{{ post['id'] }}" onsubmit="return confirm('Are you sure you want to delete this post?');">
-    <button type="submit" class="post-action delete-post">Delete Post</button>
-  </form>
-</div>
-
+    <!-- ✅ Separate delete form -->
+    <form method="POST" action="/delete_post/{{ post['id'] }}" onsubmit="return confirm('Are you sure you want to delete this post?');">
+      <div class="user-section">
+        <button type="submit" class="post-action delete-post">Delete Post</button>
+      </div>
+    </form>
   </div>
 {% endblock %}
