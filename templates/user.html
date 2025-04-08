@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+{% block title %}{{ user.handle }} - Neonrest{% endblock %}
+
+{% block content %}
+  <div class="user-page">
+    <div class="user-header">
+      <div class="glow large">{{ user.handle }}</div>
+      <p>{{ user.email }}</p>
+    </div>
+
+    <div class="user-section">
+      <h2>
+        Bio
+        {% if session.get('user_id') == user['id'] %}
+          <a href="#" class="bio-edit" id="edit-bio-link">(edit)</a>
+        {% endif %}
+      </h2>
+
+      {% if session.user_id == user.id %}
+        <form id="edit-bio-form" method="POST" action="/update_bio" style="display: none;">
+          <textarea name="bio" rows="4" cols="50">{{ user.bio or '' }}</textarea>
+          <br>
+          <button type="submit">Save</button>
+        </form>
+      {% endif %}
+
+      <p id="bio-text">{{ user.bio or "This user hasn’t written a bio yet." }}</p>
+    </div>
+
+    {% if session.get('user_id') == user['id'] %}
+      <div class="user-section">
+        <button class="post-action" id="toggle-post-form">New Post</button>
+
+        <form id="inline-post-form" method="POST" action="/create_post" style="display: none; margin-top: 1rem;">
+          <textarea name="content" class="post-textarea" rows="4" placeholder="What's on your mind?" required></textarea><br>
+          <input type="text" name="vibes" class="glow-input" maxlength="100" placeholder="Vibes"><br>
+          <input type="text" name="circle" class="glow-input" maxlength="100" placeholder="Circle"><br>
+          <button type="submit" class="post-action update-post">Post</button>
+        </form>
+      </div>
+    {% endif %}
+
+    <div class="user-section">
+      <h2>Recent Posts</h2>
+      {% if posts %}
+        {% for post in posts %}
+          <div class="post-preview">
+            <p>
+              {% if session.get('user_id') == post['user_id'] %}
+                <a href="/edit_post/{{ post['id'] }}" class="edit-link">(edit)</a>
+              {% endif %}
+            </p>
+            <p>
+              <strong>Vibes:</strong>
+              {% if post['vibes'] %}
+                {% for vibe in post['vibes'].split(',') %}
+                  <span class="vibe-pill">{{ vibe.strip() }}</span>
+                {% endfor %}
+              {% else %}
+                <span class="vibe-pill">—</span>
+              {% endif %}
+              | <strong>Circle:</strong> {{ post['circle'] or '—' }}
+            </p>
+            <p>{{ post['content'] }}</p>
+            <p class="timestamp">Posted on {{ post['created_at'] }}</p>
+            <hr>
+          </div>
+        {% endfor %}
+      {% else %}
+        <p>No posts yet.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if session.user_id == user.id %}
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const bioLink = document.getElementById('edit-bio-link');
+      const bioForm = document.getElementById('edit-bio-form');
+      const bioText = document.getElementById('bio-text');
+
+      if (bioLink && bioForm && bioText) {
+        bioLink.addEventListener('click', function (e) {
+          e.preventDefault();
+          bioForm.style.display = 'block';
+          bioText.style.display = 'none';
+        });
+      }
+
+      const togglePostBtn = document.getElementById('toggle-post-form');
+      const inlinePostForm = document.getElementById('inline-post-form');
+
+      if (togglePostBtn && inlinePostForm) {
+        togglePostBtn.addEventListener('click', function () {
+          inlinePostForm.style.display = inlinePostForm.style.display === 'none' ? 'block' : 'none';
+        });
+      }
+    });
+  </script>
+  {% endif %}
+{% endblock %}

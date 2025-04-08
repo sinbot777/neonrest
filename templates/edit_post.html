@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% block title %}Edit Post - Neonrest{% endblock %}
+
+{% block content %}
+  <div class="user-page">
+    <div class="user-header">
+      <div class="glow large">Edit Post</div>
+      <p>Make changes to your post below.</p>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-container">
+          {% for category, message in messages %}
+            <div class="flash flash-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST">
+      <div class="user-section">
+        <label for="content">Post Content</label><br>
+        <textarea name="content" id="content" class="post-textarea" rows="6" required>{{ post['content'] }}</textarea>
+        <small class="markdown-hint">
+          You can use <a href="/markdown-guide" target="_blank">Markdown</a> to format your post.
+        </small>
+      </div>
+
+      <div class="user-section">
+        <label for="vibe">Vibe</label><br>
+        <input type="text" id="vibe" name="vibe" maxlength="100" value="{{ post['vibe'] }}" class="glow-input">
+      </div>
+
+      <div class="user-section">
+        <label for="circle">Circle</label><br>
+        <input type="text" id="circle" name="circle" maxlength="100" value="{{ post['circle'] }}" class="glow-input">
+      </div>
+
+      <div class="user-section">
+  <button type="submit" class="post-action update-post">Update Post</button>
+</div>
+
+<div class="user-section">
+  <form method="POST" action="/delete_post/{{ post['id'] }}" onsubmit="return confirm('Are you sure you want to delete this post?');">
+    <button type="submit" class="post-action delete-post">Delete Post</button>
+  </form>
+</div>
+
+  </div>
+{% endblock %}
