@@ -1,9 +1,22 @@
+# Python
 __pycache__/
 *.pyc
+
+# Flask / Local settings
 instance/
 .env
+*.log
+
+# Databases (if moved inside)
 *.sqlite3
 *.db
-*.log
-*.bak
+
+# OS junk
 .DS_Store
+
+# Backups
+*.bak
+
+# Editor settings (optional)
+.vscode/
+.idea/
