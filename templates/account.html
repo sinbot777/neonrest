@@ -2,6 +2,11 @@
 {% block title %}Account Settings - Neonrest{% endblock %}
 
 {% block content %}
+<div class="buttons">
+  <a href="/" class="button">Feed</a>
+  <a href="/@{{ session.user_handle.lstrip('@') }}" class="button">Your Profile</a>
+</div>
+
   <div class="user-page">
     <div class="user-header">
       <div class="glow large">Account Settings</div>
