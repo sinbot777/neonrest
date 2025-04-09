@@ -828,3 +828,46 @@ input.glow-input:focus {
     border-color: #ff00ff; /* Bright border color for focus */
     outline: none;
 }
+
+.user-handle {
+  color: #ffb3ec; /* softer pink-lavender neon */
+  font-weight: 600;
+  text-decoration: none;
+  text-shadow: 0 0 2px #ffb3ec, 0 0 6px rgba(255, 179, 236, 0.5);
+  transition: color 0.3s ease, text-shadow 0.3s ease;
+}
+
+.user-handle:hover {
+  color: #ffffff;
+  text-shadow: 0 0 6px #ffb3ec, 0 0 12px #ffa7d7;
+}
+
+.codename-badge {
+  font-style: italic;
+  font-size: 1.1rem;
+  color: #a3ffd1;
+  text-shadow: 0 0 4px #7dffc3;
+  margin-top: -0.3rem;
+  margin-bottom: 0.5rem;
+}
+
+.glow-input {
+  background-color: #1a1a1a !important;
+  color: #ffffff !important;
+  border: 1px solid #aaa !important;
+  font-size: 1rem;
+  font-family: 'Space Grotesk', sans-serif;
+  padding: 0.8rem;
+  border-radius: 6px;
+  width: 100%;
+  box-shadow: 0 0 5px rgba(255, 255, 255, 0.2);
+}
+
+
+.glow-input:focus {
+  background-color: #222 !important;
+  color: #fff !important;
+  border-color: #ffa7d7 !important;
+  outline: none;
+  box-shadow: 0 0 6px #ffa7d7;
+}
