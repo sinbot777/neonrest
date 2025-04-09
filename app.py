@@ -1,16 +1,39 @@
-from flask import Flask, render_template, request, redirect, session, flash, g, jsonify
+from flask import Flask, render_template, request, redirect, session, flash, g, jsonify, url_for
 import sqlite3
-from werkzeug.security import generate_password_hash, check_password_hash
 import os
 import logging
 import re
+
+from flask_mail import Mail, Message
+from werkzeug.security import generate_password_hash, check_password_hash
+from email_validator import validate_email
+import itsdangerous
+
 from utils import generate_unique_handle
 
+# Basic logging setup
 logging.basicConfig(level=logging.DEBUG)
 
 app = Flask(__name__)
+
+# Secret key for token generation
 app.secret_key = os.urandom(24)
 
+# MailerSend SMTP configuration
+app.config['MAIL_SERVER'] = 'smtp.mailersend.net'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = 'MS_xnbgGG@neonrest.com'
+app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')  # Set this in environment
+app.config['MAIL_DEFAULT_SENDER'] = ('Neonrest', 'MS_xnbgGG@neonrest.com')
+
+# Initialize Flask-Mail
+mail = Mail(app)
+
+# Token serializer
+s = itsdangerous.URLSafeTimedSerializer(app.secret_key)
+
+# SQLite DB path
 DATABASE = '/home/sinbot/db/neonrest.db'
 
 def get_db():
@@ -71,36 +94,57 @@ def signup():
     if request.method == 'POST':
         email = request.form['email'].strip()
         handle = request.form['handle'].strip()
-        if not handle.startswith("@"):
-            handle = "@" + handle
         password = request.form['password']
-        dob = request.form['dob'].strip()
-        consent = 1 if request.form.get('consent') == 'on' else 0
 
-        pronouns = request.form.get('pronouns', '').strip()
-        avatar = None  # Placeholder — add file upload logic later
+        # Ensure email is valid
+        try:
+            validate_email(email)
+        except Exception as e:
+            flash(str(e), 'error')
+            return redirect('/signup')
+
+        hashed = generate_password_hash(password)
 
         db = get_db()
-        email_exists = db.execute('SELECT 1 FROM users WHERE email = ?', (email,)).fetchone()
-        handle_exists = db.execute('SELECT 1 FROM users WHERE handle = ?', (handle,)).fetchone()
 
-        if email_exists:
-            flash('That email is already registered.', 'email_exists')
-        elif handle_exists:
-            flash('That handle is already taken.', 'handle_exists')
-        elif not dob:
-            flash('Date of birth is required.', 'dob_required')
-        elif not consent:
-            flash('You must agree to the terms and privacy policy.', 'consent_required')
-        else:
-            hashed = generate_password_hash(password)
-            db.execute('''
-                INSERT INTO users (email, handle, password_hash, dob, pronouns, avatar, consent)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            ''', (email, handle, hashed, dob, pronouns, avatar, consent))
-            db.commit()
-            flash('Signup successful! Please log in.', 'success')
-            return redirect('/login')
+        # Check if email or handle already exists
+        existing = db.execute('SELECT 1 FROM users WHERE handle = ? OR email = ?', (handle, email)).fetchone()
+        if existing:
+            flash("That handle or email is already in use. Try something else!", 'error')
+            return redirect('/signup')
+
+        # Insert the user with verified = 0
+        avatar_filename = None  # placeholder until avatar uploads are implemented
+
+        db.execute('''
+            INSERT INTO users (email, handle, password_hash, verified, avatar)
+            VALUES (?, ?, ?, 0, ?)
+        ''', (email, handle, hashed, avatar_filename))
+        db.commit()
+
+        # Send the verification email
+        token = s.dumps(email, salt="email-verification")
+        verification_url = url_for('verify_email', token=token, _external=True)
+
+        msg = Message(
+            subject="Please verify your email",
+            recipients=[email]
+        )
+        msg.body = f"""Hi there!
+
+Thanks for signing up for Neonrest ✨
+
+Click the link below to verify your email address:
+
+{verification_url}
+
+If you didn’t create this account, feel free to ignore this message.
+"""
+
+        mail.send(msg)
+
+        flash("A verification email has been sent. Please check your inbox.", 'success')
+        return redirect('/login')
 
     return render_template('signup.html')
 
@@ -113,30 +157,73 @@ def check_handle():
     exists = db.execute('SELECT 1 FROM users WHERE handle = ?', (handle,)).fetchone()
     return jsonify({'available': not bool(exists)})
 
+@app.route('/verify_email/<token>')
+def verify_email(token):
+    try:
+        email = s.loads(token, salt="email-verification", max_age=3600)
+    except itsdangerous.SignatureExpired:
+        flash("The verification link has expired.", 'error')
+        return redirect('/signup')
+    except itsdangerous.BadSignature:
+        flash("The verification link is invalid.", 'error')
+        return redirect('/signup')
+
+    db = get_db()
+    db.execute('UPDATE users SET verified = 1 WHERE email = ?', (email,))
+    db.commit()
+    flash("Your email has been verified!", 'success')
+    return redirect('/login')
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         email = request.form['email']
         password = request.form['password']
         db = get_db()
+
+        # Fetch the user by email
         user = db.execute('SELECT * FROM users WHERE email = ?', (email,)).fetchone()
 
         if user and check_password_hash(user['password_hash'], password):
+            # Check if the email is verified
+            if user['verified'] == 0:
+                # Resend verification email
+                token = s.dumps(user['email'], salt="email-verification")
+                verification_url = url_for('verify_email', token=token, _external=True)
+
+                msg = Message(
+                    subject="Resend: Please verify your email",
+                    recipients=[user['email']]
+                )
+                msg.body = f"""Hi again!
+
+                You tried to log into Neonrest, but your email hasn't been verified yet.
+
+                Click the link below to finish verification:
+
+                {verification_url}
+
+                If you didn’t create this account, feel free to ignore this message.
+                """
+                mail.send(msg)
+                flash("A new verification email has been sent.", "info")
+
+                flash('Please verify your email before logging in.', 'error')
+                return redirect('/login')
+
+            # If the email is verified, log them in
             session['user_id'] = user['id']
             session['user_email'] = user['email']
-            session['user_handle'] = user['handle'] if 'handle' in user.keys() else ''
+            session['user_handle'] = user['handle']
 
             flash('Logged in successfully.', 'success')
-
-            if not session['user_handle']:
-                flash("Please choose a handle to complete your profile.", 'info')
-                return redirect('/account')
-
-            return redirect(f"/user/{user['id']}")
+            return redirect('/feed')  # Redirect to the user's feed or homepage
 
         else:
             flash('Invalid email or password.', 'error')
+
     return render_template('login.html')
+
 
 @app.route('/@<handle>')
 def user_by_handle(handle):
@@ -286,14 +373,14 @@ def feed():
 
     db = get_db()
     posts = db.execute('''
-        SELECT posts.id, posts.user_id, posts.content, posts.circle, posts.created_at, posts.updated_at, users.handle,
-               GROUP_CONCAT(vibes.name, ', ') AS vibes
-        FROM posts
-        JOIN users ON users.id = posts.user_id
-        LEFT JOIN post_vibes ON posts.id = post_vibes.post_id
-        LEFT JOIN vibes ON post_vibes.vibe_id = vibes.id
-        GROUP BY posts.id
-        ORDER BY posts.created_at DESC
+    SELECT posts.id, posts.user_id, posts.content, posts.circle, posts.created_at, posts.last_edited, users.handle,
+           GROUP_CONCAT(vibes.name, ', ') AS vibes
+    FROM posts
+    JOIN users ON users.id = posts.user_id
+    LEFT JOIN post_vibes ON posts.id = post_vibes.post_id
+    LEFT JOIN vibes ON post_vibes.vibe_id = vibes.id
+    GROUP BY posts.id
+    ORDER BY posts.created_at DESC
     ''').fetchall()
 
     return render_template('feed.html', posts=posts, vibe_slug='mixed')
@@ -357,8 +444,8 @@ def vibe_page(vibe_name):
         return redirect('/feed')
 
     posts = db.execute('''
-        SELECT posts.*, users.handle,
-               MAX(posts.updated_at) AS updated_at,
+        SELECT posts.id, posts.user_id, posts.content, posts.circle, posts.created_at,
+               posts.last_edited, users.handle,
                GROUP_CONCAT(vibes.name, ', ') AS vibes
         FROM posts
         JOIN users ON posts.user_id = users.id
@@ -373,8 +460,6 @@ def vibe_page(vibe_name):
 
     vibe_slug = vibe_name.lower().replace(" ", "-")
     return render_template('vibe_page.html', vibe_name=vibe_name, vibe_slug=vibe_slug, posts=posts)
-
-
 
 @app.route('/logout')
 def logout():

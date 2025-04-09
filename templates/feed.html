@@ -9,7 +9,9 @@
     </div>
 
     {% for post in posts %}
-  <div class="user-section {% if post['vibes'] %}vibe-{{ post['vibes'].split(',')[0] | lower | replace(' ', '-') }}{% endif %}">
+  {% set vibe_list = (post['vibes'] or '').split(',') %}
+  {% set first_vibe = vibe_list[0] if vibe_list else 'default' %}
+  <div class="user-section vibe-{{ first_vibe | lower | replace(' ', '-') }}">
     <h3>
       <strong>@{{ post['handle'].lstrip('@') }}</strong>
       {% if session.get('user_id') == post['user_id'] %}
@@ -19,8 +21,8 @@
 
     <p class="post-meta">
       <strong>Vibes:</strong>
-      {% if post['vibes'] %}
-        {% for vibe in post['vibes'].split(',') %}
+      {% if vibe_list and vibe_list[0] %}
+        {% for vibe in vibe_list %}
           <a href="/vibe/{{ vibe.strip() | urlencode }}">
             <span class="vibe-label">{{ vibe.strip() }}</span>
           </a>
@@ -41,6 +43,7 @@
 {% else %}
   <p>No posts yet.</p>
 {% endfor %}
+
 
   </div>
 {% endblock %}

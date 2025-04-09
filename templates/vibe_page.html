@@ -13,7 +13,8 @@
       <div class="user-section vibe-{{ vibe_slug }}">
         <h3><strong>@{{ post['handle'].lstrip('@') }}</strong></h3>
         <p><strong>Vibes:</strong>
-          {% for vibe in post['vibes'].split(',') %}
+          {% set vibe_list = (post['vibes'] or '').split(',') %}
+          {% for vibe in vibe_list %}
             <a class="vibe-label" href="/vibe/{{ vibe.strip() | urlencode }}">{{ vibe.strip() }}</a>
           {% endfor %}
           | <strong>Circle:</strong> {{ post['circle'] or '—' }}
