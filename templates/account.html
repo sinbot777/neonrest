@@ -19,17 +19,26 @@
     {% endwith %}
 
     <div class="user-section">
-      <h2>Update Handle</h2>
-      <form method="POST" action="/account">
-        <input type="text" name="handle" value="{{ session.user_handle }}" required>
-        <button type="submit">Save</button>
-      </form>
-    </div>
+  <h2>Update Handle & Codename</h2>
+  <form method="POST" action="/account">
+    <label for="handle">Handle:</label>
+    <!-- Handle input -->
+<input type="text" name="handle" value="{{ session.user_handle }}" class="glow-input" required>
+
+    <label for="codename">Codename (optional):</label>
+    <input type="text" name="codename" value="{{ user['codename'] or '' }}" class="glow-input">
+
+    <button type="submit">Save</button>
+  </form>
+</div>
+
+
 
     <div class="user-section">
       <h2>Change Password</h2>
       <form method="POST" action="/account">
-        <input type="password" name="new_password" placeholder="New password" required>
+        <!-- Password input -->
+<input type="password" name="new_password" placeholder="New password" class="glow-input" required>
         <button type="submit">Change Password</button>
       </form>
     </div>

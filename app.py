@@ -311,19 +311,25 @@ def account():
                     flash("That handle is already taken.", 'error')
                 else:
                     db.execute('UPDATE users SET handle = ? WHERE id = ?', (new_handle, user['id']))
-                    db.commit()
                     session['user_handle'] = new_handle
                     flash("Handle updated successfully.", 'success')
+
+        if 'codename' in request.form:
+            new_codename = request.form['codename'].strip()
+            db.execute('UPDATE users SET codename = ? WHERE id = ?', (new_codename, user['id']))
+            flash("Codename updated successfully.", 'success')
 
         if 'new_password' in request.form:
             new_password = request.form['new_password'].strip()
             if new_password:
                 new_hash = generate_password_hash(new_password)
                 db.execute('UPDATE users SET password_hash = ? WHERE id = ?', (new_hash, user['id']))
-                db.commit()
                 flash("Password updated successfully.", 'success')
 
+        db.commit()
+
     return render_template('account.html', user=user)
+
 
 @app.route('/create_post', methods=['GET', 'POST'])
 def create_post():
