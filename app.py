@@ -237,10 +237,16 @@ def user_by_handle(handle):
         return redirect("/")
 
     posts = db.execute('''
-        SELECT * FROM posts
-        WHERE user_id = ?
-        ORDER BY created_at DESC
+    SELECT posts.id, posts.user_id, posts.content, posts.circle, posts.created_at,
+           GROUP_CONCAT(vibes.name, ', ') AS vibes
+    FROM posts
+    LEFT JOIN post_vibes ON posts.id = post_vibes.post_id
+    LEFT JOIN vibes ON post_vibes.vibe_id = vibes.id
+    WHERE posts.user_id = ?
+    GROUP BY posts.id
+    ORDER BY posts.created_at DESC
     ''', (user['id'],)).fetchall()
+
 
     return render_template("user.html", user=user, posts=posts)
 
