@@ -89,6 +89,8 @@ def home():
 def about():
     return render_template('about.html')
 
+from datetime import datetime
+
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
@@ -113,13 +115,14 @@ def signup():
             flash("That handle or email is already in use. Try something else!", 'error')
             return redirect('/signup')
 
-        # Insert the user with verified = 0
+        # Insert the user with verified = 0 and a created_at timestamp
+        created_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         avatar_filename = None  # placeholder until avatar uploads are implemented
 
         db.execute('''
-            INSERT INTO users (email, handle, password_hash, verified, avatar)
-            VALUES (?, ?, ?, 0, ?)
-        ''', (email, handle, hashed, avatar_filename))
+            INSERT INTO users (email, handle, password_hash, verified, avatar, created_at)
+            VALUES (?, ?, ?, 0, ?, ?)
+        ''', (email, handle, hashed, avatar_filename, created_at))
         db.commit()
 
         # Send the verification email
@@ -147,6 +150,7 @@ If you didn’t create this account, feel free to ignore this message.
         return redirect('/login')
 
     return render_template('signup.html')
+
 
 @app.route('/check_handle')
 def check_handle():
@@ -472,6 +476,16 @@ def vibe_page(vibe_name):
 
     vibe_slug = vibe_name.lower().replace(" ", "-")
     return render_template('vibe_page.html', vibe_name=vibe_name, vibe_slug=vibe_slug, posts=posts)
+
+@app.template_filter('datetimeformat')
+def datetimeformat(value, format='medium'):
+    if not value:
+        return ''
+    from datetime import datetime
+    date = datetime.strptime(value, '%Y-%m-%d %H:%M:%S')
+    if format == 'long':
+        return date.strftime('%B %Y')
+    return date.strftime('%Y-%m-%d')
 
 @app.route('/logout')
 def logout():
