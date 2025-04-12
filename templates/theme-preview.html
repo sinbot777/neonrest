@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="theme-preview" style="
+  {% if theme.background_layers %}background-image: {{ theme.background_layers }};{% endif %}
+  {% if theme.blend_mode %}background-blend-mode: {{ theme.blend_mode }};{% endif %}
+  {% if theme.bg_color %}background-color: {{ theme.bg_color }};{% endif %}
+  color: {{ theme.text_color }};
+">
+  <h1 class="glow large">Preview: {{ theme.name }} ({{ theme.mode }})</h1>
+  <div class="user-header">Header Area</div>
+  <div class="vibe-label">#FreshStarts</div>
+  <div class="post-block">Example post block styled by this theme.</div>
+</div>
+{% if theme.custom_css %}
+  <style>{{ theme.custom_css | safe }}</style>
+{% endif %}
+{% endblock %}

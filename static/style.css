@@ -552,79 +552,7 @@ html, body {
   text-shadow: 0 0 4px #00ffaa;
 }
 
-.vibe-fresh-starts .user-header,
-.vibe-fresh-starts .vibe-label {
-  background-color: #fff4d6; /* pale yellow */
-  color: #2a2d4a; /* muted blue */
-  text-shadow: 0 0 4px #fefcf3;
-  border: 1px solid rgba(42, 45, 74, 0.1);
-}
 
-.vibe-fresh-starts .vibe-label:hover {
-  background-color: #ffeae2; /* peachy hover */
-  box-shadow: 0 0 6px #ffdacc;
-  color: #2a2d4a;
-}
-
-.vibe-fresh-starts .vibe-label {
-  border-radius: 6px;
-  padding: 4px 10px;
-  font-weight: bold;
-  font-family: 'Space Grotesk', sans-serif;
-}
-
-/* Background for Fresh Starts vibe page (day) */
-body.vibe-fresh-starts--day {
-  background-color: #fff9e6;
-  color: #2a2d4a;
-  background-image:
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.9)),
-    url('/static/bg-freshstart-paper.png'),
-    url('/static/grain.png');
-  background-size: cover, cover, cover;
-  background-blend-mode: lighten, multiply, overlay;
-}
-
-/* Background for Fresh Starts vibe page (night) */
-body.vibe-fresh-starts--night {
-  background-color: #1e1c26;
-  color: #fefcf3;
-  background-image:
-    linear-gradient(to bottom, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.9)),
-    url('/static/bg-freshstart-paper.png'),
-    url('/static/grain.png');
-  background-size: cover, cover, cover;
-  background-blend-mode: darken, multiply, overlay;
-}
-
-/* Specific override for Fresh Starts header */
-body.vibe-fresh-starts--day .glow.large {
-  font-family: 'VT323', monospace;
-  font-size: 2.5rem;
-  text-shadow: none;
-  background-color: #fff4d6;
-  color: #2a2d4a;
-  padding: 0.4rem 1rem;
-  border: 2px solid #b6a88a;
-  display: inline-block;
-  box-shadow: inset -2px -2px 0 #dcd2b1, inset 2px 2px 0 #9a8e70;
-  letter-spacing: 1px;
-}
-
-/* Fresh Starts header font */
-body.vibe-fresh-starts--day .glow.large,
-body.vibe-fresh-starts--night .glow.large {
-  font-family: 'VT323', monospace;
-  font-size: 2.2rem;
-  color: #2a2d4a;
-  text-shadow: 0 0 3px #ffe8c2, 1px 1px 0 #f8ddaf;
-  background-color: rgba(255, 244, 214, 0.85);
-  border: 2px solid #ffe8c2;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  margin-bottom: 0.5rem;
-  display: inline-block;
-}
 
 .circle {
   color: #d2ffd2;
@@ -730,6 +658,120 @@ footer#footer-tagline {
 
 #toggle-post-form:hover {
   background-color: #3a89c9;
+}
+
+.theme-editor-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: center;
+}
+
+.theme-preview-box {
+  margin-top: 2rem;
+  padding: 1rem;
+  border-radius: 8px;
+  background-color: var(--bg);
+  color: var(--text);
+  box-shadow: 0 0 5px var(--glow);
+}
+
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr); /* Force two columns */
+  gap: 1.2rem;
+  margin-bottom: 2rem;
+  justify-items: center;
+}
+
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: bold;
+  font-family: "Space Grotesk", sans-serif;
+}
+
+.form-group input[type="color"] {
+  width: 96px;
+  height: 96px;
+  border: 2px solid #444;
+  cursor: pointer;
+  margin-top: 0.4rem;
+  margin-bottom: 0.4rem;
+}
+
+input[type="color"] {
+  width: 100%;
+  height: 2.5rem;
+  padding: 0;
+  border: 1px solid #999;
+  background: transparent;
+  cursor: pointer;
+}
+
+.form-wide {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-wide input[type="text"],
+.form-wide select {
+  padding: 0.5rem;
+  font-size: 1rem;
+  width: 100%;
+  max-width: 100%;
+}
+
+textarea {
+  width: 100%;
+  font-family: monospace;
+  font-size: 0.95rem;
+}
+
+.form-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.color-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.color-field {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start; /* Instead of center */
+  text-align: left;
+}
+
+.color-field label {
+  font-weight: bold;
+  margin-bottom: 0.4rem;
+}
+
+.color-field input[type="color"] {
+  width: 96px;
+  height: 96px;
+  border: 2px solid #444;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  margin-bottom: 0.4rem;
+}
+
+.unset-checkbox {
+  font-weight: normal;
+  font-size: 0.85rem;
 }
 
 body::after {
@@ -871,3 +913,45 @@ input.glow-input:focus {
   outline: none;
   box-shadow: 0 0 6px #ffa7d7;
 }
+
+.account-nav {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 2rem;
+  flex-wrap: wrap;
+}
+
+.account-nav .button {
+  text-decoration: none;
+  text-align: center;
+  margin-top: 1rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 8px;
+  background-color: #1c2a3a;
+  color: #9efeff;
+  font-weight: 600;
+  border: 2px solid #72c2ff;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.account-nav .button:hover {
+  background-color: #72c2ff;
+  color: #0d0d0d;
+}
+
+.emoji-ring {
+  width: 25px;
+  height: 25px;
+  background-image: url('/static/sprites/emoji_rings.png'); /* rename if needed */
+  background-size: 256px 64px;
+  background-repeat: no-repeat;
+  display: inline-block;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.ring-neonstars   { background-position:    0    0; }
+.ring-pixelsunset { background-position:  -64px  0; }
+.ring-cassette    { background-position: -128px  0; }
+.ring-crown       { background-position: -192px  0; }
