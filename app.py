@@ -8,7 +8,7 @@ from flask_mail import Mail, Message
 from werkzeug.security import generate_password_hash, check_password_hash
 from email_validator import validate_email
 import itsdangerous
-
+from datetime import datetime
 from utils import generate_unique_handle
 
 # Basic logging setup
@@ -72,6 +72,15 @@ def init_db():
     ''')
     db.commit()
 
+def can_edit_theme(user_id, theme):
+    return user_id == 1
+
+def get_logged_in_user():
+    email = session.get('user_email')
+    if not email:
+        return None
+    db = get_db()
+    return db.execute('SELECT * FROM users WHERE email = ?', (email,)).fetchone()
 
 with app.app_context():
     os.makedirs('db', exist_ok=True)
@@ -323,6 +332,11 @@ def account():
             db.execute('UPDATE users SET codename = ? WHERE id = ?', (new_codename, user['id']))
             flash("Codename updated successfully.", 'success')
 
+        if 'timezone' in request.form:
+            tz = request.form['timezone'].strip() or None
+            db.execute('UPDATE users SET timezone = ? WHERE id = ?', (tz, user['id']))
+            flash("Timezone updated successfully.", "success")
+
         if 'new_password' in request.form:
             new_password = request.form['new_password'].strip()
             if new_password:
@@ -333,7 +347,6 @@ def account():
         db.commit()
 
     return render_template('account.html', user=user)
-
 
 @app.route('/create_post', methods=['GET', 'POST'])
 def create_post():
@@ -454,10 +467,37 @@ def delete_post(post_id):
 @app.route('/vibe/<vibe_name>')
 def vibe_page(vibe_name):
     db = get_db()
+
+    # Lookup vibe
     vibe = db.execute('SELECT * FROM vibes WHERE name = ?', (vibe_name,)).fetchone()
     if not vibe:
         flash("That vibe doesn't exist yet.", "error")
         return redirect('/feed')
+
+    slug = vibe['name'].lower().replace(" ", "-")
+
+    # Auto-detect time for default theme mode
+    from zoneinfo import ZoneInfo
+    
+    user = get_logged_in_user()
+    tz = user['timezone'] if user and user['timezone'] else 'UTC'
+    now = datetime.now(ZoneInfo(tz))
+    hour = now.hour
+    theme_mode = 'day' if 6 <= hour < 18 else 'night'
+
+
+    # Get theme for current mode
+    theme = db.execute('SELECT * FROM themes WHERE slug = ? AND mode = ?', (slug, theme_mode)).fetchone()
+    if not theme:
+        # fallback
+        theme = db.execute('SELECT * FROM themes WHERE slug = ? AND mode = ?', (slug, 'night')).fetchone() or \
+                db.execute('SELECT * FROM themes WHERE slug = ? AND mode = ?', (slug, 'day')).fetchone()
+        current_mode = theme['mode'] if theme else 'base'
+
+    # Load both day & night styles for toggling
+    alt_themes = db.execute('SELECT mode, custom_css FROM themes WHERE slug = ?', (slug,)).fetchall()
+    custom_css_map = {row['mode']: row['custom_css'] for row in alt_themes}
+
 
     posts = db.execute('''
         SELECT posts.id, posts.user_id, posts.content, posts.circle, posts.created_at,
@@ -474,8 +514,26 @@ def vibe_page(vibe_name):
         ORDER BY posts.created_at DESC
     ''', (vibe['id'],)).fetchall()
 
-    vibe_slug = vibe_name.lower().replace(" ", "-")
-    return render_template('vibe_page.html', vibe_name=vibe_name, vibe_slug=vibe_slug, posts=posts)
+    return render_template(
+        'vibe_page.html',
+        vibe_name=vibe_name,
+        vibe_slug=theme['slug'],
+        theme_slug=theme['slug'] if theme else None,
+        theme_mode=theme['mode'] if theme else 'base',
+        bg_color=theme['bg_color'],
+        text_color=theme['text_color'],
+        glow_color=theme['glow_color'],
+        background_layers=theme['background_layers'] if theme else '',
+        blend_mode=theme['blend_mode'] if theme else '',
+        font_stack=theme['font_stack'] if theme else '',
+        custom_css=theme['custom_css'] if theme else '',
+        custom_css_day=custom_css_map.get('day', ''),
+        custom_css_night=custom_css_map.get('night', ''),
+        posts=posts,
+        skip_static_css=True
+    )
+
+
 
 @app.template_filter('datetimeformat')
 def datetimeformat(value, format='medium'):
@@ -486,6 +544,85 @@ def datetimeformat(value, format='medium'):
     if format == 'long':
         return date.strftime('%B %Y')
     return date.strftime('%Y-%m-%d')
+
+@app.route('/themes/preview/<slug>/<mode>')
+def theme_preview(slug, mode):
+    db = get_db()
+    theme = db.execute('''
+        SELECT * FROM themes
+        WHERE slug = ? AND mode = ?
+    ''', (slug, mode)).fetchone()
+
+    if not theme:
+        abort(404)
+
+    return render_template('theme-preview.html', theme=theme)
+
+@app.route('/themes/edit/<slug>/<mode>', methods=['GET', 'POST'])
+def edit_theme(slug, mode):
+    db = get_db()
+    theme = db.execute('SELECT * FROM themes WHERE slug = ? AND mode = ?', (slug, mode)).fetchone()
+
+    if not theme:
+        flash("Theme not found.", "error")
+        return redirect('/feed')
+
+    user_id = session.get('user_id')
+    if not can_edit_theme(user_id, theme):
+        flash("You don’t have permission to edit this theme.", "error")
+        return redirect('/feed')
+
+    editable_themes = db.execute('SELECT * FROM themes').fetchall() if user_id == 1 else []
+
+    def sanitize_color(value):
+        return value if value and not value.isspace() else None
+
+    if request.method == 'POST':
+        new_css = request.form.get('custom_css', '').strip()
+
+        # Handle nullable colors
+        bg_color = None if request.form.get('null_bg_color') else sanitize_color(request.form.get('bg_color'))
+        text_color = None if request.form.get('null_text_color') else sanitize_color(request.form.get('text_color'))
+        glow_color = None if request.form.get('null_glow_color') else sanitize_color(request.form.get('glow_color'))
+
+        # New fields
+        bg_url = request.form.get('bg_url', '').strip() or None
+        bg_midi_url = request.form.get('bg_midi_url', '').strip() or None
+        button_style = request.form.get('button_style', '').strip() or None
+        extra_css = request.form.get('extra_css', '').strip() or None
+        description = request.form.get('description', '').strip() or None
+        tags = request.form.get('tags', '').strip() or None
+        preview_url = request.form.get('preview_url', '').strip() or None
+        is_public = 1 if request.form.get('is_public') else 0
+        remixable = 1 if request.form.get('remixable') else 0
+
+        bg_layers = request.form.get('background_layers', '').strip()
+        blend_mode = request.form.get('blend_mode', '').strip()
+        font_stack = request.form.get('font_stack', '').strip()
+
+        db.execute('''
+            UPDATE themes SET
+                custom_css = ?, bg_color = ?, text_color = ?, glow_color = ?,
+                background_layers = ?, blend_mode = ?, font_stack = ?,
+                bg_url = ?, bg_midi_url = ?, button_style = ?, extra_css = ?,
+                description = ?, tags = ?, preview_url = ?, is_public = ?, remixable = ?
+            WHERE id = ?
+        ''', (
+            new_css, bg_color, text_color, glow_color,
+            bg_layers, blend_mode, font_stack,
+            bg_url, bg_midi_url, button_style, extra_css,
+            description, tags, preview_url, is_public, remixable,
+            theme['id']
+        ))
+        db.commit()
+
+        action = request.form.get('action')
+        if action == 'save_and_preview':
+            return redirect(f'/themes/preview/{slug}/{mode}')
+        else:
+            return redirect(url_for('edit_theme', slug=slug, mode=mode))
+
+    return render_template('edit_theme.html', theme=theme, editable_themes=editable_themes)
 
 @app.route('/logout')
 def logout():

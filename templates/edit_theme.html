@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+{% block title %}Edit Theme - {{ theme.name }} ({{ theme.mode }}){% endblock %}
+
+{% block content %}
+<div class="user-page">
+  <div class="user-header">
+    <div class="glow large">Edit Theme: {{ theme.name }} ({{ theme.mode }})</div>
+    <p>You are editing the <strong>{{ theme.slug }}</strong> theme variant.</p>
+  </div>
+
+  <!-- Dropdown: Switch Between Editable Themes -->
+  <form method="get" action="/themes/edit/{{ editable_themes[0].slug }}/{{ editable_themes[0].mode if editable_themes else 'day' }}" class="theme-selector">
+    <label for="theme-select">Switch Theme:</label>
+    <select id="theme-select" onchange="location.href=this.value;">
+      {% for t in editable_themes %}
+        <option value="/themes/edit/{{ t.slug }}/{{ t.mode }}"
+                {% if t.id == theme.id %}selected{% endif %}>
+          {{ t.name }} ({{ t.mode }})
+        </option>
+      {% endfor %}
+    </select>
+  </form>
+
+  <!-- Main Theme Editor Form -->
+  <form method="post" class="theme-editor-form">
+    <div class="theme-grid">
+      <div class="color-field">
+        <label for="bg_color">Background</label>
+        <input type="color" id="bg_color" name="bg_color" value="{{ theme.bg_color or '#ffffff' }}">
+        <label class="unset-checkbox">
+          <input type="checkbox" name="null_bg_color" {% if not theme.bg_color %}checked{% endif %}> Unset
+        </label>
+      </div>
+
+      <div class="color-field">
+        <label for="text_color">Text</label>
+        <input type="color" id="text_color" name="text_color" value="{{ theme.text_color or '#000000' }}">
+        <label class="unset-checkbox">
+          <input type="checkbox" name="null_text_color" {% if not theme.text_color %}checked{% endif %}> Unset
+        </label>
+      </div>
+
+      <div class="color-field">
+        <label for="glow_color">Glow</label>
+        <input type="color" id="glow_color" name="glow_color" value="{{ theme.glow_color or '#cccccc' }}">
+        <label class="unset-checkbox">
+          <input type="checkbox" name="null_glow_color" {% if not theme.glow_color %}checked{% endif %}> Unset
+        </label>
+      </div>
+    </div>
+
+    <div class="form-wide">
+      <label for="background_layers">Background Layers (CSS):</label>
+      <input type="text" id="background_layers" name="background_layers" value="{{ theme.background_layers or '' }}">
+    </div>
+
+    <div class="form-wide">
+      <label for="blend_mode">Blend Mode:</label>
+      <input type="text" id="blend_mode" name="blend_mode" value="{{ theme.blend_mode or '' }}">
+    </div>
+
+    <div class="form-wide">
+      <label for="bg_url">Background Image URL:</label>
+      <input type="text" id="bg_url" name="bg_url" value="{{ theme.bg_url or '' }}">
+    </div>
+
+    <div class="form-wide">
+      <label for="bg_midi_url">MIDI Background (Optional):</label>
+      <input type="text" id="bg_midi_url" name="bg_midi_url" value="{{ theme.bg_midi_url or '' }}">
+    </div>
+
+    <div class="form-wide">
+      <label for="button_style">Button Style (CSS class):</label>
+      <input type="text" id="button_style" name="button_style" value="{{ theme.button_style or '' }}">
+    </div>
+
+    <div class="form-wide">
+      <label for="font_stack">Font Stack:</label>
+      <select name="font_stack" id="font_stack">
+        <option value="'VT323', monospace" {% if theme.font_stack == "'VT323', monospace" %}selected{% endif %}>VT323</option>
+        <option value="'Space Grotesk', sans-serif" {% if theme.font_stack == "'Space Grotesk', sans-serif" %}selected{% endif %}>Space Grotesk</option>
+        <option value="'Orbitron', sans-serif" {% if theme.font_stack == "'Orbitron', sans-serif" %}selected{% endif %}>Orbitron</option>
+        <option value="'Press Start 2P', monospace" {% if theme.font_stack == "'Press Start 2P', monospace" %}selected{% endif %}>Press Start 2P</option>
+      </select>
+    </div>
+
+    <div class="form-wide">
+      <label for="custom_css">Custom CSS (advanced):</label>
+      <textarea id="custom_css" name="custom_css" rows="10">{{ theme.custom_css or '' }}</textarea>
+    </div>
+
+    <div class="form-wide">
+      <label for="extra_css">Extra CSS (appended safely):</label>
+      <textarea id="extra_css" name="extra_css" rows="6">{{ theme.extra_css or '' }}</textarea>
+    </div>
+
+    <div class="form-wide">
+      <label for="description">Theme Description:</label>
+      <textarea name="description" rows="3">{{ theme.description or '' }}</textarea>
+    </div>
+
+    <div class="form-wide">
+      <label for="tags">Tags (comma-separated):</label>
+      <input type="text" id="tags" name="tags" value="{{ theme.tags or '' }}">
+    </div>
+
+    <div class="form-wide">
+      <label for="preview_url">Preview Image URL:</label>
+      <input type="text" id="preview_url" name="preview_url" value="{{ theme.preview_url or '' }}">
+    </div>
+
+    <div class="form-wide">
+      <input type="checkbox" id="is_public" name="is_public" {% if theme.is_public %}checked{% endif %}>
+      <label for="is_public">Make theme public</label>
+    </div>
+
+    <div class="form-wide">
+      <input type="checkbox" id="remixable" name="remixable" {% if theme.remixable %}checked{% endif %}>
+      <label for="remixable">Allow others to remix</label>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" name="action" value="save">Save Changes</button>
+      <button type="submit" name="action" value="save_and_preview">Save & Preview</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

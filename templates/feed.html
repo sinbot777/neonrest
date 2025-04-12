@@ -13,7 +13,11 @@
   {% set first_vibe = vibe_list[0] if vibe_list else 'default' %}
   <div class="user-section vibe-{{ first_vibe | lower | replace(' ', '-') }}">
     <h3>
-      <strong>@{{ post['handle'].lstrip('@') }}</strong>
+        <strong>
+          <a href="/@{{ post['handle'].lstrip('@') }}" class="user-handle">@{{ post['handle'].lstrip('@') }}</a>
+        </strong>
+
+
       {% if session.get('user_id') == post['user_id'] %}
         <a href="/edit_post/{{ post['id'] }}" class="edit-link">(edit)</a>
       {% endif %}
@@ -35,9 +39,10 @@
     </p>
 
     <p>{{ post['content'] }}</p>
-    {% if post['updated_at'] %}
-      <p class="post-timestamp">Last edited: {{ post['updated_at'] }}</p>
-    {% endif %}
+    {% if post['last_edited'] %}
+  <p class="post-timestamp">Last edited: {{ post['last_edited'] }}</p>
+{% endif %}
+
     <hr>
   </div>
 {% else %}

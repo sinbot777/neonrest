@@ -5,7 +5,20 @@
   <div class="user-page">
     <div class="user-header">
       <div class="glow large">{{ user.handle }}</div>
-      <p>{{ user.email }}</p>
+<div class="identity-details">
+  <p class="nuid-badge">
+    {% if session.get('user_id') == user['id'] %}
+      Your NUID: #{{ '%03d' | format(user['id']) }}
+    {% else %}
+      NUID: #{{ '%03d' | format(user['id']) }}
+    {% endif %}
+  </p>
+    <p class="join-date">Joined: {{ user['created_at'] | datetimeformat("long") }}</p>
+  {% if user['codename'] %}
+    <p class="codename-badge">“{{ user['codename'] }}”</p>
+  {% endif %}
+</div>
+
     </div>
 
     <div class="user-section">

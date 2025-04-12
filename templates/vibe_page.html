@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% block title %}{{ vibe_name }} - Neonrest{% endblock %}
+{% block body_class %}theme-{{ theme_slug or 'default' }} vibe-{{ theme_slug or 'default' }}--{{ theme_mode or 'base' }}{% endblock %}
 
 {% block content %}
   <div class="user-page">
@@ -20,8 +21,8 @@
           | <strong>Circle:</strong> {{ post['circle'] or '—' }}
         </p>
         <p>{{ post['content'] }}</p>
-        {% if post['updated_at'] %}
-          <p class="post-timestamp">Last edited: {{ post['updated_at'] }}</p>
+        {% if post['last_edited'] %}
+          <p class="post-timestamp">Last edited: {{ post['last_edited'] }}</p>
         {% endif %}
         <hr>
       </div>
@@ -32,4 +33,9 @@
       {% endif %}
     </div>
   </div>
+
+  {% if custom_css %}
+  <style>{{ custom_css | safe }}</style>
+  {% endif %}
+
 {% endblock %}
