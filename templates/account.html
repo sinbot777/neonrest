@@ -23,28 +23,42 @@
     {% endif %}
   {% endwith %}
 
-  <div class="user-section">
-    <h2>Update Handle & Codename</h2>
-    <form method="POST" action="/account">
-      <label for="handle">Handle:</label>
-      <input type="text" name="handle" value="{{ session.user_handle }}" class="glow-input" required>
+<div class="user-section">
+  <h2>Update Handle & Codename</h2>
+  <form method="POST" action="/account">
+    <label for="handle">Handle:</label>
+    <input type="text" name="handle" value="{{ session.user_handle }}" class="glow-input" required>
 
-      <label for="codename">Codename (optional):</label>
-      <input type="text" name="codename" value="{{ user['codename'] or '' }}" class="glow-input">
+    <label for="codename">Codename (optional):</label>
+    <input type="text" name="codename" value="{{ user['codename'] or '' }}" class="glow-input">
 
-      <label for="timezone">Preferred Timezone:</label>
-      <select name="timezone" id="timezone" class="glow-input">
-        <option value="">(use server time)</option>
-        <option value="America/Los_Angeles" {% if user.timezone == "America/Los_Angeles" %}selected{% endif %}>America/Los_Angeles (Pacific)</option>
-        <option value="America/New_York" {% if user.timezone == "America/New_York" %}selected{% endif %}>America/New_York (Eastern)</option>
-        <option value="Europe/London" {% if user.timezone == "Europe/London" %}selected{% endif %}>Europe/London</option>
-        <option value="Asia/Tokyo" {% if user.timezone == "Asia/Tokyo" %}selected{% endif %}>Asia/Tokyo</option>
-        <option value="Australia/Sydney" {% if user.timezone == "Australia/Sydney" %}selected{% endif %}>Australia/Sydney</option>
-      </select>
+    <label for="timezone">Preferred Timezone:</label>
+    <select name="timezone" id="timezone" class="glow-input">
+      <option value="">(use server time)</option>
+      <option value="America/Los_Angeles" {% if user.timezone == "America/Los_Angeles" %}selected{% endif %}>America/Los_Angeles (Pacific)</option>
+      <option value="America/New_York" {% if user.timezone == "America/New_York" %}selected{% endif %}>America/New_York (Eastern)</option>
+      <option value="Europe/London" {% if user.timezone == "Europe/London" %}selected{% endif %}>Europe/London</option>
+      <option value="Asia/Tokyo" {% if user.timezone == "Asia/Tokyo" %}selected{% endif %}>Asia/Tokyo</option>
+      <option value="Australia/Sydney" {% if user.timezone == "Australia/Sydney" %}selected{% endif %}>Australia/Sydney</option>
+    </select>
 
-      <button type="submit">Save</button>
-    </form>
-  </div>
+    <button type="submit">Save</button>
+  </form>
+</div>
+
+<div class="user-section">
+  <h2>Upload Avatar</h2>
+  <form method="post" action="{{ url_for('upload_avatar') }}" enctype="multipart/form-data">
+    <label for="avatar">Upload Avatar:</label>
+    <input type="file" name="avatar" accept="image/*">
+    <button type="submit">Upload</button>
+  </form>
+
+  {% if user.avatar_path %}
+    <img src="{{ user.avatar_path }}" alt="Your avatar" class="avatar-img">
+  {% endif %}
+</div>
+
 
   <div class="user-section">
     <h2>Change Password</h2>

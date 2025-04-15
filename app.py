@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, session, flash, g, jsonify, url_for
+from flask import Flask, render_template, request, redirect, session, flash, g, jsonify, url_for, current_app
 import sqlite3
 import os
 import logging
@@ -9,12 +9,24 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from email_validator import validate_email
 import itsdangerous
 from datetime import datetime
-from utils import generate_unique_handle
+from utils.generate_unique_handle import generate_unique_handle
+from utils.friend_helpers import are_friends, get_friend_requests, get_following_map
+from utils.image_uploads import allowed_file   # ✅ Your image upload helper
+
+from routes.friends import bp as friends_bp  # ✅ IMPORT FIRST
 
 # Basic logging setup
 logging.basicConfig(level=logging.DEBUG)
 
+# SQLite DB path
+DATABASE = '/home/sinbot/db/neonrest.db'
+
 app = Flask(__name__)
+app.config['DATABASE'] = DATABASE
+
+
+# Register blueprint AFTER app is created
+app.register_blueprint(friends_bp)  # ✅ REGISTER HERE
 
 # Secret key for token generation
 app.secret_key = os.urandom(24)
@@ -33,14 +45,14 @@ mail = Mail(app)
 # Token serializer
 s = itsdangerous.URLSafeTimedSerializer(app.secret_key)
 
-# SQLite DB path
-DATABASE = '/home/sinbot/db/neonrest.db'
+
 
 def get_db():
     if 'db' not in g:
-        g.db = sqlite3.connect(DATABASE)
+        g.db = sqlite3.connect(current_app.config['DATABASE'])  # <- this matters
         g.db.row_factory = sqlite3.Row
     return g.db
+
 
 @app.teardown_appcontext
 def close_db(exception):
@@ -70,6 +82,29 @@ def init_db():
             FOREIGN KEY (user_id) REFERENCES users(id)
         );
     ''')
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS friend_requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sender_id INTEGER NOT NULL,
+            receiver_id INTEGER NOT NULL,
+            status TEXT NOT NULL CHECK(status IN ('pending', 'accepted', 'declined')),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(sender_id, receiver_id)
+        );
+    ''')
+
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS follows (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            follower_id INTEGER NOT NULL,
+            followed_id INTEGER NOT NULL,
+            revoked BOOLEAN DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(follower_id, followed_id)
+        );
+    ''')
+
     db.commit()
 
 def can_edit_theme(user_id, theme):
@@ -160,6 +195,44 @@ If you didn’t create this account, feel free to ignore this message.
 
     return render_template('signup.html')
 
+@app.route('/upload_avatar', methods=['POST'])
+def upload_avatar():
+    if 'user_id' not in session:
+        flash("You must be logged in to upload an avatar.")
+        return redirect(url_for('login'))
+
+    file = request.files.get('avatar')
+    if not file or file.filename == '':
+        flash("No file selected.")
+        return redirect(url_for('account'))
+
+    if not allowed_file(file.filename):
+        flash("Invalid file type. Please upload PNG, JPG, or GIF.")
+        return redirect(url_for('account'))
+
+    filename = f"user_{session['user_id']}_avatar.png"
+    avatar_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'avatars')
+    os.makedirs(avatar_dir, exist_ok=True)
+    save_path = os.path.join(avatar_dir, filename)
+
+    try:
+        logging.warning("DATABASE USED: %s", current_app.config.get('DATABASE'))
+
+        file.save(save_path)
+
+        db = get_db()
+        avatar_url = f"/static/uploads/avatars/{filename}"
+        db.execute("UPDATE users SET avatar_path = ? WHERE id = ?", (avatar_url, session['user_id']))
+        db.commit()
+
+        flash("Avatar updated!")
+    except Exception as e:
+        logging.error(f"Avatar upload failed: {e}")
+        flash("Something went wrong uploading your avatar.")
+        return redirect(url_for('account'))  # ✅ already exists
+
+    return redirect(url_for('account'))  # ✅ ADD THIS LINE
+
 
 @app.route('/check_handle')
 def check_handle():
@@ -237,7 +310,6 @@ def login():
 
     return render_template('login.html')
 
-
 @app.route('/@<handle>')
 def user_by_handle(handle):
     if not handle.startswith("@"):
@@ -245,23 +317,64 @@ def user_by_handle(handle):
 
     db = get_db()
     user = db.execute('SELECT * FROM users WHERE handle = ?', (handle,)).fetchone()
-    if not user:
+    if user is None:
         flash("User not found.", "error")
         return redirect("/")
 
     posts = db.execute('''
-    SELECT posts.id, posts.user_id, posts.content, posts.circle, posts.created_at,
-           GROUP_CONCAT(vibes.name, ', ') AS vibes
-    FROM posts
-    LEFT JOIN post_vibes ON posts.id = post_vibes.post_id
-    LEFT JOIN vibes ON post_vibes.vibe_id = vibes.id
-    WHERE posts.user_id = ?
-    GROUP BY posts.id
-    ORDER BY posts.created_at DESC
+        SELECT posts.id, posts.user_id, posts.content, posts.circle, posts.created_at,
+               GROUP_CONCAT(vibes.name, ', ') AS vibes
+        FROM posts
+        LEFT JOIN post_vibes ON posts.id = post_vibes.post_id
+        LEFT JOIN vibes ON post_vibes.vibe_id = vibes.id
+        WHERE posts.user_id = ?
+        GROUP BY posts.id
+        ORDER BY posts.created_at DESC
     ''', (user['id'],)).fetchall()
 
+    viewer_id = session.get('user_id')
+    incoming_requests, outgoing_requests = get_friend_requests(viewer_id)
+    pending_received_from = [r['sender_id'] for r in incoming_requests]
+    # outgoing_requests = []  # Optionally implement later
+    following_map = get_following_map(viewer_id)
 
-    return render_template("user.html", user=user, posts=posts)
+    # Build friend_status_map
+    friend_status_map = {}
+    if viewer_id:
+        relationships = db.execute('''
+            SELECT sender_id, receiver_id, status
+            FROM friend_requests
+            WHERE sender_id = ? OR receiver_id = ?
+        ''', (viewer_id, viewer_id)).fetchall()
+
+        for r in relationships:
+            other_id = r['receiver_id'] if r['sender_id'] == viewer_id else r['sender_id']
+            friend_status_map[other_id] = r['status']
+
+    # ✅ Get friends for this user's profile
+    friends = db.execute('''
+        SELECT u.id, u.handle, u.codename
+        FROM users u
+        JOIN friend_requests fr ON (
+            (fr.sender_id = ? AND fr.receiver_id = u.id) OR
+            (fr.receiver_id = ? AND fr.sender_id = u.id)
+        )
+        WHERE fr.status = 'accepted'
+    ''', (user['id'], user['id'])).fetchall()
+
+    return render_template(
+        "user.html",
+        user=user,
+        posts=posts,
+        viewer_id=viewer_id,
+        following_map=following_map,
+        incoming_requests=incoming_requests,
+        outgoing_requests=outgoing_requests,
+        friend_status_map=friend_status_map,
+        pending_received_from=pending_received_from,
+        friends=friends  # ✅ new context
+    )
+
 
 
 @app.route('/user/<int:user_id>')
@@ -274,7 +387,7 @@ def user_page(user_id):
 
     posts = db.execute('''
         SELECT posts.id, posts.user_id, posts.content, posts.circle, posts.created_at,
-               GROUP_CONCAT(vibes.name, ', ') AS vibes
+               posts.last_edited, GROUP_CONCAT(vibes.name, ', ') AS vibes
         FROM posts
         LEFT JOIN post_vibes ON posts.id = post_vibes.post_id
         LEFT JOIN vibes ON post_vibes.vibe_id = vibes.id
@@ -283,7 +396,49 @@ def user_page(user_id):
         ORDER BY posts.created_at DESC
     ''', (user_id,)).fetchall()
 
-    return render_template('user.html', user=user, posts=posts)
+    viewer_id = session.get('user_id')
+    incoming_requests, outgoing_requests = get_friend_requests(viewer_id)
+    pending_received_from = [r['sender_id'] for r in incoming_requests]
+    # outgoing_requests = []  # Optionally implement later
+    following_map = get_following_map(viewer_id)
+
+    # Build friend_status_map
+    friend_status_map = {}
+    if viewer_id:
+        relationships = db.execute('''
+            SELECT sender_id, receiver_id, status
+            FROM friend_requests
+            WHERE sender_id = ? OR receiver_id = ?
+        ''', (viewer_id, viewer_id)).fetchall()
+
+        for r in relationships:
+            other_id = r['receiver_id'] if r['sender_id'] == viewer_id else r['sender_id']
+            friend_status_map[other_id] = r['status']
+
+    # ✅ Get friends for this user's profile
+    friends = db.execute('''
+        SELECT u.id, u.handle, u.codename
+        FROM users u
+        JOIN friend_requests fr ON (
+            (fr.sender_id = ? AND fr.receiver_id = u.id) OR
+            (fr.receiver_id = ? AND fr.sender_id = u.id)
+        )
+        WHERE fr.status = 'accepted'
+    ''', (user_id, user_id)).fetchall()
+
+    return render_template(
+        "user.html",
+        user=user,
+        posts=posts,
+        viewer_id=viewer_id,
+        following_map=following_map,
+        incoming_requests=incoming_requests,
+        outgoing_requests=outgoing_requests,
+        friend_status_map=friend_status_map,
+        pending_received_from=pending_received_from,
+        friends=friends  # ✅ Include friends list
+    )
+
 
 
 @app.route('/update_bio', methods=['POST'])
@@ -297,8 +452,7 @@ def update_bio():
     db.execute('UPDATE users SET bio = ? WHERE id = ?', (new_bio, session['user_id']))
     db.commit()
     flash("Bio updated!", "success")
-    return redirect(f"/@{session['user_handle'].lstrip('@')}")
-
+    return redirect(f"/{session['user_handle']}")
 
 @app.route('/account', methods=['GET', 'POST'])
 def account():
@@ -402,7 +556,7 @@ def feed():
 
     db = get_db()
     posts = db.execute('''
-    SELECT posts.id, posts.user_id, posts.content, posts.circle, posts.created_at, posts.last_edited, users.handle,
+    SELECT posts.id, posts.user_id, posts.content, posts.circle, posts.created_at, posts.last_edited, users.handle, users.avatar_path,
            GROUP_CONCAT(vibes.name, ', ') AS vibes
     FROM posts
     JOIN users ON users.id = posts.user_id
@@ -468,7 +622,7 @@ def delete_post(post_id):
 def vibe_page(vibe_name):
     db = get_db()
 
-    # Lookup vibe
+    # Always get vibe first
     vibe = db.execute('SELECT * FROM vibes WHERE name = ?', (vibe_name,)).fetchone()
     if not vibe:
         flash("That vibe doesn't exist yet.", "error")
@@ -478,27 +632,24 @@ def vibe_page(vibe_name):
 
     # Auto-detect time for default theme mode
     from zoneinfo import ZoneInfo
-    
     user = get_logged_in_user()
     tz = user['timezone'] if user and user['timezone'] else 'UTC'
     now = datetime.now(ZoneInfo(tz))
     hour = now.hour
     theme_mode = 'day' if 6 <= hour < 18 else 'night'
 
-
-    # Get theme for current mode
+    # Get theme
     theme = db.execute('SELECT * FROM themes WHERE slug = ? AND mode = ?', (slug, theme_mode)).fetchone()
     if not theme:
-        # fallback
         theme = db.execute('SELECT * FROM themes WHERE slug = ? AND mode = ?', (slug, 'night')).fetchone() or \
                 db.execute('SELECT * FROM themes WHERE slug = ? AND mode = ?', (slug, 'day')).fetchone()
-        current_mode = theme['mode'] if theme else 'base'
+        theme_mode = theme['mode'] if theme else 'base'
 
-    # Load both day & night styles for toggling
+    # Get both versions for CSS toggling
     alt_themes = db.execute('SELECT mode, custom_css FROM themes WHERE slug = ?', (slug,)).fetchall()
     custom_css_map = {row['mode']: row['custom_css'] for row in alt_themes}
 
-
+    # Fetch posts tagged with this vibe
     posts = db.execute('''
         SELECT posts.id, posts.user_id, posts.content, posts.circle, posts.created_at,
                posts.last_edited, users.handle,
@@ -517,12 +668,12 @@ def vibe_page(vibe_name):
     return render_template(
         'vibe_page.html',
         vibe_name=vibe_name,
-        vibe_slug=theme['slug'],
+        vibe_slug=theme['slug'] if theme else slug,
         theme_slug=theme['slug'] if theme else None,
         theme_mode=theme['mode'] if theme else 'base',
-        bg_color=theme['bg_color'],
-        text_color=theme['text_color'],
-        glow_color=theme['glow_color'],
+        bg_color=theme['bg_color'] if theme else None,
+        text_color=theme['text_color'] if theme else None,
+        glow_color=theme['glow_color'] if theme else None,
         background_layers=theme['background_layers'] if theme else '',
         blend_mode=theme['blend_mode'] if theme else '',
         font_stack=theme['font_stack'] if theme else '',
@@ -530,7 +681,8 @@ def vibe_page(vibe_name):
         custom_css_day=custom_css_map.get('day', ''),
         custom_css_night=custom_css_map.get('night', ''),
         posts=posts,
-        skip_static_css=True
+        skip_static_css=True,
+        vibe=vibe  # ✅ always defined now
     )
 
 
@@ -562,6 +714,7 @@ def theme_preview(slug, mode):
 def edit_theme(slug, mode):
     db = get_db()
     theme = db.execute('SELECT * FROM themes WHERE slug = ? AND mode = ?', (slug, mode)).fetchone()
+    vibe = db.execute('SELECT * FROM vibes WHERE theme_id = ?', (theme['id'],)).fetchone()
 
     if not theme:
         flash("Theme not found.", "error")
@@ -614,6 +767,18 @@ def edit_theme(slug, mode):
             description, tags, preview_url, is_public, remixable,
             theme['id']
         ))
+        if vibe:
+            logo_url = request.form.get('logo_url', '').strip()
+            logo_width = request.form.get('logo_width', '').strip() or None
+            logo_height = request.form.get('logo_height', '').strip() or None
+            logo_padding = request.form.get('logo_padding', '').strip() or None
+            logo_align = request.form.get('logo_align', '').strip() or 'center'
+            db.execute('''
+                UPDATE vibes
+                SET logo_url = ?, logo_width = ?, logo_height = ?, logo_padding = ?, logo_align = ?
+                WHERE id = ?
+            ''', (logo_url, logo_width, logo_height, logo_padding, logo_align, vibe['id']))
+
         db.commit()
 
         action = request.form.get('action')
@@ -622,7 +787,13 @@ def edit_theme(slug, mode):
         else:
             return redirect(url_for('edit_theme', slug=slug, mode=mode))
 
-    return render_template('edit_theme.html', theme=theme, editable_themes=editable_themes)
+    return render_template(
+    'edit_theme.html',
+    theme=theme,
+    editable_themes=editable_themes,
+    vibe=vibe
+)
+
 
 @app.route('/logout')
 def logout():
@@ -641,6 +812,17 @@ def terms():
 @app.route('/privacy')
 def privacy():
     return render_template('privacy.html')
+
+@app.route("/explore")
+def explore():
+    return render_template("explore.html")
+
+@app.route("/about-mailersend")
+def about_mailersend():
+    return render_template("about-mailersend.html")
+
+app.config['UPLOAD_FOLDER'] = '/home/sinbot/neonrest/static/uploads'
+app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024  # 2MB limit
 
 
 if __name__ == '__main__':

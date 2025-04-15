@@ -43,13 +43,18 @@ body {
   border-radius: 20px;
   font-size: 0.9em;
   color: #ffdfc4;
-  text-decoration: none;
+  text-decoration: none; !important;
   background-color: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
   margin-right: 0.25rem;
   transition: all 0.25s ease;
+  text-decoration: none !important;
 }
 
+a .vibe-label {
+    text-decoration: none !important;
+    border-bottom: none !important;
+}
 
 .vibe-label:hover {
   filter: brightness(1.2) saturate(1.1);
@@ -313,7 +318,7 @@ a.button:hover {
 }
 
 .user-header {
-  text-align: center;
+  text-align: left;
   margin-bottom: 3rem;
 }
 
@@ -324,6 +329,18 @@ a.button:hover {
 
 .user-section {
   margin-bottom: 1.5em;
+  text-align: left;
+}
+
+.user-section a {
+  color: #fdfdfd; /* Matches your page's white text */
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.user-section a:hover {
+  color: #ffcc99; /* Optional: Add a soft highlight glow on hover */
+  border-bottom: 1px solid #ffcc99;
 }
 
 .user-section h2 {
@@ -407,7 +424,7 @@ a.button:hover {
   color: #aaa;
 }
 
-.markdown-hint a {
+.markdown-hint p a {
   color: #ffa3d7; /* pick something in your aesthetic */
   text-decoration: underline dotted;
 }
@@ -508,11 +525,6 @@ html, body {
 .vibe {
   color: #c0f5ff;
 }
-
-
-
-
-
 
 .vibe-tag {
   display: inline-block;
@@ -955,3 +967,109 @@ input.glow-input:focus {
 .ring-pixelsunset { background-position:  -64px  0; }
 .ring-cassette    { background-position: -128px  0; }
 .ring-crown       { background-position: -192px  0; }
+
+.friend-btn {
+  font-family: 'Space Grotesk', sans-serif;
+  text-decoration: none;
+  padding: 0.8rem 1.5rem;
+  background-color: #333;
+  border: 2px solid #fcb5a3;
+  border-radius: 12px;
+  color: #fcb5a3;
+  font-weight: 600;
+  transition: background 0.3s, color 0.3s;
+  margin: 0.3rem;
+  cursor: pointer;
+}
+.friend-btn:hover {
+  background-color: #fcb5a3;
+  color: #111;
+}
+
+.nuid {
+  font-size: 0.85em;
+  color: var(--meta-text, #ccc);  /* slightly brighter than #aaa */
+  margin-left: 0.3em;
+  font-style: italic;
+  opacity: 0.9;
+}
+
+.user-handle::before {
+  content: "@";
+}
+
+.explore-page {
+  max-width: 700px;
+  margin: auto;
+  padding: 2rem;
+}
+
+.vibe-list a {
+  color: #fcb5a3;  /* Soft neon coral */
+  text-decoration: none;
+  font-weight: 600;
+  text-shadow: 0 0 3px #fcb5a3;
+  transition: color 0.2s ease, text-shadow 0.2s ease;
+}
+
+.vibe-list a:hover {
+  color: #fff8e7;
+  text-shadow: 0 0 6px #ffe5d0, 0 0 8px #fcb5a3;
+}
+
+.avatar-img {
+  max-width: 128px;
+  max-height: 128px;
+  border-radius: 16px;
+  border: 2px solid var(--glow-color, #ffffff);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
+  margin-top: 1rem;
+}
+
+.avatar-img {
+  object-fit: cover;
+  aspect-ratio: 1 / 1;
+}
+
+.avatar-img:hover {
+  box-shadow: 0 0 12px var(--glow-color, #fff);
+  transition: box-shadow 0.2s ease;
+}
+
+.avatar-img.small {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin: 0; /* ✅ reset everything */
+  margin-right: 0.5rem;
+  vertical-align: middle;
+  display: inline-block; /* or leave unset if inside flex */
+}
+
+
+.post-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  text-align: left !important; /* ✅ force override */
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.post-user-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.user-handle {
+  text-align: left;
+}
+
+.avatar-img.small {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
