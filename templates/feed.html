@@ -12,16 +12,20 @@
   {% set vibe_list = (post['vibes'] or '').split(',') %}
   {% set first_vibe = vibe_list[0] if vibe_list else 'default' %}
   <div class="user-section vibe-{{ first_vibe | lower | replace(' ', '-') }}">
-    <h3>
-        <strong>
-          <a href="/@{{ post['handle'].lstrip('@') }}" class="user-handle">@{{ post['handle'].lstrip('@') }}</a>
-        </strong>
+{% set avatar = post['avatar_path'] or '/static/default-avatar.png' %}
+<div class="post-header">
+  <img src="{{ avatar }}" alt="avatar" class="avatar-img small">
+  <div class="post-user-meta">
+    <strong>
+      <a href="/@{{ post['handle'].lstrip('@') }}" class="user-handle">{{ post['handle'].lstrip('@') }}</a>
+    </strong>
+    {% if session.get('user_id') == post['user_id'] %}
+      <a href="/edit_post/{{ post['id'] }}" class="edit-link">(edit)</a>
+    {% endif %}
+  </div>
+</div>
 
 
-      {% if session.get('user_id') == post['user_id'] %}
-        <a href="/edit_post/{{ post['id'] }}" class="edit-link">(edit)</a>
-      {% endif %}
-    </h3>
 
     <p class="post-meta">
       <strong>Vibes:</strong>
