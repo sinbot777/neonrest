@@ -24,6 +24,8 @@
   <!-- Main Theme Editor Form -->
   <form method="post" class="theme-editor-form">
     <div class="theme-grid">
+
+      <!-- Base Colors -->
       <div class="color-field">
         <label for="bg_color">Background</label>
         <input type="color" id="bg_color" name="bg_color" value="{{ theme.bg_color or '#ffffff' }}">
@@ -47,8 +49,59 @@
           <input type="checkbox" name="null_glow_color" {% if not theme.glow_color %}checked{% endif %}> Unset
         </label>
       </div>
+
+      <!-- Extended CSS Variables -->
+      <div class="color-field">
+        <label for="link_color">Link Color</label>
+        <input type="color" id="link_color" name="extra_css_vars[--link-color]" value="{{ theme.extra_css_vars['--link-color'] if theme.extra_css_vars else '#88c0d0' }}">
+      </div>
+      <div class="color-field">
+        <label for="hover_color">Hover Color</label>
+        <input type="color" id="hover_color" name="extra_css_vars[--hover-color]" value="{{ theme.extra_css_vars['--hover-color'] if theme.extra_css_vars else '#b48ead' }}">
+      </div>
+      <div class="color-field">
+        <label for="meta_text_color">Meta Text</label>
+        <input type="color" id="meta_text_color" name="extra_css_vars[--meta-color]" value="{{ theme.extra_css_vars['--meta-color'] if theme.extra_css_vars else '#999999' }}">
+      </div>
+      <div class="color-field">
+        <label for="post_bg_color">Post BG</label>
+        <input type="color" id="post_bg_color" name="extra_css_vars[--post-bg]" value="{{ theme.extra_css_vars['--post-bg'] if theme.extra_css_vars else '#f4f4f4' }}">
+      </div>
+      <div class="color-field">
+        <label for="pill_bg_color">Pill BG</label>
+        <input type="color" id="pill_bg_color" name="extra_css_vars[--pill-bg]" value="{{ theme.extra_css_vars['--pill-bg'] if theme.extra_css_vars else '#e0e0e0' }}">
+      </div>
+      <div class="color-field">
+        <label for="pill_text_color">Pill Text</label>
+        <input type="color" id="pill_text_color" name="extra_css_vars[--pill-text]" value="{{ theme.extra_css_vars['--pill-text'] if theme.extra_css_vars else '#000000' }}">
+      </div>
     </div>
 
+    <!-- Vibe Logo (optional) -->
+    <div class="form-wide">
+      <label for="logo_url">Vibe Logo URL (optional):</label>
+      <input type="text" id="logo_url" name="logo_url" value="{{ vibe.logo_url if vibe else '' }}">
+    </div>
+    <div class="form-wide">
+      <label for="logo_width">Logo Width (e.g. 800px or 80%)</label>
+      <input type="text" id="logo_width" name="logo_width" value="{{ vibe.logo_width or '' }}">
+    </div>
+    <div class="form-wide">
+      <label for="logo_height">Logo Height (optional)</label>
+      <input type="text" id="logo_height" name="logo_height" value="{{ vibe.logo_height or '' }}">
+    </div>
+    <div class="form-wide">
+      <label for="logo_padding">Logo Padding (e.g. 1rem or 10px)</label>
+      <input type="text" id="logo_padding" name="logo_padding" value="{{ vibe.logo_padding or '' }}">
+    </div>
+    <div class="form-wide">
+      <label for="logo_align">Logo Alignment</label>
+      <select id="logo_align" name="logo_align">
+        <option value="center" {% if vibe.logo_align == 'center' %}selected{% endif %}>Center</option>
+        <option value="left" {% if vibe.logo_align == 'left' %}selected{% endif %}>Left</option>
+        <option value="right" {% if vibe.logo_align == 'right' %}selected{% endif %}>Right</option>
+      </select>
+    </div>
     <div class="form-wide">
       <label for="background_layers">Background Layers (CSS):</label>
       <input type="text" id="background_layers" name="background_layers" value="{{ theme.background_layers or '' }}">
@@ -60,63 +113,32 @@
     </div>
 
     <div class="form-wide">
-      <label for="bg_url">Background Image URL:</label>
-      <input type="text" id="bg_url" name="bg_url" value="{{ theme.bg_url or '' }}">
-    </div>
-
-    <div class="form-wide">
-      <label for="bg_midi_url">MIDI Background (Optional):</label>
-      <input type="text" id="bg_midi_url" name="bg_midi_url" value="{{ theme.bg_midi_url or '' }}">
-    </div>
-
-    <div class="form-wide">
-      <label for="button_style">Button Style (CSS class):</label>
-      <input type="text" id="button_style" name="button_style" value="{{ theme.button_style or '' }}">
-    </div>
-
-    <div class="form-wide">
       <label for="font_stack">Font Stack:</label>
       <select name="font_stack" id="font_stack">
+        <option value="'Roboto', sans-serif" {% if theme.font_stack == "'Roboto', sans-serif" %}selected{% endif %}>Roboto</option>
+        <option value="'Open Sans', sans-serif" {% if theme.font_stack == "'Open Sans', sans-serif" %}selected{% endif %}>Open Sans</option>
+        <option value="'Lato', sans-serif" {% if theme.font_stack == "'Lato', sans-serif" %}selected{% endif %}>Lato</option>
+        <option value="'Montserrat', sans-serif" {% if theme.font_stack == "'Montserrat', sans-serif" %}selected{% endif %}>Montserrat</option>
+        <option value="'Raleway', sans-serif" {% if theme.font_stack == "'Raleway', sans-serif" %}selected{% endif %}>Raleway</option>
+        <option value="'Playfair Display', serif" {% if theme.font_stack == "'Playfair Display', serif" %}selected{% endif %}>Playfair Display</option>
+        <option value="'Merriweather', serif" {% if theme.font_stack == "'Merriweather', serif" %}selected{% endif %}>Merriweather</option>
+        <option value="'PT Serif', serif" {% if theme.font_stack == "'PT Serif', serif" %}selected{% endif %}>PT Serif</option>
+        <option value="'Bitter', serif" {% if theme.font_stack == "'Bitter', serif" %}selected{% endif %}>Bitter</option>
+        <option value="'Bebas Neue', sans-serif" {% if theme.font_stack == "'Bebas Neue', sans-serif" %}selected{% endif %}>Bebas Neue</option>
+        <option value="'Pacifico', cursive" {% if theme.font_stack == "'Pacifico', cursive" %}selected{% endif %}>Pacifico</option>
+        <option value="'Great Vibes', cursive" {% if theme.font_stack == "'Great Vibes', cursive" %}selected{% endif %}>Great Vibes</option>
+        <option value="'Orbitron', sans-serif" {% if theme.font_stack == "'Orbitron', sans-serif" %}selected{% endif %}>Orbitron</option>
         <option value="'VT323', monospace" {% if theme.font_stack == "'VT323', monospace" %}selected{% endif %}>VT323</option>
         <option value="'Space Grotesk', sans-serif" {% if theme.font_stack == "'Space Grotesk', sans-serif" %}selected{% endif %}>Space Grotesk</option>
-        <option value="'Orbitron', sans-serif" {% if theme.font_stack == "'Orbitron', sans-serif" %}selected{% endif %}>Orbitron</option>
         <option value="'Press Start 2P', monospace" {% if theme.font_stack == "'Press Start 2P', monospace" %}selected{% endif %}>Press Start 2P</option>
+        <option value="'Space Mono', monospace" {% if theme.font_stack == "'Space Mono', monospace" %}selected{% endif %}>Space Mono</option>
       </select>
     </div>
+
 
     <div class="form-wide">
       <label for="custom_css">Custom CSS (advanced):</label>
       <textarea id="custom_css" name="custom_css" rows="10">{{ theme.custom_css or '' }}</textarea>
-    </div>
-
-    <div class="form-wide">
-      <label for="extra_css">Extra CSS (appended safely):</label>
-      <textarea id="extra_css" name="extra_css" rows="6">{{ theme.extra_css or '' }}</textarea>
-    </div>
-
-    <div class="form-wide">
-      <label for="description">Theme Description:</label>
-      <textarea name="description" rows="3">{{ theme.description or '' }}</textarea>
-    </div>
-
-    <div class="form-wide">
-      <label for="tags">Tags (comma-separated):</label>
-      <input type="text" id="tags" name="tags" value="{{ theme.tags or '' }}">
-    </div>
-
-    <div class="form-wide">
-      <label for="preview_url">Preview Image URL:</label>
-      <input type="text" id="preview_url" name="preview_url" value="{{ theme.preview_url or '' }}">
-    </div>
-
-    <div class="form-wide">
-      <input type="checkbox" id="is_public" name="is_public" {% if theme.is_public %}checked{% endif %}>
-      <label for="is_public">Make theme public</label>
-    </div>
-
-    <div class="form-wide">
-      <input type="checkbox" id="remixable" name="remixable" {% if theme.remixable %}checked{% endif %}>
-      <label for="remixable">Allow others to remix</label>
     </div>
 
     <div class="form-actions">

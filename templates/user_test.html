@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+{% block title %}{{ user.handle }} - Neonrest{% endblock %}
+
+{% block content %}
+<div class="main-and-top9">
+  <!-- Left Column: User Identity -->
+<div id="main-content">
+  <div class="info-box">
+    <div class="user-header">
+      <img src="{{ user.avatar_path or '/static/default-avatar.png' }}" alt="Avatar" class="avatar-img" style="max-width: 128px; border-radius: 16px; border: 2px solid var(--glow-color, #ffffff); box-shadow: 0 0 8px rgba(255,255,255,0.3);">
+      <h1 class="glow large">{{ user.handle }}</h1>
+      <p class="nuid-badge">NUID: #{{ '%03d' | format(user['id']) }}</p>
+      {% if user.codename %}
+        <p><em>"{{ user.codename }}"</em></p>
+      {% endif %}
+    </div>
+
+    <div class="user-section">
+      <h2>Bio</h2>
+      <p>{{ user.bio or "This user hasn’t written a bio yet." }}</p>
+    </div>
+  </div>
+
+    <div class="info-box">
+      <div class="user-section">
+        <h2>Details</h2>
+        <p>Timezone: {{ user.timezone or "Unset" }}</p>
+
+        <p>
+          Now Playing:
+          <span id="now-playing-text" aria-live="polite">—</span>
+        </p>
+
+{% if user.lastfm_username %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    fetch("/now_playing/{{ user.lastfm_username }}")
+      .then(res => res.json())
+      .then(data => {
+        console.log("Now Playing response:", data);  // DEBUG
+        if (data.now_playing) {
+          document.getElementById("now-playing-text").textContent = data.now_playing;
+        }
+      })
+      .catch(err => console.error("Fetch failed:", err));  // NEW LINE
+  });
+</script>
+{% endif %}
+
+
+
+        <p>Mood: {{ user.mood or "—" }}</p>
+        <p>Frequent haunts: {{ user.vibes or "—" }}</p>
+      </div>
+    </div>
+</div>
+
+
+<!-- Right Column: Top 9 and Posts -->
+<div class="right-column">
+  <aside class="top9-column">
+    <h3>Top 9</h3>
+    <div class="top9-grid">
+      {% for friend in top_friends %}
+        <div class="top9-slot {% if friend.placeholder %}placeholder{% endif %}">
+          {% if friend.placeholder %}
+            <div class="avatar-frame">+</div>
+            <a href="#" class="user-handle">Add</a>
+          {% else %}
+            <a href="/@{{ friend.handle.lstrip('@') }}">
+              <div class="avatar-frame">
+                <img src="{{ friend.avatar_path or '/static/default-avatar.png' }}" alt="Avatar" class="avatar-img small">
+              </div>
+              <div class="user-handle">{{ friend.codename or '@' + friend.handle.lstrip('@') }}</div>
+            </a>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  </aside>
+
+  <div class="recent-posts">
+    <h3>Recent Posts</h3>
+    {% if posts %}
+      {% for post in posts %}
+        {% set vibe_list = (post['vibes'] or '').split(',') %}
+        <div class="post-preview">
+          <p class="post-meta">
+            <strong>Vibes:</strong>
+            {% if vibe_list and vibe_list[0] %}
+              {% for vibe in vibe_list %}
+                <a href="/vibe/{{ vibe.strip() | urlencode }}">
+                  <span class="vibe-pill">{{ vibe.strip() }}</span>
+                </a>
+              {% endfor %}
+            {% else %}
+              <span>—</span>
+            {% endif %}
+            |
+            <strong>Circle:</strong> {{ post['circle'] or "—" }}
+          </p>
+          <div class="post-content">{{ post['html_content'] | safe }}</div>
+          <p class="timestamp">Posted on {{ post['created_at'] }}</p>
+        </div>
+      {% endfor %}
+    {% else %}
+      <p>No posts yet.</p>
+    {% endif %}
+  </div>
+</div> <!-- end .right-column -->
+
+
+{% endblock %}

@@ -77,7 +77,7 @@
           {% endif %}
           | <strong>Circle:</strong> {{ post['circle'] or '—' }}
         </p>
-        <p>{{ post['content'] }}</p>
+        <div class="post-content">{{ post['html_content'] | safe }}</div>
         <p class="timestamp">Posted on {{ post['created_at'] }}</p>
         <hr>
       </div>
