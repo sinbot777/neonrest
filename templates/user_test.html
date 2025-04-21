@@ -7,7 +7,7 @@
 <div id="main-content">
   <div class="info-box">
     <div class="user-header">
-      <img src="{{ user.avatar_path or '/static/default-avatar.png' }}" alt="Avatar" class="avatar-img" style="max-width: 128px; border-radius: 16px; border: 2px solid var(--glow-color, #ffffff); box-shadow: 0 0 8px rgba(255,255,255,0.3);">
+      <img src="{{ user.avatar_path or '/static/default-avatar.png' }}" alt="Avatar" class="avatar-img">
       <h1 class="glow large">{{ user.handle }}</h1>
       <p class="nuid-badge">NUID: #{{ '%03d' | format(user['id']) }}</p>
       {% if user.codename %}
@@ -26,31 +26,40 @@
         <h2>Details</h2>
         <p>Timezone: {{ user.timezone or "Unset" }}</p>
 
+        <p>Mood: {{ user.mood or "—" }}</p>
+        <p>Frequent haunts: {{ user.vibes or "—" }}</p>
+
         <p>
           Now Playing:
           <span id="now-playing-text" aria-live="polite">—</span>
         </p>
+        <div id="album-art" style="margin-top: 0.5rem;"></div>
 
-{% if user.lastfm_username %}
+        {% if user.lastfm_username %}
 <script>
   document.addEventListener("DOMContentLoaded", function () {
     fetch("/now_playing/{{ user.lastfm_username }}")
       .then(res => res.json())
       .then(data => {
-        console.log("Now Playing response:", data);  // DEBUG
-        if (data.now_playing) {
-          document.getElementById("now-playing-text").textContent = data.now_playing;
+        console.log("Now Playing response:", data);
+
+        const npText = document.getElementById("now-playing-text");
+        const albumArt = document.getElementById("album-art");
+
+        if (data.track) {
+          npText.textContent = data.track;
+        }
+
+        if (data.album_art) {
+          albumArt.innerHTML = `<img src="${data.album_art}" alt="Album Art" style="max-width: 85%;">`;
         }
       })
-      .catch(err => console.error("Fetch failed:", err));  // NEW LINE
+      .catch(err => console.error("Fetch failed:", err));
   });
 </script>
-{% endif %}
 
 
-
-        <p>Mood: {{ user.mood or "—" }}</p>
-        <p>Frequent haunts: {{ user.vibes or "—" }}</p>
+        {% endif %}
       </div>
     </div>
 </div>

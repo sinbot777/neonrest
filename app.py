@@ -592,10 +592,12 @@ def account():
 def now_playing(username):
     from utils.lastfm import get_now_playing
     import sys
+
     print(f"Now Playing check for {username}", file=sys.stderr)
     result = get_now_playing(username)
     print(f"Result: {result}", file=sys.stderr)
-    return jsonify({"now_playing": result})
+
+    return jsonify(result)
 
 
 
