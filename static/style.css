@@ -11,19 +11,20 @@ html, body {
 }
 
 body {
-  margin: 0;
   font-family: 'Space Grotesk', sans-serif;
   background: linear-gradient(to bottom, #1c1c1c, #0d0d0d);
-  color: #fdfdfd;
-  min-height: 100vh;
   background-image: url('/static/bg-cassette-fuzz.png');
   background-size: cover;
   background-blend-mode: overlay;
+  background-attachment: fixed;  /* ✅ Keeps background from scrolling */
+  color: #fdfdfd;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
   transition: background 0.5s ease, color 0.5s ease;
 }
+
 
 .page-wrapper {
   max-width: 800px;
@@ -32,6 +33,7 @@ body {
 
 #main-content {
   flex: 1;
+  max-width: 800px;
 }
 
 /* Cleaned up: Removed duplicate @import and html/body definitions */
@@ -77,19 +79,6 @@ a .vibe-label {
 /* ✅ All cleanup complete: No more duplication, merged shared classes, and your full theme system is preserved. */
 
 /* Reset & Base */
-body {
-  margin: 0;
-  font-family: 'Space Grotesk', sans-serif;
-  background: linear-gradient(to bottom, #1c1c1c, #0d0d0d);
-  color: #fdfdfd;
-  min-height: 100vh;
-  background-image: url('/static/bg-cassette-fuzz.png');
-  background-size: cover;
-  background-blend-mode: overlay;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
 
 /* Glow headline */
 .glow {
@@ -177,19 +166,7 @@ a.button:hover {
   text-decoration: underline;
 }
 
-.auth-box a {
-  color: #FFD9EC;
-  font-weight: bold;
-  text-shadow: 0 0 4px #FFB8E1, 0 0 6px #ff92c2;
-  text-decoration: underline;
-  transition: all 0.2s ease-in-out;
-}
-
-.auth-box a:hover {
-  color: #ffffff;
-  text-shadow: 0 0 6px #FFB8E1, 0 0 10px #ff79b0;
-}
-
+.auth-box a,
 .auth-box label a,
 .auth-box p.auth-link a {
   color: #FFD9EC;
@@ -198,6 +175,10 @@ a.button:hover {
   text-decoration: underline;
 }
 
+.auth-box a:hover {
+  color: #ffffff;
+  text-shadow: 0 0 6px #FFB8E1, 0 0 10px #ff79b0;
+}
 
 .auth-box input[type="email"],
 .auth-box input[type="password"] {
@@ -444,32 +425,23 @@ a.button:hover {
 }
 
 .glow-input {
-  background-color: #1a1a1a;
-  border: 1px solid #444;
-  border-radius: 0.5rem;
-  padding: 0.5rem;
-  color: #fff;
+  background-color: #1a1a1a !important;
+  color: #ffffff !important;
+  border: 1px solid #aaa !important;
   font-size: 1rem;
+  font-family: 'Space Grotesk', sans-serif;
+  padding: 0.8rem;
+  border-radius: 6px;
   width: 100%;
   box-shadow: 0 0 5px rgba(255, 255, 255, 0.2);
 }
 
-html, body {
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.page-wrapper {
-  max-width: 800px;
-  margin: 0 auto;
-}
-
-#main-content {
-  flex: 1;  /* <- okay to leave */
-  max-width: 800px;  /* Optional: add this if you want tighter control */
+.glow-input:focus {
+  background-color: #222 !important;
+  color: #fff !important;
+  border-color: #ffa7d7 !important;
+  outline: none;
+  box-shadow: 0 0 6px #ffa7d7;
 }
 
 
@@ -886,12 +858,15 @@ input.glow-input:focus {
 }
 
 .user-handle {
-  color: #ffb3ec; /* softer pink-lavender neon */
+  font-size: 0.95rem;
   font-weight: 600;
+  text-align: left;
   text-decoration: none;
-  text-shadow: 0 0 2px #ffb3ec, 0 0 6px rgba(255, 179, 236, 0.5);
+  color: #ffcde9; /* slightly lighter pink wins here */
+  text-shadow: 0 0 3px #ff99cc, 0 0 6px rgba(255, 179, 236, 0.5);
   transition: color 0.3s ease, text-shadow 0.3s ease;
 }
+
 
 .user-handle:hover {
   color: #ffffff;
@@ -907,26 +882,7 @@ input.glow-input:focus {
   margin-bottom: 0.5rem;
 }
 
-.glow-input {
-  background-color: #1a1a1a !important;
-  color: #ffffff !important;
-  border: 1px solid #aaa !important;
-  font-size: 1rem;
-  font-family: 'Space Grotesk', sans-serif;
-  padding: 0.8rem;
-  border-radius: 6px;
-  width: 100%;
-  box-shadow: 0 0 5px rgba(255, 255, 255, 0.2);
-}
 
-
-.glow-input:focus {
-  background-color: #222 !important;
-  color: #fff !important;
-  border-color: #ffa7d7 !important;
-  outline: none;
-  box-shadow: 0 0 6px #ffa7d7;
-}
 
 .account-nav {
   display: flex;
@@ -1018,17 +974,14 @@ input.glow-input:focus {
 }
 
 .avatar-img {
-  max-width: 128px;
-  max-height: 128px;
+  width: 100%;
   border-radius: 16px;
   border: 2px solid var(--glow-color, #ffffff);
   box-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
+  object-fit: cover;
+  aspect-ratio: 3 / 2;
 }
 
-.avatar-img {
-  object-fit: cover;
-  aspect-ratio: 1 / 1;
-}
 
 .avatar-img:hover {
   box-shadow: 0 0 12px var(--glow-color, #fff);
@@ -1061,9 +1014,6 @@ input.glow-input:focus {
   align-items: flex-start;
 }
 
-.user-handle {
-  text-align: left;
-}
 
 .user-section-flex {
   display: flex;
@@ -1099,15 +1049,11 @@ input.glow-input:focus {
   box-shadow: 0 0 6px rgba(255, 255, 255, 0.05);
 }
 
-#main-content {
-  flex: 1;
-  max-width: 400px;
-}
-
 .top9-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 1rem;
+  margin-top: 1rem;
 }
 
 .top9-slot {
@@ -1209,8 +1155,8 @@ aside.top9-column {
 
 .user-identity .avatar-img {
   display: block;
-  width: 128px;
-  height: 128px;
+  width: 85%;
+  height: 85%;
   object-fit: cover;
   border-radius: 50%;
   margin-bottom: 1rem;
@@ -1249,12 +1195,7 @@ aside.top9-column {
   min-width: 320px;
 }
 
-.top9-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
-  margin-top: 1rem;
-}
+
 
 .top9-slot {
   text-align: center;
@@ -1276,12 +1217,6 @@ aside.top9-column {
   width: 100%;
   height: 100%;
   object-fit: cover;
-}
-
-.user-handle {
-  font-size: 0.95rem;
-  color: #ffcde9;
-  text-shadow: 0 0 3px #ff99cc;
 }
 
 .recent-posts {

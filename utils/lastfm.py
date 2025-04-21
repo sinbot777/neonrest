@@ -20,17 +20,24 @@ def get_now_playing(username):
         response.raise_for_status()
         data = response.json()
         track = data["recenttracks"]["track"][0]
+        logging.warning(f"Raw track data: {track}")  # DEBUG
 
-        # Log full track for debugging
-        logging.warning(f"Raw track data: {track}")
+        artist = track.get("artist", {}).get("#text", "Unknown Artist")
+        title = track.get("name", "Unknown Title")
 
-        # Use safe retrieval
-        nowplaying = track.get("@attr", {}).get("nowplaying", "").lower() == "true"
-        if nowplaying:
-            artist = track["artist"]["#text"]
-            title = track["name"]
-            return f"{artist} – {title}"
+        image_list = track.get("image", [])
+        album_art = next((img["#text"] for img in reversed(image_list) if img.get("#text")), None)
+
+        now_playing = f"{artist} – {title}"
+
+        return {
+            "track": now_playing,
+            "album_art": album_art
+        }
+
     except Exception as e:
         logging.error(f"Last.fm fetch failed: {e}")
-
-    return None
+        return {
+            "now_playing": None,
+            "album_art": None
+        }
