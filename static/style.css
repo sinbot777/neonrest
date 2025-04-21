@@ -293,7 +293,7 @@ a.button:hover {
   background: rgba(0, 0, 0, 0.6);
 }
 .user-page {
-  max-width: 480px;
+  max-width: 680px;
   width: 100%;
   margin: 0 auto;
   padding: 2em;
@@ -468,8 +468,10 @@ html, body {
 }
 
 #main-content {
-  flex: 1;
+  flex: 1;  /* <- okay to leave */
+  max-width: 800px;  /* Optional: add this if you want tighter control */
 }
+
 
 #footer-tagline {
   padding: 1em;
@@ -994,9 +996,7 @@ input.glow-input:focus {
   opacity: 0.9;
 }
 
-.user-handle::before {
-  content: "@";
-}
+
 
 .explore-page {
   max-width: 700px;
@@ -1023,7 +1023,6 @@ input.glow-input:focus {
   border-radius: 16px;
   border: 2px solid var(--glow-color, #ffffff);
   box-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
-  margin-top: 1rem;
 }
 
 .avatar-img {
@@ -1037,12 +1036,11 @@ input.glow-input:focus {
 }
 
 .avatar-img.small {
-  width: 32px;
-  height: 32px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
   object-fit: cover;
   margin: 0; /* ✅ reset everything */
-  margin-right: 0.5rem;
   vertical-align: middle;
   display: inline-block; /* or leave unset if inside flex */
 }
@@ -1067,9 +1065,243 @@ input.glow-input:focus {
   text-align: left;
 }
 
-.avatar-img.small {
-  width: 32px;
-  height: 32px;
+.user-section-flex {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap; /* Optional for mobile */
+}
+
+.posts-column {
+  flex: 3;
+  min-width: 300px;
+}
+
+.main-and-top9 {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 4rem;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+  flex-wrap: nowrap;
+  box-sizing: border-box;
+}
+
+.info-box {
+  background-color: rgba(255, 255, 255, 0.02);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.05);
+}
+
+#main-content {
+  flex: 1;
+  max-width: 400px;
+}
+
+.top9-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.top9-slot {
+  text-align: center;
+  background: rgba(255,255,255,0.05);
+  border-radius: 1rem;
+  transition: transform 0.2s ease;
+}
+
+.top9-slot:hover {
+  transform: scale(1.05);
+}
+
+.top9-column {
+  flex: 2;
+  max-width: 700px;
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.1);
+}
+
+.top9-column h3 {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+aside.top9-column {
+  flex-shrink: 0;
+  text-align: center;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.1);
+}
+
+.avatar-frame {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 0.25rem;
   border-radius: 50%;
+  overflow: hidden;
+  background: #333;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-frame img {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
+}
+
+.placeholder .avatar-frame {
+  background: rgba(255,255,255,0.05);
+  font-size: 2rem;
+  color: #aaa;
+}
+
+@media (max-width: 768px) {
+  .user-section-flex {
+    flex-direction: column;
+}
+
+@media (max-width: 960px) {
+  .main-and-top9 {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .top9-column {
+    width: 100%;
+    margin-top: 2rem;
+  }
+}
+
+.user-profile-flex {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 3rem;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+  box-sizing: border-box;
+  align-items: flex-start;
+}
+
+.user-identity {
+  flex: 1;
+  min-width: 240px;
+  background-color: rgba(255, 255, 255, 0.03);
+  padding: 1.5rem;
+  border-radius: 1rem;
+  border: 1px solid #444;
+}
+
+.user-identity .avatar-img {
+  display: block;
+  width: 128px;
+  height: 128px;
+  object-fit: cover;
+  border-radius: 50%;
+  margin-bottom: 1rem;
+  border: 2px solid var(--glow-color, #fff);
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.3);
+}
+
+.user-identity h2 {
+  margin-top: 0;
+  margin-bottom: 0.25rem;
+  font-size: 1.5rem;
+  color: #ffb3ec;
+}
+
+.user-identity .nuid {
+  font-size: 0.9rem;
+  color: #aaa;
+  font-style: italic;
+  margin-bottom: 0.5rem;
+}
+
+.user-details {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px dashed #666;
+}
+
+.user-details p {
+  margin: 0.5rem 0;
+  color: #ccc;
+  font-size: 0.95rem;
+}
+
+.user-main-content {
+  flex: 2;
+  min-width: 320px;
+}
+
+.top9-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.top9-slot {
+  text-align: center;
+}
+
+.top9-slot .avatar-frame {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  overflow: hidden;
+  margin: 0 auto 0.5rem;
+  background: #333;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.top9-slot img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.user-handle {
+  font-size: 0.95rem;
+  color: #ffcde9;
+  text-shadow: 0 0 3px #ff99cc;
+}
+
+.recent-posts {
+  margin-top: 0;
+}
+
+.right-column {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  max-width: 500px;
+  flex: 2;  /* ✅ Add this */
+}
+
+.post-preview {
+  background-color: rgba(255, 255, 255, 0.03);
+  border-left: 4px solid #ffa7c4;
+  padding: 1em;
+  margin: 1.5em 0;
+  border-radius: 5px;
+  font-size: 1em;
+  line-height: 1.5;
 }

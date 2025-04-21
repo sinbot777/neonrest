@@ -1,0 +1,36 @@
+{% if session.get('user_id') and session.get('user_id') != user.id %}
+  {% set current_user_id = session.get('user_id') %}
+  {% set is_following = following_map.get(user.id) %}
+  {% set friend_status = friend_status_map.get(user.id, 'none') %}
+
+  <div class="friend-buttons">
+    <form method="POST" action="/follow/{{ user.id }}" style="display: inline;">
+      {% if not is_following %}
+        <button type="submit" class="friend-btn">Follow</button>
+      {% endif %}
+    </form>
+
+    <form method="POST" action="/unfollow/{{ user.id }}" style="display: inline;">
+      {% if is_following %}
+        <button type="submit" class="friend-btn">Unfollow</button>
+      {% endif %}
+    </form>
+
+    {% if friend_status == "none" %}
+      <form method="POST" action="/send_friend_request/{{ user.id }}" style="display: inline;">
+        <button type="submit" class="friend-btn">Add Friend</button>
+      </form>
+    {% elif friend_status == "pending" and user.id in pending_received_from %}
+      <form method="POST" action="/accept_friend_request/{{ user.id }}" style="display: inline;">
+        <button type="submit" class="friend-btn">Accept</button>
+      </form>
+      <form method="POST" action="/decline_friend_request/{{ user.id }}" style="display: inline;">
+        <button type="submit" class="friend-btn">Decline</button>
+      </form>
+    {% elif friend_status == "accepted" %}
+      <form method="POST" action="/remove_friend/{{ user.id }}" style="display: inline;">
+        <button type="submit" class="friend-btn">Remove Friend</button>
+      </form>
+    {% endif %}
+  </div>
+{% endif %}

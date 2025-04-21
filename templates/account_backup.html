@@ -42,9 +42,6 @@
       <option value="Australia/Sydney" {% if user.timezone == "Australia/Sydney" %}selected{% endif %}>Australia/Sydney</option>
     </select>
 
-    <label for="lastfm_username">Last.fm Username</label>
-    <input type="text" name="lastfm_username" value="{{ user.lastfm_username or '' }}" class="glow-input">
-
     <button type="submit">Save</button>
   </form>
 </div>

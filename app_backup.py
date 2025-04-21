@@ -3,14 +3,10 @@ import sqlite3
 import os
 import logging
 import re
-import markdown2
-
 
 from flask_mail import Mail, Message
 from werkzeug.security import generate_password_hash, check_password_hash
 from email_validator import validate_email
-from utils.lastfm import get_now_playing  # this is the helper you created
-
 import itsdangerous
 from datetime import datetime
 from utils.generate_unique_handle import generate_unique_handle
@@ -339,8 +335,10 @@ def user_by_handle(handle):
     viewer_id = session.get('user_id')
     incoming_requests, outgoing_requests = get_friend_requests(viewer_id)
     pending_received_from = [r['sender_id'] for r in incoming_requests]
+    # outgoing_requests = []  # Optionally implement later
     following_map = get_following_map(viewer_id)
 
+    # Build friend_status_map
     friend_status_map = {}
     if viewer_id:
         relationships = db.execute('''
@@ -353,6 +351,7 @@ def user_by_handle(handle):
             other_id = r['receiver_id'] if r['sender_id'] == viewer_id else r['sender_id']
             friend_status_map[other_id] = r['status']
 
+    # ✅ Get friends for this user's profile
     friends = db.execute('''
         SELECT u.id, u.handle, u.codename
         FROM users u
@@ -364,28 +363,19 @@ def user_by_handle(handle):
     ''', (user['id'], user['id'])).fetchall()
 
     top_friends = get_top_friends(db, user['id'])
-
-    posts_with_html = []
-    for post in posts:
-        html_content = markdown2.markdown(post['content'])
-        post_dict = dict(post)
-        post_dict['html_content'] = html_content
-        posts_with_html.append(post_dict)
-
     return render_template(
         "user.html",
         user=user,
-        posts=posts_with_html,  # ✅ This was the missing part
+        posts=posts,
         viewer_id=viewer_id,
         following_map=following_map,
         incoming_requests=incoming_requests,
         outgoing_requests=outgoing_requests,
         friend_status_map=friend_status_map,
         pending_received_from=pending_received_from,
-        friends=friends,
-        top_friends=top_friends
+        friends=friends,  # ✅ new context
+        top_friends=top_friends       # ✅ add this
     )
-
 
 @app.route('/user/<int:user_id>')
 def user_page(user_id):
@@ -451,76 +441,6 @@ def user_page(user_id):
         top_friends=top_friends       # ✅ add this
     )
 
-@app.route('/user_test/<int:user_id>')
-def user_page_test(user_id):
-    db = get_db()
-    user = db.execute('SELECT * FROM users WHERE id = ?', (user_id,)).fetchone()
-    if not user:
-        flash('User not found.', 'error')
-        return redirect('/')
-
-    posts = db.execute('''
-        SELECT posts.id, posts.user_id, posts.content, posts.circle, posts.created_at,
-               posts.last_edited, GROUP_CONCAT(vibes.name, ', ') AS vibes
-        FROM posts
-        LEFT JOIN post_vibes ON posts.id = post_vibes.post_id
-        LEFT JOIN vibes ON post_vibes.vibe_id = vibes.id
-        WHERE posts.user_id = ?
-        GROUP BY posts.id
-        ORDER BY posts.created_at DESC
-    ''', (user_id,)).fetchall()
-
-    viewer_id = session.get('user_id')
-    incoming_requests, outgoing_requests = get_friend_requests(viewer_id)
-    pending_received_from = [r['sender_id'] for r in incoming_requests]
-    # outgoing_requests = []  # Optionally implement later
-    following_map = get_following_map(viewer_id)
-
-    # Build friend_status_map
-    friend_status_map = {}
-    if viewer_id:
-        relationships = db.execute('''
-            SELECT sender_id, receiver_id, status
-            FROM friend_requests
-            WHERE sender_id = ? OR receiver_id = ?
-        ''', (viewer_id, viewer_id)).fetchall()
-
-        for r in relationships:
-            other_id = r['receiver_id'] if r['sender_id'] == viewer_id else r['sender_id']
-            friend_status_map[other_id] = r['status']
-
-    # ✅ Get friends for this user's profile
-    friends = db.execute('''
-        SELECT u.id, u.handle, u.codename
-        FROM users u
-        JOIN friend_requests fr ON (
-            (fr.sender_id = ? AND fr.receiver_id = u.id) OR
-            (fr.receiver_id = ? AND fr.sender_id = u.id)
-        )
-        WHERE fr.status = 'accepted'
-    ''', (user_id, user_id)).fetchall()
-
-    top_friends = get_top_friends(db, user['id'])
-    posts_with_html = []
-    for post in posts:
-        html_content = markdown2.markdown(post['content'])
-        post_dict = dict(post)
-        post_dict['html_content'] = html_content
-        posts_with_html.append(post_dict)
-    return render_template(
-        "user_test.html",
-        user=user,
-        posts=posts_with_html,
-        viewer_id=viewer_id,
-        following_map=following_map,
-        incoming_requests=incoming_requests,
-        outgoing_requests=outgoing_requests,
-        friend_status_map=friend_status_map,
-        pending_received_from=pending_received_from,
-        friends=friends,  # ✅ new context
-        top_friends=top_friends       # ✅ add this
-    )
-
 @app.route('/update_bio', methods=['POST'])
 def update_bio():
     if 'user_id' not in session:
@@ -571,11 +491,6 @@ def account():
             db.execute('UPDATE users SET timezone = ? WHERE id = ?', (tz, user['id']))
             flash("Timezone updated successfully.", "success")
 
-        if 'lastfm_username' in request.form:
-            new_lfm = request.form['lastfm_username'].strip()
-            db.execute('UPDATE users SET lastfm_username = ? WHERE id = ?', (new_lfm, user['id']))
-            flash("Last.fm username updated successfully.", "success")
-
         if 'new_password' in request.form:
             new_password = request.form['new_password'].strip()
             if new_password:
@@ -586,18 +501,6 @@ def account():
         db.commit()
 
     return render_template('account.html', user=user)
-
-
-@app.route("/now_playing/<username>")
-def now_playing(username):
-    from utils.lastfm import get_now_playing
-    import sys
-    print(f"Now Playing check for {username}", file=sys.stderr)
-    result = get_now_playing(username)
-    print(f"Result: {result}", file=sys.stderr)
-    return jsonify({"now_playing": result})
-
-
 
 @app.route('/create_post', methods=['GET', 'POST'])
 def create_post():
@@ -632,7 +535,7 @@ def create_post():
                     db.execute('INSERT INTO vibes (name) VALUES (?)', (vibe_name,))
                     db.commit()
                     vibe = db.execute('SELECT id FROM vibes WHERE name = ?', (vibe_name,)).fetchone()
-                db.execute('INSERT OR IGNORE INTO post_vibes (post_id, vibe_id) VALUES (?, ?)', (post_id, vibe['id']))
+                db.execute('INSERT INTO post_vibes (post_id, vibe_id) VALUES (?, ?)', (post_id, vibe['id']))
             db.commit()
 
             flash("Post created!", 'success')
@@ -663,16 +566,7 @@ def feed():
     ORDER BY posts.created_at DESC
     ''').fetchall()
 
-    # Convert Markdown content before rendering
-    posts_with_html = []
-    for post in posts:
-        html_content = markdown2.markdown(post['content'])
-        post_dict = dict(post)
-        post_dict['html_content'] = html_content
-        posts_with_html.append(post_dict)
-
-    return render_template('feed.html', posts=posts_with_html, vibe_slug='mixed')
-
+    return render_template('feed.html', posts=posts, vibe_slug='mixed')
 
 @app.route('/edit_post/<int:post_id>', methods=['GET', 'POST'])
 def edit_post(post_id):
@@ -697,10 +591,7 @@ def edit_post(post_id):
         else:
             db.execute('''
                 UPDATE posts
-                SET content = ?,
-                    vibe = ?,
-                    circle = ?,
-                    last_edited = CURRENT_TIMESTAMP
+                SET content = ?, vibe = ?, circle = ?, last_edited = CURRENT_TIMESTAMP
                 WHERE id = ?
             ''', (new_content, new_vibe, new_circle, post_id))
             db.commit()

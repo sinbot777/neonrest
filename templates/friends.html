@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Your Friends - Neonrest{% endblock %}
+{% block content %}
+<div class="user-page">
+  <h1 class="glow large">Friends</h1>
+
+  <div class="user-section">
+    <h2>Incoming Requests</h2>
+    {% for user in incoming %}
+      <p>
+        @{{ user.handle }} —
+        <form method="POST" action="/accept_friend_request/{{ user.id }}" style="display:inline;">
+          <button type="submit">Accept</button>
+        </form>
+        <form method="POST" action="/decline_friend_request/{{ user.id }}" style="display:inline;">
+          <button type="submit">Decline</button>
+        </form>
+      </p>
+    {% else %}
+      <p>No incoming requests.</p>
+    {% endfor %}
+  </div>
+
+  <div class="user-section">
+    <h2>Outgoing Requests</h2>
+    {% for user in outgoing %}
+      <p>{{ user.handle }} — Pending</p>
+    {% else %}
+      <p>No outgoing requests.</p>
+    {% endfor %}
+  </div>
+
+  <div class="user-section">
+    <h2>Friends</h2>
+    {% for user in friends %}
+      <p>
+        <a href="/{{ user.handle }}">{{ user.handle }}</a>
+        <form method="POST" action="/remove_friend/{{ user.id }}" style="display:inline;">
+          <button type="submit">Remove</button>
+        </form>
+      </p>
+    {% else %}
+      <p>No friends yet.</p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

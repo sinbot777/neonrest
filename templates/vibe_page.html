@@ -3,39 +3,56 @@
 {% block body_class %}theme-{{ theme_slug or 'default' }} vibe-{{ theme_slug or 'default' }}--{{ theme_mode or 'base' }}{% endblock %}
 
 {% block content %}
+<div class="page-wrapper">
   <div class="user-page">
     <div class="user-header">
-      <div class="glow large">#{{ vibe_name }}</div>
+    {% if vibe.logo_url %}
+      <img 
+        src="{% if vibe.logo_url.startswith('http') %}{{ vibe.logo_url }}{% else %}{{ '/static/' + vibe.logo_url }}{% endif %}"
+        alt="{{ vibe.name }} logo"
+        class="vibe-logo"
+        style="
+          {% if vibe.logo_width %}width: {{ vibe.logo_width }};{% endif %}
+          {% if vibe.logo_height %}height: {{ vibe.logo_height }};{% endif %}
+          {% if vibe.logo_padding %}padding: {{ vibe.logo_padding }};{% endif %}
+          display: block;
+          margin-left: {% if vibe.logo_align == 'left' %}0{% elif vibe.logo_align == 'right' %}auto{% else %}auto{% endif %};
+          margin-right: {% if vibe.logo_align == 'left' %}auto{% elif vibe.logo_align == 'right' %}0{% else %}auto{% endif %};
+        ">
+    {% else %}
+      <div class="glow large">#{{ vibe.name }}</div>
+    {% endif %}
+
       <p>Welcome to the {{ vibe_name }} vibe space.</p>
     </div>
-    <div class="user-section">
-  {% if posts %}
-    {% for post in posts %}
-      <div class="user-section vibe-{{ vibe_slug }}">
-        <h3><strong>@{{ post['handle'].lstrip('@') }}</strong></h3>
-        <p><strong>Vibes:</strong>
-          {% set vibe_list = (post['vibes'] or '').split(',') %}
-          {% for vibe in vibe_list %}
-            <a class="vibe-label" href="/vibe/{{ vibe.strip() | urlencode }}">{{ vibe.strip() }}</a>
-          {% endfor %}
-          | <strong>Circle:</strong> {{ post['circle'] or '—' }}
-        </p>
-        <p>{{ post['content'] }}</p>
-        {% if post['last_edited'] %}
-          <p class="post-timestamp">Last edited: {{ post['last_edited'] }}</p>
-        {% endif %}
-        <hr>
-      </div>
-    {% endfor %}
 
+    <div class="user-section">
+      {% if posts %}
+        {% for post in posts %}
+          <div class="user-section vibe-{{ vibe_slug }}">
+            <h3><strong>@{{ post['handle'].lstrip('@') }}</strong></h3>
+            <p><strong>Vibes:</strong>
+              {% set vibe_list = (post['vibes'] or '').split(',') %}
+              {% for vibe in vibe_list %}
+                <a class="vibe-label" href="/vibe/{{ vibe.strip() | urlencode }}">{{ vibe.strip() }}</a>
+              {% endfor %}
+              | <strong>Circle:</strong> {{ post['circle'] or '—' }}
+            </p>
+            <p>{{ post['content'] }}</p>
+            {% if post['last_edited'] %}
+              <p class="post-timestamp">Last edited: {{ post['last_edited'] }}</p>
+            {% endif %}
+            <hr>
+          </div>
+        {% endfor %}
       {% else %}
         <p>No posts in this vibe yet.</p>
       {% endif %}
     </div>
   </div>
+</div>
 
-  {% if custom_css %}
+{% if custom_css %}
   <style>{{ custom_css | safe }}</style>
-  {% endif %}
-
+{% endif %}
 {% endblock %}

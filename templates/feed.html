@@ -42,7 +42,7 @@
       <strong>Circle:</strong> {{ post['circle'] or "—" }}
     </p>
 
-    <p>{{ post['content'] }}</p>
+    <div class="post-content">{{ post['html_content'] | safe }}</div>
     {% if post['last_edited'] %}
   <p class="post-timestamp">Last edited: {{ post['last_edited'] }}</p>
 {% endif %}
