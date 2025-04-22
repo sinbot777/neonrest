@@ -32,9 +32,11 @@ body {
 }
 
 #main-content {
-  flex: 1;
-  max-width: 800px;
+  flex: 2;
+  max-width: 600px;
+  width: 100%;
 }
+
 
 /* Cleaned up: Removed duplicate @import and html/body definitions */
 
@@ -300,7 +302,7 @@ a.button:hover {
 
 .user-header {
   text-align: left;
-  margin-bottom: 3rem;
+  margin-bottom: 1rem;
 }
 
 .glow.large {
@@ -1049,6 +1051,70 @@ input.glow-input:focus {
   box-shadow: 0 0 6px rgba(255, 255, 255, 0.05);
 }
 
+.icon-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0;
+  margin-left: 0.4rem;
+  color: #ffa7c4;
+}
+
+.icon-button:hover {
+  color: #fff;
+  text-shadow: 0 0 4px #ffa7c4;
+}
+
+.inline-form {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.inline-form input.glow-input.small {
+  width: 7ch;                /* approx. 7 characters wide */
+  font-size: 0.95rem;
+  padding: 0.3rem 0.4rem;    /* slightly tighter padding */
+  margin-left: 0.4rem;       /* subtle space from "Mood:" label */
+}
+
+.icon-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  color: #ffcde9;
+  text-shadow: 0 0 2px #ffa7d7;
+  transition: transform 0.2s ease;
+}
+
+.icon-button:hover {
+  transform: scale(1.15);
+}
+
+.mood-section p {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap; /* optional fallback */
+}
+
+.mood-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.mood-line {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.5rem 0;
+}
+
 .top9-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -1224,11 +1290,11 @@ aside.top9-column {
 }
 
 .right-column {
+  flex: 1;
+  max-width: 400px;
   display: flex;
   flex-direction: column;
   gap: 2rem;
-  max-width: 500px;
-  flex: 2;  /* ✅ Add this */
 }
 
 .post-preview {

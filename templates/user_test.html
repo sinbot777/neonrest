@@ -25,10 +25,18 @@
       <div class="user-section">
         <h2>Details</h2>
         <p>Timezone: {{ user.timezone or "Unset" }}</p>
-
-        <p>Mood: {{ user.mood or "—" }}</p>
+        <div class="mood-line">
+          <span>Mood:</span>
+          {% if session.user_id == user.id %}
+            <form method="POST" action="/update_mood" class="inline-form">
+              <input type="text" name="mood" value="{{ user.mood or '' }}" class="glow-input small" placeholder="Enter your mood…">
+              <button type="submit" class="icon-button" title="Save mood">✏️</button>
+            </form>
+          {% else %}
+            <span>{{ user.mood or "—" }}</span>
+          {% endif %}
+        </div>
         <p>Frequent haunts: {{ user.vibes or "—" }}</p>
-
         <p>
           Now Playing:
           <span id="now-playing-text" aria-live="polite">—</span>
