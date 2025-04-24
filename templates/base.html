@@ -27,6 +27,10 @@
       }
     </style>
   {% endif %}
+
+<link rel="stylesheet" href="{{ url_for('static', filename='post_overrides.css') }}">
+
+
 </head>
 
 <body id="theme-root"
@@ -53,6 +57,12 @@
       </div>
     {% endif %}
   {% endwith %}
+<!-- Add this just before <div id="main-content"> -->
+<div id="site-logo">
+  <a href="/">
+    <img src="{{ url_for('static', filename='logo.png') }}" alt="Neonrest Logo" class="site-logo-img">
+  </a>
+</div>
 
   <div id="main-content">
     {% block content %}{% endblock %}
@@ -73,15 +83,16 @@
       {{ custom_css | safe }}
     }
 
+
     {% if font_stack %}
     body.vibe-{{ vibe_slug }}--{{ theme_mode }},
     body.vibe-{{ vibe_slug }}--{{ theme_mode }} * {
       font-family: {{ font_stack | safe }} !important;
     }
     {% endif %}
-
   </style>
 {% endif %}
+
 
 
   <footer id="footer-tagline">✨ Stay human, stay weird ✨</footer>
