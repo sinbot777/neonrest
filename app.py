@@ -459,24 +459,26 @@ def user_page_test(user_id):
         flash('User not found.', 'error')
         return redirect('/')
 
+    viewer_id = session.get('user_id')
+
+    # Always show all posts authored by this user, including guestbook posts
     posts = db.execute('''
-        SELECT posts.id, posts.user_id, posts.content, posts.circle, posts.created_at,
+        SELECT posts.id, posts.user_id, posts.target_user_id, posts.content, posts.circle, posts.created_at,
                posts.last_edited, GROUP_CONCAT(vibes.name, ', ') AS vibes,
-               u.handle AS author_handle, u.codename AS author_codename, u.avatar_path AS author_avatar
+               u.handle AS author_handle, u.codename AS author_codename, u.avatar_path AS author_avatar,
+               target.handle AS target_handle
         FROM posts
         JOIN users u ON posts.user_id = u.id
+        LEFT JOIN users target ON posts.target_user_id = target.id
         LEFT JOIN post_vibes ON posts.id = post_vibes.post_id
         LEFT JOIN vibes ON post_vibes.vibe_id = vibes.id
-        WHERE posts.target_user_id = ? OR (posts.target_user_id IS NULL AND posts.user_id = ?)
+        WHERE posts.user_id = ?
         GROUP BY posts.id
         ORDER BY posts.created_at DESC
-    ''', (user_id, user_id)).fetchall()
+    ''', (user_id,)).fetchall()
 
-
-    viewer_id = session.get('user_id')
     incoming_requests, outgoing_requests = get_friend_requests(viewer_id)
     pending_received_from = [r['sender_id'] for r in incoming_requests]
-    # outgoing_requests = []  # Optionally implement later
     following_map = get_following_map(viewer_id)
 
     # Build friend_status_map
@@ -492,7 +494,7 @@ def user_page_test(user_id):
             other_id = r['receiver_id'] if r['sender_id'] == viewer_id else r['sender_id']
             friend_status_map[other_id] = r['status']
 
-    # ✅ Get friends for this user's profile
+    # Get friends for this user's profile
     friends = db.execute('''
         SELECT u.id, u.handle, u.codename
         FROM users u
@@ -504,12 +506,21 @@ def user_page_test(user_id):
     ''', (user_id, user_id)).fetchall()
 
     top_friends = get_top_friends(db, user['id'])
+
     posts_with_html = []
     for post in posts:
-        html_content = markdown2.markdown(post['content'])
         post_dict = dict(post)
-        post_dict['html_content'] = html_content
+        post_dict['is_guestbook_outbound'] = (
+            post['target_user_id'] is not None and post['target_user_id'] != post['user_id']
+        )
+        post_dict['html_content'] = markdown2.markdown(post['content'])
+
+        # Strip any leading @ from handles for clean display
+        post_dict['author_handle'] = post['author_handle'].lstrip('@')
+        post_dict['target_handle'] = post['target_handle'].lstrip('@') if post['target_handle'] else None
+
         posts_with_html.append(post_dict)
+
     return render_template(
         "user_test.html",
         user=user,
@@ -520,9 +531,10 @@ def user_page_test(user_id):
         outgoing_requests=outgoing_requests,
         friend_status_map=friend_status_map,
         pending_received_from=pending_received_from,
-        friends=friends,  # ✅ new context
-        top_friends=top_friends       # ✅ add this
+        friends=friends,
+        top_friends=top_friends
     )
+
 
 @app.route('/update_bio', methods=['POST'])
 def update_bio():
