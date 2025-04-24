@@ -36,7 +36,26 @@
             <span>{{ user.mood or "—" }}</span>
           {% endif %}
         </div>
-        <p>Frequent haunts: {{ user.vibes or "—" }}</p>
+        <div class="haunts-section">
+          <span>Frequent haunts:</span>
+          {% if session.user_id == user.id %}
+            <form method="POST" action="/update_haunts" class="inline-form">
+              <input type="text" name="haunts" value="{{ user.frequent_haunts or '' }}" class="glow-input small" placeholder="e.g. Retro Arcade, Blue Moon Café">
+              <button type="submit" class="icon-button" title="Save haunts">📍</button>
+            </form>
+          {% else %}
+            {% if user.frequent_haunts %}
+              <ul class="haunt-list">
+                {% for haunt in user.frequent_haunts.split(',') %}
+                  <li><a href="https://www.google.com/maps/search/{{ haunt | urlencode }}" target="_blank">{{ haunt.strip() }}</a></li>
+                {% endfor %}
+              </ul>
+            {% else %}
+              <span>—</span>
+            {% endif %}
+          {% endif %}
+        </div>
+
         <p>
           Now Playing:
           <span id="now-playing-text" aria-live="polite">—</span>
@@ -44,39 +63,57 @@
         <div id="album-art" style="margin-top: 0.5rem;"></div>
 
         {% if user.lastfm_username %}
-<script>
-  document.addEventListener("DOMContentLoaded", function () {
-    fetch("/now_playing/{{ user.lastfm_username }}")
-      .then(res => res.json())
-      .then(data => {
-        console.log("Now Playing response:", data);
+        <script>
+          document.addEventListener("DOMContentLoaded", function () {
+            fetch("/now_playing/{{ user.lastfm_username }}")
+              .then(res => res.json())
+              .then(data => {
+                const npText = document.getElementById("now-playing-text");
+                const albumArt = document.getElementById("album-art");
 
-        const npText = document.getElementById("now-playing-text");
-        const albumArt = document.getElementById("album-art");
+                if (data.track) {
+                  npText.textContent = data.track;
+                }
 
-        if (data.track) {
-          npText.textContent = data.track;
-        }
-
-        if (data.album_art) {
-          albumArt.innerHTML = `<img src="${data.album_art}" alt="Album Art" style="max-width: 85%;">`;
-        }
-      })
-      .catch(err => console.error("Fetch failed:", err));
-  });
-</script>
-
-
+                if (data.album_art) {
+                  albumArt.innerHTML = `<img src="${data.album_art}" alt="Album Art" style="max-width: 85%;">`;
+                }
+              })
+              .catch(err => console.error("Now Playing fetch failed:", err));
+          });
+        </script>
         {% endif %}
       </div>
     </div>
 </div>
 
-
 <!-- Right Column: Top 9 and Posts -->
 <div class="right-column">
   <aside class="top9-column">
     <h3>Top 9</h3>
+    {% if session.user_id == user.id %}
+    <div id="top9-drag-container" class="top9-grid">
+      {% for i in range(9) %}
+        {% set friend = top_friends[i] if top_friends|length > i else None %}
+        <div class="top9-slot{% if not friend or friend.placeholder %} placeholder{% endif %}"
+             data-slot="{{ i }}"
+             {% if friend and not friend.placeholder %}draggable="true"{% endif %}
+             data-userid="{{ friend.id if friend and not friend.placeholder else '' }}">
+
+          {% if friend and not friend.placeholder %}
+            <img src="{{ friend.avatar_path or '/static/default-avatar.png' }}" alt="avatar" class="avatar-img small">
+            <div class="top9-name">{{ friend.codename or '@' + friend.handle.lstrip('@') }}</div>
+          {% else %}
+            <div class="avatar-frame add-friend-trigger" data-slot="{{ i }}">+</div>
+            <div class="top9-name">Empty</div>
+          {% endif %}
+
+        </div>
+      {% endfor %}
+    </div>
+<input type="hidden" id="slot_order" name="slot_order">
+
+    {% else %}
     <div class="top9-grid">
       {% for friend in top_friends %}
         <div class="top9-slot {% if friend.placeholder %}placeholder{% endif %}">
@@ -88,43 +125,144 @@
               <div class="avatar-frame">
                 <img src="{{ friend.avatar_path or '/static/default-avatar.png' }}" alt="Avatar" class="avatar-img small">
               </div>
-              <div class="user-handle">{{ friend.codename or '@' + friend.handle.lstrip('@') }}</div>
+              <div class="user-handle">{{ friend.codename }} ({{ friend.handle }})</div>
             </a>
           {% endif %}
         </div>
       {% endfor %}
     </div>
+    {% endif %}
   </aside>
 
-  <div class="recent-posts">
-    <h3>Recent Posts</h3>
-    {% if posts %}
-      {% for post in posts %}
-        {% set vibe_list = (post['vibes'] or '').split(',') %}
-        <div class="post-preview">
-          <p class="post-meta">
-            <strong>Vibes:</strong>
-            {% if vibe_list and vibe_list[0] %}
-              {% for vibe in vibe_list %}
-                <a href="/vibe/{{ vibe.strip() | urlencode }}">
-                  <span class="vibe-pill">{{ vibe.strip() }}</span>
-                </a>
-              {% endfor %}
-            {% else %}
-              <span>—</span>
-            {% endif %}
-            |
-            <strong>Circle:</strong> {{ post['circle'] or "—" }}
-          </p>
-          <div class="post-content">{{ post['html_content'] | safe }}</div>
-          <p class="timestamp">Posted on {{ post['created_at'] }}</p>
-        </div>
-      {% endfor %}
+  {% if session.user_id %}
+    {% if session.user_id == user.id %}
+      <button id="toggle-post-form" class="button">New Post</button>
     {% else %}
-      <p>No posts yet.</p>
+      <button id="toggle-post-form" class="button">Sign Guestbook</button>
     {% endif %}
-  </div>
+    <div class="inline-post-form" id="inline-post-form" style="display: none;">
+      <form method="POST" action="/create_post">
+        <textarea name="content" placeholder="Write something..." required></textarea>
+        <input type="hidden" name="target_user_id" value="{{ user.id }}">
+        <input type="text" name="vibes" placeholder="Vibes (comma separated)">
+        <input type="text" name="circle" placeholder="Circle (optional)">
+        <button type="submit" class="post-action update-post">Post</button>
+      </form>
+    </div>
+  {% endif %}
+
+<div class="recent-posts">
+  <h3>Recent Posts</h3>
+  {% if posts %}
+    {% for post in posts %}
+      <div class="post-preview">
+        <div class="post-header">
+          <img src="{{ post.author_avatar or '/static/default-avatar.png' }}" alt="avatar" class="avatar-img small">
+          <div class="post-user-meta">
+            <strong>
+              <a href="/@{{ post.author_handle }}" class="user-handle">@{{ post.author_handle }}</a>
+            </strong>
+            {% if post.author_codename %}
+              <span class="user-codename">({{ post.author_codename }})</span>
+            {% endif %}
+            <div class="post-date">{{ post.created_at }}</div>
+          </div>
+        </div>
+
+        <p class="post-meta">
+          <strong>Vibes:</strong>
+          {% if post.vibes %}
+            {% for vibe in post.vibes.split(',') %}
+              <a href="/vibe/{{ vibe.strip() | urlencode }}">
+                <span class="vibe-pill">{{ vibe.strip() }}</span>
+              </a>
+            {% endfor %}
+          {% else %}
+            <span>—</span>
+          {% endif %}
+          |
+          <strong>Circle:</strong> {{ post.circle or "—" }}
+        </p>
+
+        <div class="post-content">{{ post.html_content | safe }}</div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <p>No posts yet.</p>
+  {% endif %}
+</div>
+
 </div> <!-- end .right-column -->
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const container = document.getElementById('top9-drag-container');
+  let saveTimeout = null;
+
+  if (container) {
+    new Sortable(container, {
+      animation: 150,
+      ghostClass: 'dragging',
+      onEnd: () => {
+        clearTimeout(saveTimeout);
+        showFlash("💾 Saving...", "info");
+
+        saveTimeout = setTimeout(() => {
+          const ids = [...container.querySelectorAll('.top9-slot')]
+            .map(el => el.dataset.userid || '');
+          fetch("/update_top9", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({ slot_order: ids.join(',') })
+          }).then(res => {
+            if (res.ok) {
+              showFlash("Top 9 saved.", "success");
+            } else {
+              showFlash("Save failed.", "error");
+            }
+          }).catch(() => showFlash("Network error.", "error"));
+        }, 2500);
+      }
+    });
+  }
+
+    function showFlash(message, level = "info") {
+      const flash = document.createElement("div");
+      flash.className = `flash ${level}`;
+      flash.textContent = message;
+
+      // Style it with inline styles if your .flash CSS isn't visible
+      flash.style.position = "fixed";
+      flash.style.top = "1rem";
+      flash.style.right = "1rem";
+      flash.style.backgroundColor = "#222";
+      flash.style.color = "#fff";
+      flash.style.padding = "0.5rem 1rem";
+      flash.style.borderRadius = "8px";
+      flash.style.zIndex = "9999";
+      flash.style.boxShadow = "0 0 5px rgba(0,0,0,0.3)";
+
+      document.body.appendChild(flash);
+      setTimeout(() => flash.remove(), 2500);
+    }
+
+});
+</script>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const toggleButton = document.getElementById("toggle-post-form");
+    const form = document.getElementById("inline-post-form");
+
+    if (toggleButton && form) {
+      toggleButton.addEventListener("click", function () {
+        const isHidden = form.style.display === "none";
+        form.style.display = isHidden ? "block" : "none";
+        toggleButton.textContent = isHidden ? "Hide Post" : "New Post";
+      });
+    }
+  });
+</script>
 
 
 {% endblock %}

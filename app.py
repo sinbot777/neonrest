@@ -461,14 +461,17 @@ def user_page_test(user_id):
 
     posts = db.execute('''
         SELECT posts.id, posts.user_id, posts.content, posts.circle, posts.created_at,
-               posts.last_edited, GROUP_CONCAT(vibes.name, ', ') AS vibes
+               posts.last_edited, GROUP_CONCAT(vibes.name, ', ') AS vibes,
+               u.handle AS author_handle, u.codename AS author_codename, u.avatar_path AS author_avatar
         FROM posts
+        JOIN users u ON posts.user_id = u.id
         LEFT JOIN post_vibes ON posts.id = post_vibes.post_id
         LEFT JOIN vibes ON post_vibes.vibe_id = vibes.id
-        WHERE posts.user_id = ?
+        WHERE posts.target_user_id = ? OR (posts.target_user_id IS NULL AND posts.user_id = ?)
         GROUP BY posts.id
         ORDER BY posts.created_at DESC
-    ''', (user_id,)).fetchall()
+    ''', (user_id, user_id)).fetchall()
+
 
     viewer_id = session.get('user_id')
     incoming_requests, outgoing_requests = get_friend_requests(viewer_id)
@@ -599,8 +602,6 @@ def now_playing(username):
 
     return jsonify(result)
 
-
-
 @app.route('/create_post', methods=['GET', 'POST'])
 def create_post():
     print("🟢 This is the updated /create_post route")
@@ -608,25 +609,30 @@ def create_post():
         flash("Please log in to post.", 'error')
         return redirect('/login')
 
+    user_id = session['user_id']
+    db = get_db()
+
     if request.method == 'POST':
         content = request.form['content'].strip()
-        vibes_input = request.form['vibes'].strip()  # Fix: using 'vibes' instead of 'vibe'
-        circle = request.form['circle'].strip()
+        vibes_input = request.form.get('vibes', '').strip()
+        circle = request.form.get('circle', '').strip()
+        target_user_id = int(request.form.get('target_user_id', user_id))
 
         if not content:
             flash("Post content cannot be empty.", 'error')
         else:
-            db = get_db()
-            # Insert post (no post_vibe column anymore)
+            now = datetime.utcnow().isoformat()
+
+            # Save post
             db.execute('''
-                INSERT INTO posts (user_id, content, circle)
-                VALUES (?, ?, ?)
-            ''', (session['user_id'], content, circle))
+                INSERT INTO posts (user_id, target_user_id, content, circle, created_at)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (user_id, target_user_id, content, circle, now))
             db.commit()
 
             post_id = db.execute('SELECT last_insert_rowid()').fetchone()[0]
 
-            # Associate vibes
+            # Handle vibes
             vibe_names = [v.strip() for v in vibes_input.split(',') if v.strip()]
             for vibe_name in vibe_names:
                 vibe = db.execute('SELECT id FROM vibes WHERE name = ?', (vibe_name,)).fetchone()
@@ -638,8 +644,9 @@ def create_post():
             db.commit()
 
             flash("Post created!", 'success')
-            return redirect('/feed')
+            return redirect(f'/user_test/{target_user_id}')
 
+    # If GET, render standalone page
     return render_template('create_post.html')
 
 
@@ -904,6 +911,26 @@ def edit_theme(slug, mode):
     editable_themes=editable_themes,
     vibe=vibe
 )
+
+@app.route('/update_top9', methods=['POST'])
+def update_top9():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    slot_order = request.form.get('slot_order', '')
+    friend_ids = [fid.strip() for fid in slot_order.split(',') if fid.strip().isdigit()]
+
+    db = get_db()
+    db.execute('DELETE FROM top_friends WHERE user_id = ?', (session['user_id'],))
+
+    for position, friend_id in enumerate(friend_ids):
+        db.execute('''
+            INSERT INTO top_friends (user_id, friend_id, position_t9)
+            VALUES (?, ?, ?)
+        ''', (session['user_id'], int(friend_id), position))
+
+    db.commit()
+    return jsonify({'success': True})
 
 
 @app.route('/logout')
