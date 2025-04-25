@@ -1609,6 +1609,65 @@ body #main-content div.post-preview.guestbook-outbound {
   transition: color 0.2s ease-in-out;
 }
 
+.react-form {
+  margin-top: 0.5em;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4em;
+}
+
+/* Reuse .icon-button for styling consistency */
+.react-form .icon-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  color: #ffcde9;
+  text-shadow: 0 0 2px #ffa7d7;
+  transition: transform 0.2s ease;
+  padding: 0;
+}
+
+.react-form .icon-button:hover {
+  transform: scale(1.15);
+  color: #fff;
+  text-shadow: 0 0 4px #ffa7c4;
+}
+
+/* Optional: Highlight if user has already reacted */
+.react-form .icon-button.active {
+  font-weight: bold;
+  text-shadow: 0 0 6px #fff;
+}
+
+
+.react-btn {
+  font-size: 1.1rem;
+  line-height: 1;
+  border: none;
+  background: none;
+  color: #ffcde9;
+  cursor: pointer;
+  padding: 0.2em 0.4em;
+  border-radius: 6px;
+  text-shadow: 0 0 5px #ffa7d7;
+  transition: transform 0.2s ease, background-color 0.3s ease;
+}
+
+.react-btn:hover {
+  transform: scale(1.15);
+  background-color: rgba(255, 167, 199, 0.1); /* soft pink glow */
+  text-shadow: 0 0 8px #fff;
+}
+
+/* Optional: bold glow if user has reacted (if tracked later) */
+.react-btn.active {
+  font-weight: bold;
+  text-shadow: 0 0 6px #fff;
+}
+
+
 .post-actions {
   position: absolute;
   top: 8px;

@@ -32,6 +32,7 @@ def get_now_playing(username):
 
         return {
             "track": now_playing,
+            "url": track.get("url"),  # ← add this line!
             "album_art": album_art
         }
 

@@ -228,6 +228,17 @@
   </p>
 
   <div class="post-content">{{ post.html_content | safe }}</div>
+    <div class="react-form" data-post-id="{{ post.id }}">
+    {% for react in ['👍', '👎', '🕶️', '💖', '💩', '🤮', '❓', '🔥', '🐐', '🦙'] %}
+        {% set count = post.reaction_counts[react] if post.reaction_counts and react in post.reaction_counts else 0 %}
+        <button type="button" class="icon-button react-btn" data-emoji="{{ react }}">
+          {{ react }}{% if count %} {{ count }}{% endif %}
+        </button>
+      {% endfor %}
+    </div>
+
+
+
 </div>
 
     {% endfor %}
@@ -293,6 +304,44 @@ document.addEventListener("DOMContentLoaded", () => {
 
 });
 </script>
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    document.querySelectorAll(".react-form").forEach(form => {
+      const postId = form.dataset.postId;
+
+      form.querySelectorAll("button").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const emoji = btn.dataset.emoji;
+          console.log("Clicked:", emoji, "Post ID:", postId);  // 🧪 DEBUG
+
+          fetch(`/react/${postId}`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ emoji })
+          })
+          .then(res => res.json())
+            .then(data => {
+              if (data.status === "ok") {
+                const emoji = data.emoji;
+                const count = data.count || 0;
+                const action = data.action;
+
+                btn.classList.toggle("active", action === "added");
+                btn.textContent = `${emoji} ${count > 0 ? count : ""}`;
+              } else {
+                console.error("Reaction failed:", data.message);
+              }
+            })
+          .catch(err => console.error("Fetch error:", err));
+        });
+      });
+    });
+  });
+</script>
+
+
 <script>
   document.addEventListener("DOMContentLoaded", function () {
     const toggleButton = document.getElementById("toggle-post-form");
