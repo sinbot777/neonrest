@@ -13,6 +13,9 @@
       {% if user.codename %}
         <p><em>"{{ user.codename }}"</em></p>
       {% endif %}
+        {% if viewer_id != user['id'] %}
+          {% include 'partials/friend_buttons.html' %}
+        {% endif %}
     </div>
 
     <div class="user-section">
@@ -56,33 +59,38 @@
           {% endif %}
         </div>
 
-        <p>
-          Now Playing:
-          <span id="now-playing-text" aria-live="polite">—</span>
-        </p>
-        <div id="album-art" style="margin-top: 0.5rem;"></div>
+<p>
+  Now Playing:
+  <span id="now-playing-text" aria-live="polite">—</span>
+</p>
+<div id="album-art" style="margin-top: 0.5rem;"></div>
 
-        {% if user.lastfm_username %}
-        <script>
-          document.addEventListener("DOMContentLoaded", function () {
-            fetch("/now_playing/{{ user.lastfm_username }}")
-              .then(res => res.json())
-              .then(data => {
-                const npText = document.getElementById("now-playing-text");
-                const albumArt = document.getElementById("album-art");
+{% if user.lastfm_username %}
+<script>
+  window.addEventListener("DOMContentLoaded", function () {
+    fetch("/now_playing/{{ user.lastfm_username }}")
+      .then(res => res.json())
+      .then(data => {
+        const npText = document.getElementById("now-playing-text");
+        const albumArt = document.getElementById("album-art");
 
-                if (data.track) {
-                  npText.textContent = data.track;
-                }
+        if (data.track) {
+          if (data.url) {
+            npText.innerHTML = `<a href="${data.url}" target="_blank" title="View on Last.fm">${data.track}</a>`;
+          } else {
+            npText.textContent = data.track;
+          }
+        }
 
-                if (data.album_art) {
-                  albumArt.innerHTML = `<img src="${data.album_art}" alt="Album Art" style="max-width: 85%;">`;
-                }
-              })
-              .catch(err => console.error("Now Playing fetch failed:", err));
-          });
-        </script>
-        {% endif %}
+        if (data.album_art) {
+          albumArt.innerHTML = `<img src="${data.album_art}" alt="Album Art" style="max-width: 85%;">`;
+        }
+      })
+      .catch(err => console.error("Now Playing fetch failed:", err));
+  });
+</script>
+{% endif %}
+
       </div>
     </div>
 </div>
@@ -90,7 +98,14 @@
 <!-- Right Column: Top 9 and Posts -->
 <div class="right-column">
   <aside class="top9-column">
-    <h3>Top 9</h3>
+<div class="top9-header-row">
+  <h3 class="top9-label">Top 9 Friends</h3>
+  {% if viewer_id == user['id'] %}
+    <a href="/account/friends" class="top9-manage-link">+/-</a>
+  {% endif %}
+</div>
+
+
     {% if session.user_id == user.id %}
     <div id="top9-drag-container" class="top9-grid">
       {% for i in range(9) %}
@@ -102,7 +117,14 @@
 
           {% if friend and not friend.placeholder %}
             <img src="{{ friend.avatar_path or '/static/default-avatar.png' }}" alt="avatar" class="avatar-img small">
-            <div class="top9-name">{{ friend.codename or '@' + friend.handle.lstrip('@') }}</div>
+            <div class="top9-name">
+              {% if friend.codename %}
+                <span class="user-handle">{{ friend.codename }}</span>
+              {% endif %}
+              <span class="user-handle">@{{ friend.handle.lstrip('@') }}</span>
+            </div>
+
+
           {% else %}
             <div class="avatar-frame add-friend-trigger" data-slot="{{ i }}">+</div>
             <div class="top9-name">Empty</div>
@@ -125,7 +147,10 @@
               <div class="avatar-frame">
                 <img src="{{ friend.avatar_path or '/static/default-avatar.png' }}" alt="Avatar" class="avatar-img small">
               </div>
-              <div class="user-handle">{{ friend.codename }} ({{ friend.handle }})</div>
+                <div class="top9-name">
+                  <span class="user-handle">{{ friend.codename }}</span><br>
+                  <span class="user-handle">@{{ friend.handle.lstrip('@') }}</span>
+                </div>
             </a>
           {% endif %}
         </div>
@@ -155,37 +180,56 @@
   <h3>Recent Posts</h3>
   {% if posts %}
     {% for post in posts %}
-      <div class="post-preview">
-        <div class="post-header">
-          <img src="{{ post.author_avatar or '/static/default-avatar.png' }}" alt="avatar" class="avatar-img small">
-          <div class="post-user-meta">
-            <strong>
-              <a href="/@{{ post.author_handle }}" class="user-handle">@{{ post.author_handle }}</a>
-            </strong>
-            {% if post.author_codename %}
-              <span class="user-codename">({{ post.author_codename }})</span>
-            {% endif %}
-            <div class="post-date">{{ post.created_at }}</div>
-          </div>
+<div class="post-preview{% if post.is_guestbook_outbound %} guestbook-outbound{% endif %}">
+  <div class="post-header">
+    <img src="{{ post.author_avatar or '/static/default-avatar.png' }}" alt="avatar" class="avatar-img small">
+    <div class="post-user-meta">
+{% if post.is_guestbook_outbound and post.target_handle %}
+  <strong>
+    <a href="/@{{ post.author_handle }}" class="user-handle">@{{ post.author_handle }}</a> ➝
+    <a href="/@{{ post.target_handle }}" class="user-handle">@{{ post.target_handle }}</a>
+  </strong>
+{% else %}
+  <strong>
+    <a href="/@{{ post.author_handle }}" class="user-handle">@{{ post.author_handle }}</a>
+  </strong>
+  {% if post.author_codename %}
+    <span class="user-codename">({{ post.author_codename }})</span>
+  {% endif %}
+{% endif %}
+
+      <div class="post-date">{{ post.created_at }}</div>
+      {% if viewer_id == post.user_id %}
+      <div class="post-actions">
+        <button class="icon-button" onclick="togglePostMenu(this)">⋮</button>
+        <div class="post-dropdown" style="display: none;">
+          <a href="/edit_post/{{ post.id }}">Edit</a>
+          <a href="/delete_post/{{ post.id }}" onclick="return confirm('Delete this post?')">Delete</a>
         </div>
-
-        <p class="post-meta">
-          <strong>Vibes:</strong>
-          {% if post.vibes %}
-            {% for vibe in post.vibes.split(',') %}
-              <a href="/vibe/{{ vibe.strip() | urlencode }}">
-                <span class="vibe-pill">{{ vibe.strip() }}</span>
-              </a>
-            {% endfor %}
-          {% else %}
-            <span>—</span>
-          {% endif %}
-          |
-          <strong>Circle:</strong> {{ post.circle or "—" }}
-        </p>
-
-        <div class="post-content">{{ post.html_content | safe }}</div>
       </div>
+    {% endif %}
+
+    </div>
+  </div>
+
+  <p class="post-meta">
+    <strong>Vibes:</strong>
+    {% if post.vibes %}
+      {% for vibe in post.vibes.split(',') %}
+        <a href="/vibe/{{ vibe.strip() | urlencode }}">
+          <span class="vibe-pill">{{ vibe.strip() }}</span>
+        </a>
+      {% endfor %}
+    {% else %}
+      <span>—</span>
+    {% endif %}
+    |
+    <strong>Circle:</strong> {{ post.circle or "—" }}
+  </p>
+
+  <div class="post-content">{{ post.html_content | safe }}</div>
+</div>
+
     {% endfor %}
   {% else %}
     <p>No posts yet.</p>
@@ -262,6 +306,21 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
   });
+</script>
+<script>
+function togglePostMenu(button) {
+  const menu = button.nextElementSibling;
+  document.querySelectorAll('.post-dropdown').forEach(el => {
+    if (el !== menu) el.style.display = 'none';
+  });
+  menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+}
+
+document.addEventListener('click', function (e) {
+  if (!e.target.closest('.post-actions')) {
+    document.querySelectorAll('.post-dropdown').forEach(el => el.style.display = 'none');
+  }
+});
 </script>
 
 
