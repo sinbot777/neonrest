@@ -455,6 +455,19 @@ def user_page(user_id):
 def user_page_test(user_id):
     db = get_db()
     user = db.execute('SELECT * FROM users WHERE id = ?', (user_id,)).fetchone()
+    from utils.lastfm import get_now_playing  # make sure this is at the top if not already
+
+    # Now Playing (if lastfm_username is set)
+    now_playing_text = None
+    now_playing_url = None
+    if user and user['lastfm_username']:
+        try:
+            now_playing = get_now_playing(user['lastfm_username'])
+            now_playing_text = now_playing.get('track')
+            now_playing_url = now_playing.get('url')
+        except Exception as e:
+            print(f"[Last.fm] Error fetching now playing: {e}")
+
     if not user:
         flash('User not found.', 'error')
         return redirect('/')
@@ -532,7 +545,9 @@ def user_page_test(user_id):
         friend_status_map=friend_status_map,
         pending_received_from=pending_received_from,
         friends=friends,
-        top_friends=top_friends
+        top_friends=top_friends,
+        now_playing_text=now_playing_text,
+        now_playing_url=now_playing_url
     )
 
 
