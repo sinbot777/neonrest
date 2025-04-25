@@ -19,6 +19,8 @@ from utils.image_uploads import allowed_file   # ✅ Your image upload helper
 
 from routes.friends import bp as friends_bp  # ✅ IMPORT FIRST
 
+VALID_REACTS = ["👍", "👎", "🕶️", "💖", "💩", "🤮", "❓", "🔥", "🐐", "🦙"]
+
 # Basic logging setup
 logging.basicConfig(level=logging.DEBUG)
 
@@ -534,6 +536,23 @@ def user_page_test(user_id):
 
         posts_with_html.append(post_dict)
 
+    reaction_data = db.execute('''
+      SELECT post_id, emoji, COUNT(*) as count
+      FROM post_reactions
+      GROUP BY post_id, emoji
+    ''').fetchall()
+
+    reaction_map = {}
+    for row in reaction_data:
+        post_id = row['post_id']
+        emoji = row['emoji']
+        count = row['count']
+        reaction_map.setdefault(post_id, {})[emoji] = count
+
+    for post in posts_with_html:
+        post['reaction_counts'] = reaction_map.get(post['id'], {})
+
+
     return render_template(
         "user_test.html",
         user=user,
@@ -547,7 +566,8 @@ def user_page_test(user_id):
         friends=friends,
         top_friends=top_friends,
         now_playing_text=now_playing_text,
-        now_playing_url=now_playing_url
+        now_playing_url=now_playing_url,
+        VALID_REACTS=VALID_REACTS
     )
 
 
@@ -958,6 +978,56 @@ def update_top9():
 
     db.commit()
     return jsonify({'success': True})
+
+@app.route("/react/<int:post_id>", methods=["POST"])
+def react_to_post(post_id):
+    if 'user_id' not in session:
+        if request.is_json:
+            return jsonify({ "status": "unauthorized" }), 401
+        return redirect("/login")
+
+    user_id = session['user_id']
+    data = request.get_json(silent=True)
+    emoji = data.get('emoji') if data else request.form.get('emoji')
+
+    if emoji not in VALID_REACTS:
+        return jsonify({ "status": "error", "message": "Invalid reaction" }), 400
+
+    db = get_db()
+
+    # Check if this reaction already exists
+    existing = db.execute("""
+        SELECT 1 FROM post_reactions WHERE post_id = ? AND user_id = ? AND emoji = ?
+    """, (post_id, user_id, emoji)).fetchone()
+
+    if existing:
+        # Remove reaction
+        db.execute("""
+            DELETE FROM post_reactions WHERE post_id = ? AND user_id = ? AND emoji = ?
+        """, (post_id, user_id, emoji))
+        db.commit()
+        action = "removed"
+    else:
+        # Add reaction
+        db.execute("""
+            INSERT INTO post_reactions (post_id, user_id, emoji)
+            VALUES (?, ?, ?)
+        """, (post_id, user_id, emoji))
+        db.commit()
+        action = "added"
+
+    # Get the updated count
+    count = db.execute("""
+        SELECT COUNT(*) FROM post_reactions
+        WHERE post_id = ? AND emoji = ?
+    """, (post_id, emoji)).fetchone()[0]
+
+    return jsonify({
+        "status": "ok",
+        "emoji": emoji,
+        "count": count,
+        "action": action
+    })
 
 
 @app.route('/logout')
