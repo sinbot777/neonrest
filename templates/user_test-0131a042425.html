@@ -1,0 +1,243 @@
+{% extends 'base.html' %}
+{% block title %}{{ user.handle }} - Neonrest{% endblock %}
+
+{% block content %}
+<div class="main-and-top9">
+  <!-- Left Column: User Identity -->
+<div id="main-content">
+  <div class="info-box">
+    <div class="user-header">
+      <img src="{{ user.avatar_path or '/static/default-avatar.png' }}" alt="Avatar" class="avatar-img">
+      <h1 class="glow large">{{ user.handle }}</h1>
+      <p class="nuid-badge">NUID: #{{ '%03d' | format(user['id']) }}</p>
+      {% if user.codename %}
+        <p><em>"{{ user.codename }}"</em></p>
+      {% endif %}
+    </div>
+
+    <div class="user-section">
+      <h2>Bio</h2>
+      <p>{{ user.bio or "This user hasn’t written a bio yet." }}</p>
+    </div>
+  </div>
+
+    <div class="info-box">
+      <div class="user-section">
+        <h2>Details</h2>
+        <p>Timezone: {{ user.timezone or "Unset" }}</p>
+        <div class="mood-line">
+          <span>Mood:</span>
+          {% if session.user_id == user.id %}
+            <form method="POST" action="/update_mood" class="inline-form">
+              <input type="text" name="mood" value="{{ user.mood or '' }}" class="glow-input small" placeholder="Enter your mood…">
+              <button type="submit" class="icon-button" title="Save mood">✏️</button>
+            </form>
+          {% else %}
+            <span>{{ user.mood or "—" }}</span>
+          {% endif %}
+        </div>
+        <div class="haunts-section">
+          <span>Frequent haunts:</span>
+          {% if session.user_id == user.id %}
+            <form method="POST" action="/update_haunts" class="inline-form">
+              <input type="text" name="haunts" value="{{ user.frequent_haunts or '' }}" class="glow-input small" placeholder="e.g. Retro Arcade, Blue Moon Café">
+              <button type="submit" class="icon-button" title="Save haunts">📍</button>
+            </form>
+          {% else %}
+            {% if user.frequent_haunts %}
+              <ul class="haunt-list">
+                {% for haunt in user.frequent_haunts.split(',') %}
+                  <li><a href="https://www.google.com/maps/search/{{ haunt | urlencode }}" target="_blank">{{ haunt.strip() }}</a></li>
+                {% endfor %}
+              </ul>
+            {% else %}
+              <span>—</span>
+            {% endif %}
+          {% endif %}
+        </div>
+
+        <p>
+          Now Playing:
+          <span id="now-playing-text" aria-live="polite">—</span>
+        </p>
+        <div id="album-art" style="margin-top: 0.5rem;"></div>
+
+        {% if user.lastfm_username %}
+        {% endif %}
+      </div>
+    </div>
+</div>
+
+<!-- Right Column: Top 9 and Posts -->
+<div class="right-column">
+  <aside class="top9-column">
+    <h3>Top 9</h3>
+    {% if session.user_id == user.id %}
+    <div id="top9-drag-container" class="top9-grid">
+      {% for i in range(9) %}
+        {% set friend = top_friends[i] if top_friends|length > i else None %}
+        <div class="top9-slot{% if not friend or friend.placeholder %} placeholder{% endif %}"
+             data-slot="{{ i }}"
+             {% if friend and not friend.placeholder %}draggable="true"{% endif %}
+             data-userid="{{ friend.id if friend and not friend.placeholder else '' }}">
+
+          {% if friend and not friend.placeholder %}
+            <img src="{{ friend.avatar_path or '/static/default-avatar.png' }}" alt="avatar" class="avatar-img small">
+            <div class="top9-name">{{ friend.codename or '@' + friend.handle.lstrip('@') }}</div>
+          {% else %}
+            <div class="avatar-frame add-friend-trigger" data-slot="{{ i }}">+</div>
+            <div class="top9-name">Empty</div>
+          {% endif %}
+
+        </div>
+      {% endfor %}
+    </div>
+
+    {% else %}
+    <div class="top9-grid">
+      {% for friend in top_friends %}
+        <div class="top9-slot {% if friend.placeholder %}placeholder{% endif %}">
+          {% if friend.placeholder %}
+            <div class="avatar-frame">+</div>
+            <a href="#" class="user-handle">Add</a>
+          {% else %}
+            <a href="/@{{ friend.handle.lstrip('@') }}">
+              <div class="avatar-frame">
+                <img src="{{ friend.avatar_path or '/static/default-avatar.png' }}" alt="Avatar" class="avatar-img small">
+              </div>
+              <div class="user-handle">{{ friend.codename }} ({{ friend.handle }})</div>
+            </a>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </aside>
+
+  {% if session.user_id %}
+    {% if session.user_id == user.id %}
+      <button id="toggle-post-form" class="button">New Post</button>
+    {% else %}
+      <button id="toggle-post-form" class="button">Sign Guestbook</button>
+    {% endif %}
+    <div class="inline-post-form" id="inline-post-form" style="display: none;">
+      <form method="POST" action="/create_post">
+        <textarea name="content" placeholder="Write something..." required></textarea>
+        <input type="hidden" name="target_user_id" value="{{ user.id }}">
+        <input type="text" name="vibes" placeholder="Vibes (comma separated)">
+        <input type="text" name="circle" placeholder="Circle (optional)">
+        <button type="submit" class="post-action update-post">Post</button>
+      </form>
+    </div>
+  {% endif %}
+
+  <div class="recent-posts">
+    <h3>Recent Posts</h3>
+    {% if posts %}
+      {% for post in posts %}
+        {% set vibe_list = (post['vibes'] or '').split(',') %}
+        <div class="post-preview">
+<p class="post-meta">
+  <strong>Vibes:</strong>
+  {% if vibe_list and vibe_list[0] %}
+    {% for vibe in vibe_list %}
+      <a href="/vibe/{{ vibe.strip() | urlencode }}">
+        <span class="vibe-pill">{{ vibe.strip() }}</span>
+      </a>
+    {% endfor %}
+  {% else %}
+    <span>—</span>
+  {% endif %}
+  |
+  <strong>Circle:</strong> {{ post['circle'] or "—" }}
+</p>
+
+  <div class="post-content">{{ post['html_content'] | safe }}</div>
+
+<div class="post-header">
+  <img src="{{ post.author_avatar or '/static/default-avatar.png' }}" alt="avatar" class="avatar-img small">
+  <div class="post-user-meta">
+    <strong>
+      <a href="/{{ post.author_handle }}" class="user-handle">{{ post.author_handle }}</a>
+    </strong>
+    {% if post.author_codename %}
+      <span class="user-codename">({{ post.author_codename }})</span>
+    {% endif %}
+    <div class="post-date">{{ post.created_at }}</div>
+  </div>
+</div>
+
+        </div>
+      {% endfor %}
+    {% else %}
+      <p>No posts yet.</p>
+    {% endif %}
+  </div>
+</div> <!-- end .right-column -->
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const container = document.getElementById('top9-drag-container');
+  let dragging = null;
+
+  container.addEventListener('dragstart', e => {
+    dragging = e.target;
+    dragging.classList.add('dragging');
+  });
+
+  container.addEventListener('dragend', e => {
+    dragging.classList.remove('dragging');
+    dragging = null;
+
+    // When dragging stops, send update
+    const ids = [...container.querySelectorAll('.top9-slot')]
+      .map(el => el.dataset.userid)
+      .filter(id => id);
+
+    fetch("/update_top9", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      body: new URLSearchParams({
+        slot_order: ids.join(',')
+      })
+    }).then(response => {
+      if (response.ok) {
+        console.log("✅ Top 9 saved.");
+        showFlash("Top 9 saved.", "success");
+      } else {
+        console.error("❌ Failed to save Top 9.");
+        showFlash("Something went wrong.", "error");
+      }
+    }).catch(error => {
+      console.error("❌ Network error:", error);
+      showFlash("Network error.", "error");
+    });
+  });
+
+  container.addEventListener('dragover', e => {
+    e.preventDefault();
+    const afterElement = [...container.querySelectorAll('.top9-slot:not(.dragging)')].find(el => {
+      const box = el.getBoundingClientRect();
+      const offset = e.clientY - box.top - box.height / 2;
+      return offset < 0;
+    });
+
+    if (afterElement && dragging) {
+      container.insertBefore(dragging, afterElement);
+    }
+  });
+
+  // Flash message helper
+  function showFlash(message, level = "info") {
+    const flash = document.createElement("div");
+    flash.className = flash ${level};
+    flash.textContent = message;
+    document.body.appendChild(flash);
+    setTimeout(() => flash.remove(), 3000);
+  }
+});
+</script>
+
+{% endblock %}

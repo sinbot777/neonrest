@@ -2,6 +2,25 @@
 {% block title %}{{ user.handle }} - Neonrest{% endblock %}
 
 {% block content %}
+{% if user_theme %}
+  <style>
+    :root {
+      --bg-color: {{ user_theme.bg_color or '#111' }};
+      --text-color: {{ user_theme.text_color or '#fff' }};
+      --accent-color: {{ user_theme.accent_color or '#ffa7c4' }};
+      --meta-text: {{ user_theme.meta_text or '#aaa' }};
+      --glow-color: {{ user_theme.glow_color or '#ffa7d7' }};
+      --vibe-pill-bg: {{ user_theme.vibe_pill_bg or '#ffeebb' }};
+      --vibe-pill-color: {{ user_theme.vibe_pill_color or '#333' }};
+      --reaction-active: {{ user_theme.reaction_active or '#fff' }};
+      --reaction-hover-bg: {{ user_theme.reaction_hover_bg or 'rgba(255, 167, 199, 0.1)' }};
+      --reaction-glow: {{ user_theme.reaction_glow or '#ffa7d7' }};
+      font-family: {{ user_theme.font_stack | safe }};
+    }
+    {{ user_theme.custom_css | safe }}
+  </style>
+{% endif %}
+
 <div class="main-and-top9">
   <!-- Left Column: User Identity -->
 <div id="main-content">
@@ -198,8 +217,24 @@
   {% endif %}
 {% endif %}
 
-      <div class="post-date">{{ post.created_at }}</div>
-      {% if viewer_id == post.user_id %}
+      <div class="post-meta-row">
+        <span class="post-date">{{ post.created_at }}</span> ·
+        <strong>Vibes:</strong>
+        {% if post.vibes %}
+          {% for vibe in post.vibes.split(',') %}
+            <a href="/vibe/{{ vibe.strip() | urlencode }}">
+              <span class="vibe-pill">{{ vibe.strip() }}</span>
+            </a>
+          {% endfor %}
+        {% else %}
+          <span>—</span>
+        {% endif %}
+        |
+        <strong>Circle:</strong> {{ post.circle or "—" }}
+      </div>
+    </div>
+
+    {% if viewer_id == post.user_id %}
       <div class="post-actions">
         <button class="icon-button" onclick="togglePostMenu(this)">⋮</button>
         <div class="post-dropdown" style="display: none;">
@@ -208,39 +243,18 @@
         </div>
       </div>
     {% endif %}
-
-    </div>
   </div>
 
-  <p class="post-meta">
-    <strong>Vibes:</strong>
-    {% if post.vibes %}
-      {% for vibe in post.vibes.split(',') %}
-        <a href="/vibe/{{ vibe.strip() | urlencode }}">
-          <span class="vibe-pill">{{ vibe.strip() }}</span>
-        </a>
-      {% endfor %}
-    {% else %}
-      <span>—</span>
-    {% endif %}
-    |
-    <strong>Circle:</strong> {{ post.circle or "—" }}
-  </p>
-
   <div class="post-content">{{ post.html_content | safe }}</div>
-    <div class="react-form" data-post-id="{{ post.id }}">
-    {% for react in ['👍', '👎', '🕶️', '💖', '💩', '🤮', '❓', '🔥', '🐐', '🦙'] %}
-        {% set count = post.reaction_counts[react] if post.reaction_counts and react in post.reaction_counts else 0 %}
-        <button type="button" class="icon-button react-btn" data-emoji="{{ react }}">
-          {{ react }}{% if count %} {{ count }}{% endif %}
-        </button>
-      {% endfor %}
-    </div>
-
-
-
+  <div class="post-reactions-box react-form" data-post-id="{{ post.id }}">
+    {% for react in VALID_REACTS %}
+      {% set count = post.reaction_counts[react] if post.reaction_counts and react in post.reaction_counts else 0 %}
+      <button type="button" class="icon-button react-btn" data-emoji="{{ react }}">
+        {{ react }}{% if count %}<sub>{{ count }}</sub>{% endif %}
+      </button>
+    {% endfor %}
+  </div>
 </div>
-
     {% endfor %}
   {% else %}
     <p>No posts yet.</p>
