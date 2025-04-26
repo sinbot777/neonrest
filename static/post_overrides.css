@@ -1,8 +1,59 @@
+/* Guestbook Post Highlight (unchanged, fine as-is) */
 .post-preview.guestbook-outbound {
-  margin-left: 1cm;
-  background-color: rgba(255, 255, 255, 0.06);
-  border-left: 4px solid #ff9bc2;
-  padding-left: 1.5rem;
+  margin-left: 0.5cm;
+  background-color: rgb(16 81 80 / 45%);
+  border-left: 16px solid #ff9bc2;
+  padding-left: 0.5rem;
   box-shadow: 0 0 6px rgba(255, 155, 194, 0.3);
   border-radius: 0.75em;
 }
+
+/* Reactions Box — tighter padding, gap, and radius */
+.post-reactions-box {
+  display: inline-flex;
+  flex-wrap: wrap;
+  padding: 0.1rem 0.2rem;
+  background-color: rgb(88 157 210);
+  border-radius: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.react-btn {
+  position: relative;
+  font-size: 1.1rem;
+  line-height: 1;
+  border: none;
+  background: none;
+  color: #ffcde9;
+  cursor: pointer;
+  padding: 0;
+  margin: 0 -0.15rem;   /* ← Negative margin to pull buttons tighter together */
+  text-shadow: 0 0 1px black, 0 0 2px black;
+}
+
+
+/* Subscript Count for Reactions */
+.react-btn sub {
+  position: absolute;
+  bottom: -0.4em;
+  right: 0.3em;
+  font-size: 0.55em;
+  background-color: white;
+  color: black;
+  padding: 1px 2.5px;
+  border-radius: 3px;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.25);
+  font-weight: bold;
+  line-height: 1;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.post-reactions-box.react-form {
+  position: absolute;
+  bottom: 0.5rem;
+  right: 0.75rem;
+  margin: 0; /* override any top margins */
+}
+
+
