@@ -198,64 +198,11 @@
 <div class="recent-posts">
   <h3>Recent Posts</h3>
   {% if posts %}
-    {% for post in posts %}
-<div class="post-preview{% if post.is_guestbook_outbound %} guestbook-outbound{% endif %}">
-  <div class="post-header">
-    <img src="{{ post.author_avatar or '/static/default-avatar.png' }}" alt="avatar" class="avatar-img small">
-    <div class="post-user-meta">
-{% if post.is_guestbook_outbound and post.target_handle %}
-  <strong>
-    <a href="/@{{ post.author_handle }}" class="user-handle">@{{ post.author_handle }}</a> ➝
-    <a href="/@{{ post.target_handle }}" class="user-handle">@{{ post.target_handle }}</a>
-  </strong>
-{% else %}
-  <strong>
-    <a href="/@{{ post.author_handle }}" class="user-handle">@{{ post.author_handle }}</a>
-  </strong>
-  {% if post.author_codename %}
-    <span class="user-codename">({{ post.author_codename }})</span>
-  {% endif %}
-{% endif %}
+    {% set _posts = posts %}
+    {% set _reactors = post_reactors %}
+    {% set _reacts = VALID_REACTS %}
+    {% include 'partials/posts.html' %}
 
-      <div class="post-meta-row">
-        <span class="post-date">{{ post.created_at }}</span> ·
-        <strong>Vibes:</strong>
-        {% if post.vibes %}
-          {% for vibe in post.vibes.split(',') %}
-            <a href="/vibe/{{ vibe.strip() | urlencode }}">
-              <span class="vibe-pill">{{ vibe.strip() }}</span>
-            </a>
-          {% endfor %}
-        {% else %}
-          <span>—</span>
-        {% endif %}
-        |
-        <strong>Circle:</strong> {{ post.circle or "—" }}
-      </div>
-    </div>
-
-    {% if viewer_id == post.user_id %}
-      <div class="post-actions">
-        <button class="icon-button" onclick="togglePostMenu(this)">⋮</button>
-        <div class="post-dropdown" style="display: none;">
-          <a href="/edit_post/{{ post.id }}">Edit</a>
-          <a href="/delete_post/{{ post.id }}" onclick="return confirm('Delete this post?')">Delete</a>
-        </div>
-      </div>
-    {% endif %}
-  </div>
-
-  <div class="post-content">{{ post.html_content | safe }}</div>
-  <div class="post-reactions-box react-form" data-post-id="{{ post.id }}">
-    {% for react in VALID_REACTS %}
-      {% set count = post.reaction_counts[react] if post.reaction_counts and react in post.reaction_counts else 0 %}
-      <button type="button" class="icon-button react-btn" data-emoji="{{ react }}">
-        {{ react }}{% if count %}<sub>{{ count }}</sub>{% endif %}
-      </button>
-    {% endfor %}
-  </div>
-</div>
-    {% endfor %}
   {% else %}
     <p>No posts yet.</p>
   {% endif %}
