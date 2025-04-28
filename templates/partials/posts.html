@@ -1,7 +1,9 @@
 <!-- templates/partials/posts.html -->
-{% set posts = _posts %}
-{% set post_reactors = _reactors %}
-{% set VALID_REACTS = _reacts %}
+{# Make sure posts.html works with modular includes #}
+{% set posts = _posts if _posts is defined else posts %}
+{% set post_reactors = _reactors if _reactors is defined else {} %}
+{% set VALID_REACTS = _reacts if _reacts is defined else [] %}
+
 
 {% for post in posts %}
 <div class="post-preview{% if post.is_guestbook_outbound %} guestbook-outbound{% endif %}">
@@ -53,14 +55,14 @@
   <div class="post-content">{{ post.html_content | safe }}</div>
 
   <div class="post-reactions-box react-form" data-post-id="{{ post.id }}">
-    {% for react in _reacts %}
+    {% for react in VALID_REACTS %}
       {% set count = post.reaction_counts[react] if post.reaction_counts and react in post.reaction_counts else 0 %}
-        <button type="button" class="icon-button react-btn" data-emoji="{{ react }}"
-          title="{% if _reactors.get(post.id) and _reactors[post.id].get(react) %}{{ _reactors[post.id][react] | join(', ') }}{% endif %}">
-          {{ react }}{% if count %}<sub>{{ count }}</sub>{% endif %}
-        </button>
-
+      <button type="button" class="icon-button react-btn" data-emoji="{{ react }}"
+        title="{% if _reactors.get(post.id, {}).get(react) %}{{ _reactors.get(post.id, {}).get(react) | join(', ') }}{% endif %}">
+        {{ react }}{% if count %}<sub>{{ count }}</sub>{% endif %}
+      </button>
     {% endfor %}
+
   </div>
 </div>
 {% endfor %}

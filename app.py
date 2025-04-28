@@ -552,6 +552,20 @@ def user_page_test(user_id):
     for post in posts_with_html:
         post['reaction_counts'] = reaction_map.get(post['id'], {})
 
+    post_ids = [post['id'] for post in posts_with_html]
+    post_reactors = {}
+
+    if post_ids:
+        placeholders = ','.join(['?'] * len(post_ids))
+        reactor_rows = db.execute(f'''
+            SELECT pr.post_id, pr.emoji, u.handle
+            FROM post_reactions pr
+            JOIN users u ON pr.user_id = u.id
+            WHERE pr.post_id IN ({placeholders})
+        ''', post_ids).fetchall()
+
+        for row in reactor_rows:
+            post_reactors.setdefault(row['post_id'], {}).setdefault(row['emoji'], []).append(row['handle'])
 
     return render_template(
         "user_test.html",
@@ -567,6 +581,7 @@ def user_page_test(user_id):
         top_friends=top_friends,
         now_playing_text=now_playing_text,
         now_playing_url=now_playing_url,
+        post_reactors=post_reactors,
         VALID_REACTS=VALID_REACTS
     )
 
