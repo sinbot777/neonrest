@@ -201,11 +201,13 @@
     {% set _posts = posts %}
     {% set _reactors = post_reactors %}
     {% set _reacts = VALID_REACTS %}
+    {% set _viewer_id = viewer_id %}
     {% include 'partials/posts.html' %}
   {% else %}
     <p>No posts yet.</p>
   {% endif %}
 </div>
+
 
 
 </div> <!-- end .right-column -->

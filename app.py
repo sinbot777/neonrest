@@ -724,25 +724,69 @@ def feed():
 
     db = get_db()
     posts = db.execute('''
-    SELECT posts.id, posts.user_id, posts.content, posts.circle, posts.created_at, posts.last_edited, users.handle, users.avatar_path,
-           GROUP_CONCAT(vibes.name, ', ') AS vibes
-    FROM posts
-    JOIN users ON users.id = posts.user_id
-    LEFT JOIN post_vibes ON posts.id = post_vibes.post_id
-    LEFT JOIN vibes ON post_vibes.vibe_id = vibes.id
-    GROUP BY posts.id
-    ORDER BY posts.created_at DESC
+        SELECT posts.id, posts.user_id, posts.content, posts.circle, posts.created_at, posts.last_edited,
+               users.handle AS author_handle, users.codename AS author_codename, users.avatar_path,
+               GROUP_CONCAT(vibes.name, ', ') AS vibes
+        FROM posts
+        JOIN users ON users.id = posts.user_id
+        LEFT JOIN post_vibes ON posts.id = post_vibes.post_id
+        LEFT JOIN vibes ON post_vibes.vibe_id = vibes.id
+        GROUP BY posts.id
+        ORDER BY posts.created_at DESC
     ''').fetchall()
 
-    # Convert Markdown content before rendering
     posts_with_html = []
     for post in posts:
-        html_content = markdown2.markdown(post['content'])
         post_dict = dict(post)
-        post_dict['html_content'] = html_content
+        post_dict['html_content'] = markdown2.markdown(post['content'])
+        post_dict['author_handle'] = post['author_handle'].lstrip('@') if 'author_handle' in post.keys() and post['author_handle'] else None
+        post_dict['author_avatar'] = post['avatar_path'] if 'avatar_path' in post.keys() else None  # <-- NEW
+        post_dict['is_guestbook_outbound'] = False  # Feed posts aren't guestbook posts
         posts_with_html.append(post_dict)
 
-    return render_template('feed.html', posts=posts_with_html, vibe_slug='mixed')
+
+    # Reaction counts
+    reaction_data = db.execute('''
+        SELECT post_id, emoji, COUNT(*) as count
+        FROM post_reactions
+        GROUP BY post_id, emoji
+    ''').fetchall()
+
+    reaction_map = {}
+    for row in reaction_data:
+        post_id = row['post_id']
+        emoji = row['emoji']
+        count = row['count']
+        reaction_map.setdefault(post_id, {})[emoji] = count
+
+    for post in posts_with_html:
+        post['reaction_counts'] = reaction_map.get(post['id'], {})
+
+    # Reaction hover tooltips
+    post_ids = [post['id'] for post in posts_with_html]
+    post_reactors = {}
+
+    if post_ids:
+        placeholders = ','.join(['?'] * len(post_ids))
+        reactor_rows = db.execute(f'''
+            SELECT pr.post_id, pr.emoji, u.handle
+            FROM post_reactions pr
+            JOIN users u ON pr.user_id = u.id
+            WHERE pr.post_id IN ({placeholders})
+        ''', post_ids).fetchall()
+
+        for row in reactor_rows:
+                clean_handle = '@' + row['handle'].lstrip('@')  # <- fix here
+                post_reactors.setdefault(row['post_id'], {}).setdefault(row['emoji'], []).append(clean_handle)
+
+    return render_template(
+        'feed.html',
+        posts=posts_with_html,
+        post_reactors=post_reactors,
+        VALID_REACTS=VALID_REACTS,
+        vibe_slug='mixed'  # if you need this for CSS theming or styling
+    )
+
 
 
 @app.route('/edit_post/<int:post_id>', methods=['GET', 'POST'])

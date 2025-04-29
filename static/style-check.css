@@ -506,7 +506,7 @@ a.button:hover {
   margin-bottom: 0.5em;
 }
 
-*/
+*/ 
 
 /* moved to post_overrides.css
 .post-preview {
@@ -1091,14 +1091,10 @@ input.glow-input:focus {
   background: none;
   border: none;
   cursor: pointer;
+  font-size: 1rem;
   padding: 0;
   margin-left: 0.4rem;
-/*  color: #ffa7c4; */
-  font-size: 1.1rem;
-  line-height: 1;
-  color: #ffcde9;
-  text-shadow: 0 0 2px #ffa7d7;
-  transition: transform 0.2s ease;
+  color: #ffa7c4;
 }
 
 .icon-button:hover {
@@ -1119,7 +1115,16 @@ input.glow-input:focus {
   margin-left: 0.4rem;       /* subtle space from "Mood:" label */
 }
 
-
+.icon-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  color: #ffcde9;
+  text-shadow: 0 0 2px #ffa7d7;
+  transition: transform 0.2s ease;
+}
 
 .icon-button:hover {
   transform: scale(1.15);
@@ -1215,6 +1220,14 @@ input.glow-input:focus {
 .haunt-list a:hover {
   color: #fff8e7;
   text-shadow: 0 0 3px #fcb5a3;
+}
+
+.top9-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 96px); /* fixed-size grid slots */
+  gap: 1rem;
+  margin-top: 1rem;
+  justify-content: center;
 }
 
 .top9-grid {
@@ -1495,7 +1508,7 @@ aside.top9-column {
   line-height: 1.5;
 }
 
-*/
+*/ 
 
 .top9-edit-form select {
   background: #222;
@@ -1602,6 +1615,12 @@ aside.top9-column {
 
 */
 
+
+body #main-content div.post-preview.guestbook-outbound {
+  margin-left: 3cm !important;
+  background-color: red !important;
+  border-left: 8px solid yellow !important;
+}
 
 #now-playing-text a {
   color: var(--glow_color, #ffa7c4);
@@ -1787,7 +1806,7 @@ button.action-toggle:hover {
   letter-spacing: 0.2px;     /* optional polish */
 }
 
-*/
+*/ 
 
 /* moved to post_overrides.css
 

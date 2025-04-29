@@ -1,58 +1,21 @@
 {% extends 'base.html' %}
-{% block title %}Your Feed - Neonrest{% endblock %}
+
+{% block title %}Feed - Neonrest{% endblock %}
 
 {% block content %}
-  <div class="user-page">
-    <div class="user-header">
-      <div class="glow large">Your Feed</div>
-      <p>Recent posts from you and others.</p>
-    </div>
+<div id="main-content">
+  <h1 class="glow large">Feed</h1>
 
-    {% for post in posts %}
-  {% set vibe_list = (post['vibes'] or '').split(',') %}
-  {% set first_vibe = vibe_list[0] if vibe_list else 'default' %}
-  <div class="user-section vibe-{{ first_vibe | lower | replace(' ', '-') }}">
-{% set avatar = post['avatar_path'] or '/static/default-avatar.png' %}
-<div class="post-header">
-  <img src="{{ avatar }}" alt="avatar" class="avatar-img small">
-  <div class="post-user-meta">
-    <strong>
-      <a href="/@{{ post['handle'].lstrip('@') }}" class="user-handle">{{ post['handle'].lstrip('@') }}</a>
-    </strong>
-    {% if session.get('user_id') == post['user_id'] %}
-      <a href="/edit_post/{{ post['id'] }}" class="edit-link">(edit)</a>
+  <div class="recent-posts">
+    <h3>Your Feed</h3>
+    {% if posts %}
+      {% set _posts = posts %}
+      {% set _reactors = post_reactors %}
+      {% set _reacts = VALID_REACTS %}
+      {% include 'partials/posts.html' %}
+    {% else %}
+      <p>No posts yet.</p>
     {% endif %}
   </div>
 </div>
-
-
-
-    <p class="post-meta">
-      <strong>Vibes:</strong>
-      {% if vibe_list and vibe_list[0] %}
-        {% for vibe in vibe_list %}
-          <a href="/vibe/{{ vibe.strip() | urlencode }}">
-            <span class="vibe-label">{{ vibe.strip() }}</span>
-          </a>
-        {% endfor %}
-      {% else %}
-        <span>—</span>
-      {% endif %}
-      |
-      <strong>Circle:</strong> {{ post['circle'] or "—" }}
-    </p>
-
-    <div class="post-content">{{ post['html_content'] | safe }}</div>
-    {% if post['last_edited'] %}
-  <p class="post-timestamp">Last edited: {{ post['last_edited'] }}</p>
-{% endif %}
-
-    <hr>
-  </div>
-{% else %}
-  <p>No posts yet.</p>
-{% endfor %}
-
-
-  </div>
 {% endblock %}
