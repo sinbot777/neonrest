@@ -1,59 +1,176 @@
-/* Guestbook Post Highlight (unchanged, fine as-is) */
+/* post_overrides.css — Cleaned Version 🧹 */
+
+/* Post Preview Container */
+
+.post-preview {
+  position: relative;
+  background: rgb(0 0 0 / 46%);
+  border-left: 4px solid #ffa7c4;
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 12px rgba(255, 167, 199, 0.2);
+  color: var(--text-color, #fff);
+}
+
+
+/* Guestbook Outbound Specific */
 .post-preview.guestbook-outbound {
-  margin-left: 0.5cm;
-  background-color: rgb(16 81 80 / 45%);
-  border-left: 16px solid #ff9bc2;
-  padding-left: 0.5rem;
+  margin-left: 1cm;
+  background-color: rgb(83 83 83 / 81%);
+  border-left: 15px solid #ff9bc2;
+  padding-left: 1.5rem;
   box-shadow: 0 0 6px rgba(255, 155, 194, 0.3);
   border-radius: 0.75em;
 }
 
-/* Reactions Box — tighter padding, gap, and radius */
-.post-reactions-box {
-  display: inline-flex;
+/* Post Header */
+.post-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  position: relative;
+  font-size: 0.8rem;
+}
+
+.post-user-meta {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+/* Reaction Form + Buttons */
+
+.post-reactions-box.react-form {
+  background: rgb(99 159 203);
+  border-radius: 0.5em;
+  padding: 0.25em;
+  margin-top: 0.75em;
+  display: flex;
   flex-wrap: wrap;
-  padding: 0.1rem 0.2rem;
-  background-color: rgb(88 157 210);
-  border-radius: 0.5rem;
-  margin-top: 0.5rem;
+  gap: 0.4em;
+  justify-content: flex-end;
+}
+
+
+.react-form {
+  margin-top: 0.5em;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25em 0.3em;  /* smaller row/column spacing */
+  justify-content: flex-end;
+}
+
+.react-form .icon-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  border-radius: 6px;
+  color: #ffcde9;
+  text-shadow: 0 0 1px black, 0 0 2px black;
+  transition: transform 0.2s ease;
+  margin: 0 -0.15rem;   /* ← Negative margin to pull buttons tighter together */
+  padding: 0;
+  position: relative;
+}
+
+.react-form .icon-button:hover {
+  transform: scale(1.15);
+  color: #fff;
+  text-shadow: 0 0 4px #ffa7c4;
+}
+
+.react-form .icon-button.active {
+  font-weight: bold;
+  text-shadow: 0 0 6px #fff;
 }
 
 .react-btn {
-  position: relative;
-  font-size: 1.1rem;
-  line-height: 1;
+  background: transparent;
   border: none;
-  background: none;
-  color: #ffcde9;
+  font-size: 1rem;
+  color: var(--text-color, #333);
+  padding: 0.15em 0.25em;
   cursor: pointer;
-  padding: 0;
-  margin: 0 -0.15rem;   /* ← Negative margin to pull buttons tighter together */
-  text-shadow: 0 0 1px black, 0 0 2px black;
+  border-radius: 6px;
+  transition: background 0.2s, transform 0.2s;
+  text-shadow: 0 0 3px var(--reaction-glow, #ffa7d7);
+  position: relative;
+}
+
+.react-btn sub {
+  position: absolute;
+  bottom: -0.25em;
+  right: -0.4em;
+  font-size: 0.55em;
+  font-weight: bold;
+  color: #333;
+  background: #fff;
+  border-radius: 1em;
+  padding: 0.1em 0.4em;
+  line-height: 1;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.2);
+  pointer-events: none;
 }
 
 
-/* Subscript Count for Reactions */
-.react-btn sub {
-  position: absolute;
-  bottom: -0.4em;
-  right: 0.3em;
-  font-size: 0.55em;
-  background-color: white;
-  color: black;
-  padding: 1px 2.5px;
-  border-radius: 3px;
-  box-shadow: 0 0 2px rgba(0, 0, 0, 0.25);
+.react-btn:hover {
+  background-color: var(--reaction-hover-bg, rgba(0, 0, 0, 0.1));
+  transform: scale(1.1);
+}
+
+.react-btn.active {
+  color: var(--reaction-active, #fff);
+  text-shadow: 0 0 6px var(--reaction-glow, #ffa7d7);
+  background-color: var(--reaction-hover-bg, rgba(255, 167, 199, 0.1));
   font-weight: bold;
-  line-height: 1;
-  pointer-events: none;
+  transform: scale(1.15);
+}
+
+/* Post Content */
+.post-content {
+  color: #ffffff;
+  white-space: pre-wrap;
+  margin-bottom: 0.5rem;
+}
+
+/* Post Actions Dropdown */
+.post-actions {
+  position: absolute;
+  top: 8px;
+  right: 8px;
   z-index: 2;
 }
 
-.post-reactions-box.react-form {
+.post-dropdown {
   position: absolute;
-  bottom: 0.5rem;
-  right: 0.75rem;
-  margin: 0; /* override any top margins */
+  background-color: #222;
+  border: 1px solid #444;
+  border-radius: 5px;
+  padding: 0.5em;
+  right: 0;
+  top: 1.8em;
+  z-index: 10;
 }
 
+.post-dropdown a,
+.post-dropdown button.link-button {
+  display: block;
+  padding: 0.25em 0.5em;
+  color: #fdfdfd;
+  background: none;
+  border: none;
+  text-align: left;
+  width: 100%;
+  text-decoration: none;
+  cursor: pointer;
+}
 
+.post-dropdown a:hover,
+.post-dropdown button.link-button:hover {
+  background-color: #333;
+}

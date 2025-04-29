@@ -3,6 +3,7 @@
 {% set posts = _posts if _posts is defined else posts %}
 {% set post_reactors = _reactors if _reactors is defined else {} %}
 {% set VALID_REACTS = _reacts if _reacts is defined else [] %}
+{% set viewer_id = _viewer_id if _viewer_id is defined else None %}
 
 
 {% for post in posts %}
@@ -42,27 +43,30 @@
     </div>
 
     {% if viewer_id == post.user_id %}
-      <div class="post-actions">
-        <button class="icon-button" onclick="togglePostMenu(this)">⋮</button>
-        <div class="post-dropdown" style="display: none;">
-          <a href="/edit_post/{{ post.id }}">Edit</a>
-          <a href="/delete_post/{{ post.id }}" onclick="return confirm('Delete this post?')">Delete</a>
+        <div class="post-actions">
+          <button class="icon-button" onclick="togglePostMenu(this)">⋮</button>
+          <div class="post-dropdown" style="display: none;">
+            <a href="/edit_post/{{ post.id }}">Edit</a>
+            <form method="POST" action="/delete_post/{{ post.id }}" style="display:inline;" onsubmit="return confirm('Delete this post?');">
+              <button type="submit" class="link-button">Delete</button>
+            </form>
+          </div>
         </div>
-      </div>
     {% endif %}
   </div>
 
-  <div class="post-content">{{ post.html_content | safe }}</div>
+<div class="post-content">{{ post.html_content | safe }}</div>
 
-  <div class="post-reactions-box react-form" data-post-id="{{ post.id }}">
-    {% for react in VALID_REACTS %}
-      {% set count = post.reaction_counts[react] if post.reaction_counts and react in post.reaction_counts else 0 %}
-      <button type="button" class="icon-button react-btn" data-emoji="{{ react }}"
-        title="{% if _reactors.get(post.id, {}).get(react) %}{{ _reactors.get(post.id, {}).get(react) | join(', ') }}{% endif %}">
-        {{ react }}{% if count %}<sub>{{ count }}</sub>{% endif %}
-      </button>
-    {% endfor %}
+<div class="post-reactions-box react-form" data-post-id="{{ post.id }}">
+  {% for react in VALID_REACTS %}
+    {% set count = post.reaction_counts[react] if post.reaction_counts and react in post.reaction_counts else 0 %}
+    {% set hover = _reactors.get(post.id, {}).get(react, []) | join(', ') %}
+    <button type="button" class="icon-button react-btn" data-emoji="{{ react }}"
+            title="{{ hover if hover else '' }}">
+      {{ react }}{% if count %}<sub>{{ count }}</sub>{% endif %}
+    </button>
+  {% endfor %}
+</div>
 
-  </div>
 </div>
 {% endfor %}
