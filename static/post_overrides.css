@@ -174,3 +174,52 @@
 .post-dropdown button.link-button:hover {
   background-color: #333;
 }
+
+.reply-thread {
+  margin-left: 1.5rem;
+  border-left: 2px dashed var(--accent-color, #ccc);
+  padding-left: 1rem;
+  margin-top: 0.5rem;
+}
+
+.reply-comment .avatar-img.tiny {
+  width: 20px;
+  height: 20px;
+}
+
+.comment-actions {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 2;
+}
+
+.comment-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  font-size: 0.8rem;
+}
+
+.comment-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.comment-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.avatar-img.tiny {
+  width: 28px;
+  height: 28px;
+  object-fit: cover;
+  border-radius: 50%;
+  aspect-ratio: 1 / 1;
+}
+
