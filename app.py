@@ -13,11 +13,13 @@ from utils.lastfm import get_now_playing  # this is the helper you created
 
 import itsdangerous
 from datetime import datetime
-from utils.generate_unique_handle import generate_unique_handle
 from utils.friend_helpers import are_friends, get_friend_requests, get_following_map, get_top_friends
 from utils.image_uploads import allowed_file   # ✅ Your image upload helper
 
 from routes.friends import bp as friends_bp  # ✅ IMPORT FIRST
+from utils.utils import generate_prefixed_id, decode_prefixed_id, generate_unique_handle
+
+
 
 VALID_REACTS = ["👍", "👎", "🕶️", "💖", "💩", "🤮", "❓", "🔥", "🐐", "🦙"]
 
@@ -476,7 +478,6 @@ def user_page_test(user_id):
 
     viewer_id = session.get('user_id')
 
-    # Always show all posts authored by this user, including guestbook posts
     posts = db.execute('''
         SELECT posts.id, posts.user_id, posts.target_user_id, posts.content, posts.circle, posts.created_at,
                posts.last_edited, GROUP_CONCAT(vibes.name, ', ') AS vibes,
@@ -496,7 +497,6 @@ def user_page_test(user_id):
     pending_received_from = [r['sender_id'] for r in incoming_requests]
     following_map = get_following_map(viewer_id)
 
-    # Build friend_status_map
     friend_status_map = {}
     if viewer_id:
         relationships = db.execute('''
@@ -509,7 +509,6 @@ def user_page_test(user_id):
             other_id = r['receiver_id'] if r['sender_id'] == viewer_id else r['sender_id']
             friend_status_map[other_id] = r['status']
 
-    # Get friends for this user's profile
     friends = db.execute('''
         SELECT u.id, u.handle, u.codename
         FROM users u
@@ -523,38 +522,33 @@ def user_page_test(user_id):
     top_friends = get_top_friends(db, user['id'])
 
     posts_with_html = []
+    post_ids = []
     for post in posts:
         post_dict = dict(post)
         post_dict['is_guestbook_outbound'] = (
             post['target_user_id'] is not None and post['target_user_id'] != post['user_id']
         )
         post_dict['html_content'] = markdown2.markdown(post['content'])
-
-        # Strip any leading @ from handles for clean display
         post_dict['author_handle'] = post['author_handle'].lstrip('@')
         post_dict['target_handle'] = post['target_handle'].lstrip('@') if post['target_handle'] else None
-
+        post_dict['author_avatar'] = post['author_avatar'] or '/static/default-avatar.png'
         posts_with_html.append(post_dict)
+        post_ids.append(post['id'])
 
     reaction_data = db.execute('''
-      SELECT post_id, emoji, COUNT(*) as count
-      FROM post_reactions
-      GROUP BY post_id, emoji
+        SELECT post_id, emoji, COUNT(*) as count
+        FROM post_reactions
+        GROUP BY post_id, emoji
     ''').fetchall()
 
     reaction_map = {}
     for row in reaction_data:
-        post_id = row['post_id']
-        emoji = row['emoji']
-        count = row['count']
-        reaction_map.setdefault(post_id, {})[emoji] = count
+        reaction_map.setdefault(row['post_id'], {})[row['emoji']] = row['count']
 
     for post in posts_with_html:
         post['reaction_counts'] = reaction_map.get(post['id'], {})
 
-    post_ids = [post['id'] for post in posts_with_html]
     post_reactors = {}
-
     if post_ids:
         placeholders = ','.join(['?'] * len(post_ids))
         reactor_rows = db.execute(f'''
@@ -566,6 +560,43 @@ def user_page_test(user_id):
 
         for row in reactor_rows:
             post_reactors.setdefault(row['post_id'], {}).setdefault(row['emoji'], []).append(row['handle'])
+
+        comments_raw = db.execute(f'''
+            SELECT c.id, c.post_id, c.user_id, c.content, c.prefix, c.parent_comment_id,
+                   u.handle, u.avatar_path
+            FROM comments c
+            JOIN users u ON u.id = c.user_id
+            WHERE c.post_id IN ({placeholders})
+            ORDER BY c.created_at ASC
+        ''', post_ids).fetchall()
+
+        post_comments = {}
+        for c in comments_raw:
+            comment = {
+                'id': c['id'],
+                'post_id': c['post_id'],
+                'user_id': c['user_id'],
+                'author_handle': c['handle'].lstrip('@'),
+                'avatar': c['avatar_path'],
+                'prefix': c['prefix'],
+                'parent_comment_id': c['parent_comment_id'],
+                'content': c['content']
+            }
+            post_comments.setdefault(c['post_id'], []).append(comment)
+
+        for post in posts_with_html:
+            all_comments = post_comments.get(post['id'], [])
+            top_level = [c for c in all_comments if not c.get('parent_comment_id')]
+            replies = [c for c in all_comments if c.get('parent_comment_id')]
+
+            comment_map = {c['id']: c for c in top_level}
+            for reply in replies:
+                parent_id = reply['parent_comment_id']
+                if parent_id in comment_map:
+                    comment_map[parent_id].setdefault('replies', []).append(reply)
+
+            post['comments'] = list(comment_map.values())
+
 
     return render_template(
         "user_test.html",
@@ -584,6 +615,7 @@ def user_page_test(user_id):
         post_reactors=post_reactors,
         VALID_REACTS=VALID_REACTS
     )
+
 
 
 @app.route('/update_bio', methods=['POST'])
@@ -711,6 +743,85 @@ def create_post():
     # If GET, render standalone page
     return render_template('create_post.html')
 
+@app.route('/create_comment', methods=['POST'])
+def create_comment():
+    if 'user_id' not in session:
+        flash("You must be logged in to comment.", "error")
+        return redirect('/login')
+
+    db = get_db()
+    post_id = request.form.get('post_id')
+    content = request.form.get('content', '').strip()
+    parent_id = request.form.get('parent_comment_id')
+    prefix = request.form.get('prefix', '')  # Optional: for mods or bots
+
+    if not content:
+        flash("Comment cannot be empty.", "error")
+        return redirect(request.referrer or '/feed')
+
+    # Step 1: Insert placeholder to get raw autoincrement ID
+    cur = db.execute('''
+        INSERT INTO comments (post_id, user_id, content, parent_comment_id)
+        VALUES (?, ?, ?, ?)
+    ''', (post_id, session['user_id'], content, parent_id or None))
+    raw_id = cur.lastrowid
+
+    # Step 2: Generate Base62 or prefixed ID
+    from utils.utils import generate_prefixed_id
+    final_id = generate_prefixed_id(db, raw_id, prefix if prefix else None)
+
+    # Step 3: Update the row to store prefixed string ID
+    db.execute('UPDATE comments SET id = ? WHERE rowid = ?', (final_id, raw_id))
+    db.commit()
+
+    flash("Comment posted!", "success")
+    return redirect(request.referrer or '/feed')
+
+
+# EDIT COMMENT
+@app.route('/edit_comment/<comment_id>', methods=['GET', 'POST'])
+def edit_comment(comment_id):
+    db = get_db()
+    try:
+        real_id = decode_prefixed_id(comment_id)
+    except:
+        flash("Invalid comment ID format.", "error")
+        return redirect('/feed')
+
+    comment = db.execute('SELECT * FROM comments WHERE id = ?', (real_id,)).fetchone()
+    if not comment or comment['user_id'] != session.get('user_id'):
+        flash("Unauthorized or comment not found.", "error")
+        return redirect('/feed')
+
+    if request.method == 'POST':
+        content = request.form.get('content', '').strip()
+        if content:
+            db.execute('UPDATE comments SET content = ? WHERE id = ?', (content, real_id))
+            db.commit()
+            flash("Comment updated!", "success")
+        return redirect('/feed')
+
+    return render_template('edit_comment.html', comment=comment)
+
+# DELETE COMMENT
+@app.route('/delete_comment/<comment_id>', methods=['POST'])
+def delete_comment(comment_id):
+    db = get_db()
+    try:
+        real_id = decode_prefixed_id(comment_id)
+    except:
+        flash("Invalid comment ID format.", "error")
+        return redirect('/feed')
+
+    comment = db.execute('SELECT * FROM comments WHERE id = ?', (real_id,)).fetchone()
+    if not comment or comment['user_id'] != session.get('user_id'):
+        flash("Unauthorized or comment not found.", "error")
+        return redirect('/feed')
+
+    db.execute('DELETE FROM comments WHERE id = ?', (real_id,))
+    db.commit()
+    flash("Comment deleted.", "success")
+    return redirect(request.referrer or '/feed')
 
 @app.route('/markdown-guide')
 def markdown_guide():

@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block title %}Edit Comment{% endblock %}
+
+{% block content %}
+<div id="main-content">
+  <div class="info-box">
+    <h2>Edit Comment</h2>
+    <form method="POST">
+      <textarea name="content" required style="width: 100%; min-height: 100px;">{{ comment.content }}</textarea>
+      <div style="margin-top: 1rem;">
+        <button type="submit" class="button">Update Comment</button>
+        <a href="/feed" class="button" style="margin-left: 0.5rem;">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

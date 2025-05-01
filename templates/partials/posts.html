@@ -1,10 +1,8 @@
 <!-- templates/partials/posts.html -->
-{# Make sure posts.html works with modular includes #}
 {% set posts = _posts if _posts is defined else posts %}
 {% set post_reactors = _reactors if _reactors is defined else {} %}
 {% set VALID_REACTS = _reacts if _reacts is defined else [] %}
 {% set viewer_id = _viewer_id if _viewer_id is defined else None %}
-
 
 {% for post in posts %}
 <div class="post-preview{% if post.is_guestbook_outbound %} guestbook-outbound{% endif %}">
@@ -24,7 +22,6 @@
           <span class="user-codename">({{ post.author_codename }})</span>
         {% endif %}
       {% endif %}
-
       <div class="post-meta-row">
         <span class="post-date">{{ post.created_at }}</span> ·
         <strong>Vibes:</strong>
@@ -41,32 +38,125 @@
         <strong>Circle:</strong> {{ post.circle or '—' }}
       </div>
     </div>
-
     {% if viewer_id == post.user_id %}
-        <div class="post-actions">
-          <button class="icon-button" onclick="togglePostMenu(this)">⋮</button>
-          <div class="post-dropdown" style="display: none;">
-            <a href="/edit_post/{{ post.id }}">Edit</a>
-            <form method="POST" action="/delete_post/{{ post.id }}" style="display:inline;" onsubmit="return confirm('Delete this post?');">
+    <div class="post-actions">
+      <button class="icon-button" onclick="togglePostMenu(this)">⋮</button>
+      <div class="post-dropdown" style="display: none;">
+        <a href="/edit_post/{{ post.id }}">Edit</a>
+        <form method="POST" action="/delete_post/{{ post.id }}" style="display:inline;" onsubmit="return confirm('Delete this post?');">
+          <button type="submit" class="link-button">Delete</button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="post-content">{{ post.html_content | safe }}</div>
+
+  <div class="post-reactions-box react-form" data-post-id="{{ post.id }}">
+    {% for react in VALID_REACTS %}
+      {% set count = post.reaction_counts[react] if post.reaction_counts and react in post.reaction_counts else 0 %}
+      {% set hover = post_reactors.get(post.id, {}).get(react, []) | join(', ') %}
+      <button type="button" class="icon-button react-btn" data-emoji="{{ react }}" title="{{ hover }}">
+        {{ react }}{% if count %}<sub>{{ count }}</sub>{% endif %}
+      </button>
+    {% endfor %}
+  </div>
+
+{% if post.comments %}
+<div class="comments-section">
+  {% for comment in post.comments %}
+    <div class="comment">
+      <div class="comment-header">
+        <div class="comment-meta">
+          <img src="{{ comment.avatar or '/static/default-avatar.png' }}" class="avatar-img tiny">
+          <strong>@{{ comment.author_handle }}</strong>
+          {% if comment.prefix %}
+            <span class="comment-prefix">{{ comment.prefix }}-</span>
+          {% endif %}
+        </div>
+        {% if viewer_id == comment.user_id %}
+        <div class="comment-actions">
+          <button class="icon-button" onclick="toggleCommentMenu(this)">⋮</button>
+          <div class="comment-dropdown" style="display: none;">
+            <a href="/edit_comment/{{ comment.id }}">Edit</a>
+            <form method="POST" action="/delete_comment/{{ comment.id }}" style="display:inline;" onsubmit="return confirm('Delete this comment?');">
               <button type="submit" class="link-button">Delete</button>
             </form>
           </div>
         </div>
-    {% endif %}
-  </div>
+        {% endif %}
+      </div>
 
-<div class="post-content">{{ post.html_content | safe }}</div>
+      <div class="comment-body">{{ comment.content }}</div>
+      {% if viewer_id %}
+        <a href="javascript:void(0);" class="small-button" onclick="setReplyTarget('{{ comment.id }}', '{{ post.id }}')">Reply</a>
+      {% endif %}
 
-<div class="post-reactions-box react-form" data-post-id="{{ post.id }}">
-  {% for react in VALID_REACTS %}
-    {% set count = post.reaction_counts[react] if post.reaction_counts and react in post.reaction_counts else 0 %}
-    {% set hover = _reactors.get(post.id, {}).get(react, []) | join(', ') %}
-    <button type="button" class="icon-button react-btn" data-emoji="{{ react }}"
-            title="{{ hover if hover else '' }}">
-      {{ react }}{% if count %}<sub>{{ count }}</sub>{% endif %}
-    </button>
+      {% if comment.replies %}
+      <div class="reply-thread">
+        {% for reply in comment.replies %}
+          <div class="comment reply-comment">
+            <div class="comment-header">
+              <div class="comment-meta">
+                <img src="{{ reply.avatar or '/static/default-avatar.png' }}" class="avatar-img tiny">
+                <strong>@{{ reply.author_handle }}</strong>
+                {% if reply.prefix %}
+                  <span class="comment-prefix">{{ reply.prefix }}-</span>
+                {% endif %}
+              </div>
+              {% if viewer_id == reply.user_id %}
+              <div class="comment-actions">
+                <button class="icon-button" onclick="toggleCommentMenu(this)">⋮</button>
+                <div class="comment-dropdown" style="display: none;">
+                  <a href="/edit_comment/{{ reply.id }}">Edit</a>
+                  <form method="POST" action="/delete_comment/{{ reply.id }}" style="display:inline;" onsubmit="return confirm('Delete this comment?');">
+                    <button type="submit" class="link-button">Delete</button>
+                  </form>
+                </div>
+              </div>
+              {% endif %}
+            </div>
+            <div class="comment-body">{{ reply.content }}</div>
+          </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
   {% endfor %}
 </div>
+{% endif %}
 
+
+
+  {% if viewer_id %}
+  <div class="comment-form">
+    <form id="comment-form-{{ post.id }}" method="POST" action="/create_comment" data-post-id="{{ post.id }}">
+      <input type="hidden" name="post_id" value="{{ post.id }}">
+      <input type="hidden" name="parent_comment_id" id="parent_comment_id_{{ post.id }}" value="">
+      <input type="text" name="content" placeholder="Leave a comment..." required class="comment-input">
+      <button type="submit" class="comment-submit">Reply</button>
+    </form>
+  </div>
+  {% endif %}
 </div>
 {% endfor %}
+
+<script>
+function toggleCommentMenu(btn) {
+  const menu = btn.nextElementSibling;
+  const showing = menu.style.display === 'block';
+  document.querySelectorAll('.comment-dropdown').forEach(el => el.style.display = 'none');
+  menu.style.display = showing ? 'none' : 'block';
+}
+
+function setReplyTarget(commentId, postId) {
+  const hiddenInput = document.querySelector(`#parent_comment_id_${postId}`);
+  if (hiddenInput) {
+    hiddenInput.value = commentId;
+    const input = document.querySelector(`#comment-form-${postId} input[name="content"]`);
+    if (input) input.focus();
+  }
+}
+</script>
+
