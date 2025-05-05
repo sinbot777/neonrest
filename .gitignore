@@ -20,3 +20,4 @@ instance/
 # Editor settings (optional)
 .vscode/
 .idea/
+db/neonrest.db
