@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% block title %}{{ user.handle }} - Neonrest{% endblock %}
+{% from 'partials/posts.html' import render_comment %}
 
 {% block content %}
 {% if user_theme %}

@@ -4,6 +4,45 @@
 {% set VALID_REACTS = _reacts if _reacts is defined else [] %}
 {% set viewer_id = _viewer_id if _viewer_id is defined else None %}
 
+{% macro render_comment(comment) %}
+  <div class="comment{% if comment.parent_comment_id %} reply-comment{% endif %}">
+    <div class="comment-header">
+      <div class="comment-meta">
+        <img src="{{ comment.avatar or '/static/default-avatar.png' }}" class="avatar-img tiny">
+        <strong>@{{ comment.author_handle }}</strong>
+        {% if comment.prefix %}
+          <span class="comment-prefix">{{ comment.prefix }}-</span>
+        {% endif %}
+      </div>
+      {% if viewer_id == comment.user_id %}
+      <div class="comment-actions">
+        <button class="icon-button" onclick="toggleCommentMenu(this)">⋮</button>
+        <div class="comment-dropdown" style="display: none;">
+          <a href="/edit_comment/{{ comment.id }}">Edit</a>
+          <form method="POST" action="/delete_comment/{{ comment.id }}" style="display:inline;" onsubmit="return confirm('Delete this comment?');">
+            <button type="submit" class="link-button">Delete</button>
+          </form>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="comment-body">{{ comment.content }}</div>
+
+    {% if viewer_id %}
+      <a href="javascript:void(0);" class="small-button" onclick="setReplyTarget('{{ comment.id }}', '{{ comment.post_id }}')">Reply</a>
+    {% endif %}
+
+    {% if comment.replies %}
+      <div class="reply-thread">
+        {% for reply in comment.replies %}
+          {{ render_comment(reply) }}
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
+{% endmacro %}
+
 {% for post in posts %}
 <div class="post-preview{% if post.is_guestbook_outbound %} guestbook-outbound{% endif %}">
   <div class="post-header">
@@ -64,68 +103,13 @@
   </div>
 
 {% if post.comments %}
-<div class="comments-section">
-  {% for comment in post.comments %}
-    <div class="comment">
-      <div class="comment-header">
-        <div class="comment-meta">
-          <img src="{{ comment.avatar or '/static/default-avatar.png' }}" class="avatar-img tiny">
-          <strong>@{{ comment.author_handle }}</strong>
-          {% if comment.prefix %}
-            <span class="comment-prefix">{{ comment.prefix }}-</span>
-          {% endif %}
-        </div>
-        {% if viewer_id == comment.user_id %}
-        <div class="comment-actions">
-          <button class="icon-button" onclick="toggleCommentMenu(this)">⋮</button>
-          <div class="comment-dropdown" style="display: none;">
-            <a href="/edit_comment/{{ comment.id }}">Edit</a>
-            <form method="POST" action="/delete_comment/{{ comment.id }}" style="display:inline;" onsubmit="return confirm('Delete this comment?');">
-              <button type="submit" class="link-button">Delete</button>
-            </form>
-          </div>
-        </div>
-        {% endif %}
-      </div>
-
-      <div class="comment-body">{{ comment.content }}</div>
-      {% if viewer_id %}
-        <a href="javascript:void(0);" class="small-button" onclick="setReplyTarget('{{ comment.id }}', '{{ post.id }}')">Reply</a>
-      {% endif %}
-
-      {% if comment.replies %}
-      <div class="reply-thread">
-        {% for reply in comment.replies %}
-          <div class="comment reply-comment">
-            <div class="comment-header">
-              <div class="comment-meta">
-                <img src="{{ reply.avatar or '/static/default-avatar.png' }}" class="avatar-img tiny">
-                <strong>@{{ reply.author_handle }}</strong>
-                {% if reply.prefix %}
-                  <span class="comment-prefix">{{ reply.prefix }}-</span>
-                {% endif %}
-              </div>
-              {% if viewer_id == reply.user_id %}
-              <div class="comment-actions">
-                <button class="icon-button" onclick="toggleCommentMenu(this)">⋮</button>
-                <div class="comment-dropdown" style="display: none;">
-                  <a href="/edit_comment/{{ reply.id }}">Edit</a>
-                  <form method="POST" action="/delete_comment/{{ reply.id }}" style="display:inline;" onsubmit="return confirm('Delete this comment?');">
-                    <button type="submit" class="link-button">Delete</button>
-                  </form>
-                </div>
-              </div>
-              {% endif %}
-            </div>
-            <div class="comment-body">{{ reply.content }}</div>
-          </div>
-        {% endfor %}
-      </div>
-      {% endif %}
-    </div>
-  {% endfor %}
-</div>
+  <div class="comments-section">
+    {% for comment in post.comments %}
+      {{ render_comment(comment) }}
+    {% endfor %}
+  </div>
 {% endif %}
+
 
 
 
@@ -135,7 +119,7 @@
       <input type="hidden" name="post_id" value="{{ post.id }}">
       <input type="hidden" name="parent_comment_id" id="parent_comment_id_{{ post.id }}" value="">
       <input type="text" name="content" placeholder="Leave a comment..." required class="comment-input">
-      <button type="submit" class="comment-submit">Reply</button>
+      <button type="submit" class="comment-submit">Post</button>
     </form>
   </div>
   {% endif %}
@@ -159,4 +143,43 @@ function setReplyTarget(commentId, postId) {
   }
 }
 </script>
+<script>
+function toggleCommentMenu(btn) {
+  const menu = btn.nextElementSibling;
+  const showing = menu.style.display === 'block';
+  document.querySelectorAll('.comment-dropdown').forEach(el => el.style.display = 'none');
+  menu.style.display = showing ? 'none' : 'block';
+}
 
+function setReplyTarget(commentId, postId) {
+  const hiddenInput = document.querySelector(`#parent_comment_id_${postId}`);
+  if (hiddenInput) {
+    hiddenInput.value = commentId;
+    const input = document.querySelector(`#comment-form-${postId} input[name="content"]`);
+    if (input) input.focus();
+  }
+}
+
+async function submitComment(event, form) {
+  event.preventDefault();
+  const formData = new FormData(form);
+  try {
+    const res = await fetch(form.action, {
+      method: "POST",
+      body: formData,
+    });
+    if (!res.ok) throw new Error("Request failed");
+    location.reload();  // In future: dynamically inject comment
+  } catch (err) {
+    alert("Error submitting comment");
+    console.error(err);
+  }
+}
+
+// Attach to all comment forms after DOM is loaded
+window.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll(".comment-form form").forEach(form => {
+    form.addEventListener("submit", e => submitComment(e, form));
+  });
+});
+</script>
