@@ -17,7 +17,7 @@ from utils.friend_helpers import are_friends, get_friend_requests, get_following
 from utils.image_uploads import allowed_file   # ✅ Your image upload helper
 
 from routes.friends import bp as friends_bp  # ✅ IMPORT FIRST
-from utils.utils import generate_prefixed_id, decode_prefixed_id, generate_unique_handle
+from utils.utils import generate_prefixed_id, decode_prefixed_id, generate_unique_handle, build_comment_tree, encode_base62
 
 
 
@@ -522,7 +522,11 @@ def user_page_test(user_id):
     top_friends = get_top_friends(db, user['id'])
 
     posts_with_html = []
+
+    posts_with_html = []
     post_ids = []
+    base62_post_ids = {}
+
     for post in posts:
         post_dict = dict(post)
         post_dict['is_guestbook_outbound'] = (
@@ -532,9 +536,16 @@ def user_page_test(user_id):
         post_dict['author_handle'] = post['author_handle'].lstrip('@')
         post_dict['target_handle'] = post['target_handle'].lstrip('@') if post['target_handle'] else None
         post_dict['author_avatar'] = post['author_avatar'] or '/static/default-avatar.png'
-        posts_with_html.append(post_dict)
-        post_ids.append(post['id'])
 
+        raw_id = post['id']
+        base62_id = encode_base62(raw_id).rjust(8, 'A')  # Ensure it matches how comments are stored
+        base62_post_ids[raw_id] = base62_id
+        post_dict['id'] = base62_id  # Make sure templates see Base62 IDs
+
+        posts_with_html.append(post_dict)
+        post_ids.append(base62_id)
+
+    # Reactions
     reaction_data = db.execute('''
         SELECT post_id, emoji, COUNT(*) as count
         FROM post_reactions
@@ -548,6 +559,7 @@ def user_page_test(user_id):
     for post in posts_with_html:
         post['reaction_counts'] = reaction_map.get(post['id'], {})
 
+    # Reactors
     post_reactors = {}
     if post_ids:
         placeholders = ','.join(['?'] * len(post_ids))
@@ -561,8 +573,12 @@ def user_page_test(user_id):
         for row in reactor_rows:
             post_reactors.setdefault(row['post_id'], {}).setdefault(row['emoji'], []).append(row['handle'])
 
+    # Comments
+    comments_raw = []
+    if post_ids:
+        placeholders = ','.join(['?'] * len(post_ids))
         comments_raw = db.execute(f'''
-            SELECT c.id, c.post_id, c.user_id, c.content, c.prefix, c.parent_comment_id,
+            SELECT c.id, c.post_id, c.user_id, c.content, c.parent_comment_id,
                    u.handle, u.avatar_path
             FROM comments c
             JOIN users u ON u.id = c.user_id
@@ -570,32 +586,23 @@ def user_page_test(user_id):
             ORDER BY c.created_at ASC
         ''', post_ids).fetchall()
 
-        post_comments = {}
-        for c in comments_raw:
-            comment = {
-                'id': c['id'],
-                'post_id': c['post_id'],
-                'user_id': c['user_id'],
-                'author_handle': c['handle'].lstrip('@'),
-                'avatar': c['avatar_path'],
-                'prefix': c['prefix'],
-                'parent_comment_id': c['parent_comment_id'],
-                'content': c['content']
-            }
-            post_comments.setdefault(c['post_id'], []).append(comment)
+    post_comments = {}
+    for c in comments_raw:
+        comment = {
+            'id': c['id'],
+            'post_id': c['post_id'],
+            'user_id': c['user_id'],
+            'author_handle': c['handle'].lstrip('@'),
+            'avatar': c['avatar_path'] or '/static/default-avatar.png',
+            'parent_comment_id': c['parent_comment_id'],
+            'content': c['content']
+        }
+        post_comments.setdefault(c['post_id'], []).append(comment)
 
-        for post in posts_with_html:
-            all_comments = post_comments.get(post['id'], [])
-            top_level = [c for c in all_comments if not c.get('parent_comment_id')]
-            replies = [c for c in all_comments if c.get('parent_comment_id')]
+    for post in posts_with_html:
+        all_comments = post_comments.get(post['id'], [])
+        post['comments'] = build_comment_tree(all_comments)
 
-            comment_map = {c['id']: c for c in top_level}
-            for reply in replies:
-                parent_id = reply['parent_comment_id']
-                if parent_id in comment_map:
-                    comment_map[parent_id].setdefault('replies', []).append(reply)
-
-            post['comments'] = list(comment_map.values())
 
 
     return render_template(
@@ -615,8 +622,6 @@ def user_page_test(user_id):
         post_reactors=post_reactors,
         VALID_REACTS=VALID_REACTS
     )
-
-
 
 @app.route('/update_bio', methods=['POST'])
 def update_bio():
@@ -746,36 +751,35 @@ def create_post():
 @app.route('/create_comment', methods=['POST'])
 def create_comment():
     if 'user_id' not in session:
-        flash("You must be logged in to comment.", "error")
-        return redirect('/login')
+        return jsonify({"error": "Not logged in"}), 401
 
-    db = get_db()
-    post_id = request.form.get('post_id')
-    content = request.form.get('content', '').strip()
-    parent_id = request.form.get('parent_comment_id')
-    prefix = request.form.get('prefix', '')  # Optional: for mods or bots
+    try:
+        content = request.form.get('content', '').strip()
+        post_id = request.form.get('post_id')
+        parent_id = request.form.get('parent_comment_id') or None
 
-    if not content:
-        flash("Comment cannot be empty.", "error")
-        return redirect(request.referrer or '/feed')
+        if not content or not post_id:
+            return jsonify({"error": "Missing fields"}), 400
 
-    # Step 1: Insert placeholder to get raw autoincrement ID
-    cur = db.execute('''
-        INSERT INTO comments (post_id, user_id, content, parent_comment_id)
-        VALUES (?, ?, ?, ?)
-    ''', (post_id, session['user_id'], content, parent_id or None))
-    raw_id = cur.lastrowid
+        db = get_db()
+        cur = db.execute("INSERT INTO comments (user_id, post_id, parent_comment_id, content) VALUES (?, ?, ?, ?)",
+                         (session['user_id'], post_id, parent_id, content))
+        raw_id = cur.lastrowid
+        db.commit()
 
-    # Step 2: Generate Base62 or prefixed ID
-    from utils.utils import generate_prefixed_id
-    final_id = generate_prefixed_id(db, raw_id, prefix if prefix else None)
+        final_id = generate_prefixed_id(db, raw_id)
 
-    # Step 3: Update the row to store prefixed string ID
-    db.execute('UPDATE comments SET id = ? WHERE rowid = ?', (final_id, raw_id))
-    db.commit()
+        print(f"[Comment] Inserted: post_id={post_id}, raw_id={raw_id}, parent={parent_id}, content={content}, final_id={final_id}")
 
-    flash("Comment posted!", "success")
-    return redirect(request.referrer or '/feed')
+        db.execute('UPDATE comments SET id = ? WHERE rowid = ?', (final_id, raw_id))
+        db.commit()
+
+        return jsonify({"status": "ok", "id": final_id})
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
 
 
 # EDIT COMMENT
