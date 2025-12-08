@@ -7,7 +7,7 @@
   <textarea name="content" class="post-textarea" rows="5">{{ comment.content }}</textarea>
   <div class="actions">
     <button type="submit" class="btn btn-primary">Update Comment</button>
-    <a href="{{ url_for('posts') }}" class="btn">Cancel</a>
+    <a href="javascript:history.back()" class="btn">Cancel</a>
   </div>
 </form>
 {% endblock %}

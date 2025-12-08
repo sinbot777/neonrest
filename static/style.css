@@ -52,7 +52,7 @@ body {
 
 #main-content {
   flex: 0 0 35%;  /* fixed to 35% of parent width */
-  max-width: 400px;  /* optional: cap it */
+/*  max-width: 400px;  /* optional: cap it */
   min-width: 260px;  /* optional: prevent collapse */
 }
 
@@ -1281,7 +1281,7 @@ input.glow-input:focus {
 
 .top9-column {
   flex: 2;
-  max-width: 700px;
+  max-width: 350px;
   padding: 1.5rem;
   background: rgba(255, 255, 255, 0.02);
   border: 2px solid rgba(255, 255, 255, 0.1);

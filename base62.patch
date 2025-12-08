@@ -1,0 +1,84 @@
+diff --git a/app.py b/app.py
+index e3c0f74..d5a4c6b 100644
+--- a/app.py
++++ b/app.py
+@@ def build_post_dicts(raw_posts):
+     for post in raw_posts:
+         post_id = post['id']
+         post_dict = dict(post)
++        post_dict['base62_id'] = encode_base62(post_id).rjust(8, 'A')
+         post_dict['html_content'] = markdown_to_html(post['content'])
+         post_dicts.append(post_dict)
+     return post_dicts
+
+@@ def route_handling_function():
+-    post_comments = {}
+-    for c in raw_comments:
+-        comment = dict(c)
+-        comment['replies'] = []
+-        post_comments.setdefault(c['post_id'], []).append(comment)
++    post_comments = {}
++    for c in raw_comments:
++        comment = dict(c)
++        comment['replies'] = []
++        base62_post_id = encode_base62(c['post_id']).rjust(8, 'A')
++        post_comments.setdefault(base62_post_id, []).append(comment)
+ 
+     for post in posts:
+-        post['comments'] = build_comment_tree(post_comments.get(post['id'], []))
++        post['comments'] = build_comment_tree(post_comments.get(post['base62_id'], []))
+
+diff --git a/templates/partials/posts.html b/templates/partials/posts.html
+index ab4dbce..e8f34fc 100644
+--- a/templates/partials/posts.html
++++ b/templates/partials/posts.html
+@@ -1,6 +1,8 @@
+ {% set posts = _posts if _posts is defined else posts %}
+ {% set post_reactors = _reactors if _reactors is defined else {} %}
+ {% set VALID_REACTS = _reacts if _reacts is defined else [] %}
+ {% set viewer_id = _viewer_id if _viewer_id is defined else None %}
+
+-{% macro render_comment(comment) %}
++{% macro render_comment(comment, post=None) %}
+   <div class="comment{% if comment.parent_comment_id %} reply-comment{% endif %}">
+     <div class="comment-header">
+       <div class="comment-meta">
+@@ -30,7 +32,9 @@
+     </div>
+
+     <div class="comment-body">{{ comment.content }}</div>
+@@ -37,11 +41,11 @@
+     {% if comment.replies %}
+       <div class="reply-thread">
+         {% for reply in comment.replies %}
+-          {{ render_comment(reply) }}
++          {{ render_comment(reply, post) }}
+         {% endfor %}
+       </div>
+     {% endif %}
+
+-    {% if viewer_id %}
+-      <a href="javascript:void(0);" class="small-button" onclick="setReplyTarget('{{ comment.id }}', '{{ comment.post_id }}')">Reply</a>
++    {% if viewer_id and post %}
++      <a href="javascript:void(0);" class="small-button" onclick="setReplyTarget('{{ comment.id }}', '{{ post.base62_id }}')">Reply</a>
+     {% endif %}
+   </div>
+@@ -55,14 +59,16 @@
+ {% for post in posts %}
+   <article class="post" id="post-{{ post.base62_id }}">
+     {{ post.html_content|safe }}
+
++    {# comments form #}
+     {% if viewer_id %}
+     <div class="comment-form">
+-    <form id="comment-form-{{ post.id }}" method="POST" action="/create_comment" data-post-id="{{ post.id }}">
+-      <input type="hidden" name="post_id" value="{{ post.id }}">
+-      <input type="hidden" name="parent_comment_id" id="parent_comment_id_{{ post.id }}" value="">
++    <form id="comment-form-{{ post.base62_id }}" method="POST" action="/create_comment" data-post-id="{{ post.id }}">
++      <input type="hidden" name="post_id" value="{{ post.base62_id }}">
++      <input type="hidden" name="parent_comment_id" id="parent_comment_id_{{ post.base62_id }}" value="">
+       <input type="text" name="content" placeholder="Leave a comment..." required class="comment-input">
+       <button type="submit" class="comment-submit">Post</button>
+     </form>
+   </div>
+     {% endif %}

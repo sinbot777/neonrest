@@ -5,7 +5,6 @@ import logging
 import re
 import markdown2
 
-
 from flask_mail import Mail, Message
 from werkzeug.security import generate_password_hash, check_password_hash
 from email_validator import validate_email
@@ -458,19 +457,21 @@ def user_page(user_id):
 @app.route('/user_test/<int:user_id>')
 def user_page_test(user_id):
     db = get_db()
-    user = db.execute('SELECT * FROM users WHERE id = ?', (user_id,)).fetchone()
-    from utils.lastfm import get_now_playing  # make sure this is at the top if not already
+    user = db.execute(
+        'SELECT * FROM users WHERE id = ?',
+        (user_id,)
+    ).fetchone()
 
-    # Now Playing (if lastfm_username is set)
+    # -- Now Playing --
     now_playing_text = None
     now_playing_url = None
     if user and user['lastfm_username']:
         try:
-            now_playing = get_now_playing(user['lastfm_username'])
-            now_playing_text = now_playing.get('track')
-            now_playing_url = now_playing.get('url')
+            now = get_now_playing(user['lastfm_username'])
+            now_playing_text = now.get('track')
+            now_playing_url = now.get('url')
         except Exception as e:
-            print(f"[Last.fm] Error fetching now playing: {e}")
+            app.logger.warning(f"[Last.fm] Error: {e}")
 
     if not user:
         flash('User not found.', 'error')
@@ -478,11 +479,51 @@ def user_page_test(user_id):
 
     viewer_id = session.get('user_id')
 
-    posts = db.execute('''
-        SELECT posts.id, posts.user_id, posts.target_user_id, posts.content, posts.circle, posts.created_at,
-               posts.last_edited, GROUP_CONCAT(vibes.name, ', ') AS vibes,
-               u.handle AS author_handle, u.codename AS author_codename, u.avatar_path AS author_avatar,
-               target.handle AS target_handle
+    # -- Friend / follow data --
+    incoming, outgoing = get_friend_requests(viewer_id)
+    pending_received_from = [r['sender_id'] for r in incoming]
+    following_map = get_following_map(viewer_id)
+
+    # -- Friend Status Map --
+    friend_status_map = {}
+    if viewer_id:
+        relationships = db.execute(
+            '''
+            SELECT sender_id, receiver_id, status
+            FROM friend_requests
+            WHERE sender_id = ? OR receiver_id = ?
+            ''',
+            (viewer_id, viewer_id)
+        ).fetchall()
+        for r in relationships:
+            other_id = r['receiver_id'] if r['sender_id'] == viewer_id else r['sender_id']
+            friend_status_map[other_id] = r['status']
+
+    # -- Friends & Top Friends --
+    friends = db.execute(
+        '''
+        SELECT u.id, u.handle, u.codename
+        FROM users u
+        JOIN friend_requests fr ON (
+            (fr.sender_id = ? AND fr.receiver_id = u.id) OR
+            (fr.receiver_id = ? AND fr.sender_id = u.id)
+        )
+        WHERE fr.status = 'accepted'
+        ''',
+        (user_id, user_id)
+    ).fetchall()
+    top_friends = get_top_friends(db, user['id'])
+
+    # -- Fetch posts --
+    rows = db.execute(
+        '''
+        SELECT posts.id, posts.user_id, posts.target_user_id, posts.content,
+               posts.circle, posts.created_at, posts.last_edited,
+               GROUP_CONCAT(vibes.name, ', ') AS vibes,
+               u.handle       AS author_handle,
+               u.codename     AS author_codename,
+               u.avatar_path  AS author_avatar,
+               target.handle  AS target_handle
         FROM posts
         JOIN users u ON posts.user_id = u.id
         LEFT JOIN users target ON posts.target_user_id = target.id
@@ -491,75 +532,50 @@ def user_page_test(user_id):
         WHERE posts.user_id = ?
         GROUP BY posts.id
         ORDER BY posts.created_at DESC
-    ''', (user_id,)).fetchall()
+        ''',
+        (user_id,)
+    ).fetchall()
 
-    incoming_requests, outgoing_requests = get_friend_requests(viewer_id)
-    pending_received_from = [r['sender_id'] for r in incoming_requests]
-    following_map = get_following_map(viewer_id)
-
-    friend_status_map = {}
-    if viewer_id:
-        relationships = db.execute('''
-            SELECT sender_id, receiver_id, status
-            FROM friend_requests
-            WHERE sender_id = ? OR receiver_id = ?
-        ''', (viewer_id, viewer_id)).fetchall()
-
-        for r in relationships:
-            other_id = r['receiver_id'] if r['sender_id'] == viewer_id else r['sender_id']
-            friend_status_map[other_id] = r['status']
-
-    friends = db.execute('''
-        SELECT u.id, u.handle, u.codename
-        FROM users u
-        JOIN friend_requests fr ON (
-            (fr.sender_id = ? AND fr.receiver_id = u.id) OR
-            (fr.receiver_id = ? AND fr.sender_id = u.id)
-        )
-        WHERE fr.status = 'accepted'
-    ''', (user_id, user_id)).fetchall()
-
-    top_friends = get_top_friends(db, user['id'])
-
-    posts_with_html = []
-
+    # -- Build posts_with_html & Base62 map --
     posts_with_html = []
     post_ids = []
-    base62_post_ids = {}
+    base62_map = {}
+    for row in rows:
+        raw_id = row['id']
+        b62 = encode_base62(raw_id).rjust(8, 'A')
+        post = dict(row)
+        post.update({
+            'id': raw_id,
+            'base62_id': b62,
+            'vibes': row['vibes'] or '',
+            'html_content': markdown2.markdown(row['content']),
+            'author_handle': row['author_handle'].lstrip('@'),
+            'target_handle': row['target_handle'].lstrip('@') if row['target_handle'] else None,
+            'author_avatar': row['author_avatar'] or '/static/default-avatar.png',
+            'is_guestbook_outbound': (
+                row['target_user_id'] is not None and
+                row['target_user_id'] != row['user_id']
+            )
+        })
+        posts_with_html.append(post)
+        post_ids.append(raw_id)
+        base62_map[raw_id] = b62
 
-    for post in posts:
-        post_dict = dict(post)
-        post_dict['is_guestbook_outbound'] = (
-            post['target_user_id'] is not None and post['target_user_id'] != post['user_id']
-        )
-        post_dict['html_content'] = markdown2.markdown(post['content'])
-        post_dict['author_handle'] = post['author_handle'].lstrip('@')
-        post_dict['target_handle'] = post['target_handle'].lstrip('@') if post['target_handle'] else None
-        post_dict['author_avatar'] = post['author_avatar'] or '/static/default-avatar.png'
-
-        raw_id = post['id']
-        base62_id = encode_base62(raw_id).rjust(8, 'A')  # Ensure it matches how comments are stored
-        base62_post_ids[raw_id] = base62_id
-        post_dict['id'] = base62_id  # Make sure templates see Base62 IDs
-
-        posts_with_html.append(post_dict)
-        post_ids.append(base62_id)
-
-    # Reactions
-    reaction_data = db.execute('''
-        SELECT post_id, emoji, COUNT(*) as count
-        FROM post_reactions
-        GROUP BY post_id, emoji
-    ''').fetchall()
-
+    # -- Reactions & Reactors --
     reaction_map = {}
-    for row in reaction_data:
-        reaction_map.setdefault(row['post_id'], {})[row['emoji']] = row['count']
-
+    if post_ids:
+        placeholders = ','.join(['?'] * len(post_ids))
+        reaction_rows = db.execute(f'''
+            SELECT post_id, emoji, COUNT(*) AS count
+            FROM post_reactions
+            WHERE post_id IN ({placeholders})
+            GROUP BY post_id, emoji
+        ''', post_ids).fetchall()
+        for r in reaction_rows:
+            reaction_map.setdefault(r['post_id'], {})[r['emoji']] = r['count']
     for post in posts_with_html:
         post['reaction_counts'] = reaction_map.get(post['id'], {})
 
-    # Reactors
     post_reactors = {}
     if post_ids:
         placeholders = ','.join(['?'] * len(post_ids))
@@ -569,50 +585,70 @@ def user_page_test(user_id):
             JOIN users u ON pr.user_id = u.id
             WHERE pr.post_id IN ({placeholders})
         ''', post_ids).fetchall()
+        for r in reactor_rows:
+            b62 = base62_map.get(r['post_id'])
+            post_reactors.setdefault(b62, {}).setdefault(r['emoji'], []).append(r['handle'])
 
-        for row in reactor_rows:
-            post_reactors.setdefault(row['post_id'], {}).setdefault(row['emoji'], []).append(row['handle'])
-
-    # Comments
+    # -- Comments threaded --
     comments_raw = []
     if post_ids:
         placeholders = ','.join(['?'] * len(post_ids))
         comments_raw = db.execute(f'''
             SELECT c.id, c.post_id, c.user_id, c.content, c.parent_comment_id,
-                   u.handle, u.avatar_path
+                   c.last_edited, u.handle, u.avatar_path
             FROM comments c
             JOIN users u ON u.id = c.user_id
             WHERE c.post_id IN ({placeholders})
             ORDER BY c.created_at ASC
         ''', post_ids).fetchall()
-
     post_comments = {}
     for c in comments_raw:
+        pid, par = c['post_id'], c['parent_comment_id']
+        cid = encode_base62(c['id']).rjust(8, 'A')
         comment = {
-            'id': c['id'],
-            'post_id': c['post_id'],
+            'id': cid,
+            'post_id': encode_base62(pid).rjust(8, 'A'),
+            'parent_comment_id': encode_base62(par).rjust(8, 'A') if par else None,
             'user_id': c['user_id'],
             'author_handle': c['handle'].lstrip('@'),
             'avatar': c['avatar_path'] or '/static/default-avatar.png',
-            'parent_comment_id': c['parent_comment_id'],
-            'content': c['content']
+            'content': c['content'],
+            'last_edited': c['last_edited'],
+            'replies': []
         }
-        post_comments.setdefault(c['post_id'], []).append(comment)
-
+        post_comments.setdefault(comment['post_id'], []).append(comment)
     for post in posts_with_html:
-        all_comments = post_comments.get(post['id'], [])
-        post['comments'] = build_comment_tree(all_comments)
+        post['comments'] = build_comment_tree(post_comments.get(post['base62_id'], []))
 
+    # ——— Load vibe theme metadata ———
+    vibe_rows = db.execute('''
+        SELECT v.name       AS vibe,
+               t.bg_color   AS bg,
+               t.text_color AS text,
+               t.glow_color AS glow,
+               t.css_class  AS css_class
+        FROM vibes v
+        JOIN themes t ON v.theme_id = t.id
+    ''').fetchall()
+    vibe_metadata = {
+        row['vibe']: {
+            'bg':        row['bg'],
+            'text':      row['text'],
+            'glow':      row['glow'],
+            'css_class': row['css_class']
+        }
+        for row in vibe_rows
+    }
 
-
+    # -- Render --
     return render_template(
-        "user_test.html",
+        'user_test.html',
         user=user,
         posts=posts_with_html,
         viewer_id=viewer_id,
         following_map=following_map,
-        incoming_requests=incoming_requests,
-        outgoing_requests=outgoing_requests,
+        incoming_requests=incoming,
+        outgoing_requests=outgoing,
         friend_status_map=friend_status_map,
         pending_received_from=pending_received_from,
         friends=friends,
@@ -620,8 +656,11 @@ def user_page_test(user_id):
         now_playing_text=now_playing_text,
         now_playing_url=now_playing_url,
         post_reactors=post_reactors,
-        VALID_REACTS=VALID_REACTS
+        VALID_REACTS=VALID_REACTS,
+        vibe_metadata=vibe_metadata
     )
+
+
 
 @app.route('/update_bio', methods=['POST'])
 def update_bio():
@@ -751,60 +790,102 @@ def create_post():
 @app.route('/create_comment', methods=['POST'])
 def create_comment():
     if 'user_id' not in session:
-        return jsonify({"error": "Not logged in"}), 401
+        return jsonify({'error': 'Not logged in'}), 401
 
+    # 1) Grab & validate form fields
+    content        = request.form.get('content', '').strip()
+    raw_b62_post   = request.form.get('post_id')
+    raw_b62_parent = request.form.get('parent_comment_id') or None
+
+    if not content or not raw_b62_post:
+        return jsonify({'error': 'Missing content or post_id'}), 400
+
+    # Parse post_id (stored as a Base10 integer string) to int
     try:
-        content = request.form.get('content', '').strip()
-        post_id = request.form.get('post_id')
-        parent_id = request.form.get('parent_comment_id') or None
+        post_id = int(raw_b62_post)
 
-        if not content or not post_id:
-            return jsonify({"error": "Missing fields"}), 400
+    except ValueError:
+        return jsonify({"error": "Invalid post_id"}), 400
 
-        db = get_db()
-        cur = db.execute("INSERT INTO comments (user_id, post_id, parent_comment_id, content) VALUES (?, ?, ?, ?)",
-                         (session['user_id'], post_id, parent_id, content))
-        raw_id = cur.lastrowid
-        db.commit()
+    if raw_b62_parent:
+        try:
+            parent_id = decode_prefixed_id(raw_b62_parent)
+        except:
+            return jsonify({'error': 'Invalid parent_comment_id'}), 400
+    else:
+        parent_id = None
 
-        final_id = generate_prefixed_id(db, raw_id)
+    # 3) Insert row, get its integer PK
+    db = get_db()
+    cur = db.execute(
+        'INSERT INTO comments (user_id, post_id, parent_comment_id, content) VALUES (?, ?, ?, ?)',
+        (session['user_id'], post_id, parent_id, content)
+    )
+    raw_id = cur.lastrowid
+    db.commit()
 
-        print(f"[Comment] Inserted: post_id={post_id}, raw_id={raw_id}, parent={parent_id}, content={content}, final_id={final_id}")
+    # 4) Generate the 8-char Base62 string from that integer
+    b62 = encode_base62(raw_id).rjust(8, 'A')
 
-        db.execute('UPDATE comments SET id = ? WHERE rowid = ?', (final_id, raw_id))
-        db.commit()
+    # 5) Return JSON (no 500s!)
+    return jsonify({
+        'status':            'ok',
+        'id':                b62,
+        'post_id':           raw_b62_post,
+        'parent_comment_id': raw_b62_parent
+    }), 201
 
-        return jsonify({"status": "ok", "id": final_id})
-
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({"error": str(e)}), 500
 
 
 # EDIT COMMENT
-@app.route('/edit_comment/<comment_id>', methods=['GET', 'POST'])
+@app.route('/edit_comment/<string:comment_id>', methods=['GET', 'POST'])
 def edit_comment(comment_id):
-    db = get_db()
-    try:
-        real_id = decode_prefixed_id(comment_id)
-    except:
-        flash("Invalid comment ID format.", "error")
-        return redirect('/feed')
+    # -- Authentication check --
+    if 'user_id' not in session:
+        flash('Please log in to edit comments.', 'error')
+        return redirect(request.referrer or '/')
 
-    comment = db.execute('SELECT * FROM comments WHERE id = ?', (real_id,)).fetchone()
-    if not comment or comment['user_id'] != session.get('user_id'):
-        flash("Unauthorized or comment not found.", "error")
-        return redirect('/feed')
+    # -- Decode Base62 comment ID to integer PK --
+    try:
+        row_id = decode_prefixed_id(comment_id)
+    except Exception:
+        flash('Invalid comment ID.', 'error')
+        return redirect(request.referrer or '/')
+
+    # -- Lazy import to avoid circular dependency --
+    from app import get_db
+    db = get_db()
+
+    # -- Fetch the existing comment including last_edited --
+    comment = db.execute(
+        'SELECT id, user_id, content, last_edited FROM comments WHERE id = ?',
+        (row_id,)
+    ).fetchone()
+    if not comment:
+        flash('Comment not found.', 'error')
+        return redirect(request.referrer or '/')
+
+    # -- Authorization check --
+    if comment['user_id'] != session.get('user_id'):
+        flash('You do not have permission to edit this comment.', 'error')
+        return redirect(request.referrer or '/')
 
     if request.method == 'POST':
-        content = request.form.get('content', '').strip()
-        if content:
-            db.execute('UPDATE comments SET content = ? WHERE id = ?', (content, real_id))
-            db.commit()
-            flash("Comment updated!", "success")
-        return redirect('/feed')
+        new_content = request.form.get('content', '').strip()
+        if not new_content:
+            flash('Content cannot be empty.', 'error')
+            return render_template('edit_comment.html', comment=comment)
 
+        # -- Update content and last_edited timestamp --
+        db.execute(
+            'UPDATE comments SET content = ?, last_edited = CURRENT_TIMESTAMP WHERE id = ?',
+            (new_content, row_id)
+        )
+        db.commit()
+        flash('Comment updated.', 'success')
+        return redirect(request.referrer or '/')
+
+    # -- Render edit form --
     return render_template('edit_comment.html', comment=comment)
 
 # DELETE COMMENT
@@ -838,70 +919,97 @@ def feed():
         return redirect('/login')
 
     db = get_db()
-    posts = db.execute('''
-        SELECT posts.id, posts.user_id, posts.content, posts.circle, posts.created_at, posts.last_edited,
-               users.handle AS author_handle, users.codename AS author_codename, users.avatar_path,
+    # --- Fetch posts ---
+    rows = db.execute('''
+        SELECT posts.id, posts.user_id, posts.content, posts.circle,
+               posts.created_at, posts.last_edited,
+               users.handle      AS author_handle,
+               users.codename    AS author_codename,
+               users.avatar_path,
                GROUP_CONCAT(vibes.name, ', ') AS vibes
         FROM posts
         JOIN users ON users.id = posts.user_id
         LEFT JOIN post_vibes ON posts.id = post_vibes.post_id
-        LEFT JOIN vibes ON post_vibes.vibe_id = vibes.id
+        LEFT JOIN vibes      ON post_vibes.vibe_id = vibes.id
         GROUP BY posts.id
         ORDER BY posts.created_at DESC
     ''').fetchall()
 
+    # --- Build HTML & Base62 map ---
     posts_with_html = []
-    for post in posts:
-        post_dict = dict(post)
-        post_dict['html_content'] = markdown2.markdown(post['content'])
-        post_dict['author_handle'] = post['author_handle'].lstrip('@') if 'author_handle' in post.keys() and post['author_handle'] else None
-        post_dict['author_avatar'] = post['avatar_path'] if 'avatar_path' in post.keys() else None  # <-- NEW
-        post_dict['is_guestbook_outbound'] = False  # Feed posts aren't guestbook posts
-        posts_with_html.append(post_dict)
+    post_ids, base62_map = [], {}
+    for row in rows:
+        raw_id = row['id']
+        b62    = encode_base62(raw_id).rjust(8, 'A')
+        post   = dict(row)
+        post.update({
+            'base62_id':            b62,
+            'html_content':         markdown2.markdown(row['content']),
+            'author_handle':        row['author_handle'].lstrip('@') if row['author_handle'] else None,
+            'author_avatar':        row['avatar_path'] or '/static/default-avatar.png',
+            'is_guestbook_outbound': False
+        })
+        posts_with_html.append(post)
+        post_ids.append(raw_id)
+        base62_map[raw_id] = b62
 
-
-    # Reaction counts
-    reaction_data = db.execute('''
-        SELECT post_id, emoji, COUNT(*) as count
-        FROM post_reactions
-        GROUP BY post_id, emoji
-    ''').fetchall()
-
+    # --- Reaction counts ---
     reaction_map = {}
-    for row in reaction_data:
-        post_id = row['post_id']
-        emoji = row['emoji']
-        count = row['count']
-        reaction_map.setdefault(post_id, {})[emoji] = count
-
+    if post_ids:
+        ph = ','.join('?'*len(post_ids))
+        for r in db.execute(f'''
+            SELECT post_id, emoji, COUNT(*) AS count
+            FROM post_reactions
+            WHERE post_id IN ({ph})
+            GROUP BY post_id, emoji
+        ''', post_ids):
+            reaction_map.setdefault(r['post_id'], {})[r['emoji']] = r['count']
     for post in posts_with_html:
         post['reaction_counts'] = reaction_map.get(post['id'], {})
 
-    # Reaction hover tooltips
-    post_ids = [post['id'] for post in posts_with_html]
+    # --- Reactors (who reacted) ---
     post_reactors = {}
-
     if post_ids:
-        placeholders = ','.join(['?'] * len(post_ids))
-        reactor_rows = db.execute(f'''
+        ph = ','.join('?'*len(post_ids))
+        for r in db.execute(f'''
             SELECT pr.post_id, pr.emoji, u.handle
             FROM post_reactions pr
-            JOIN users u ON pr.user_id = u.id
-            WHERE pr.post_id IN ({placeholders})
-        ''', post_ids).fetchall()
+            JOIN users u ON u.id = pr.user_id
+            WHERE pr.post_id IN ({ph})
+        ''', post_ids):
+            b62 = base62_map[r['post_id']]
+            post_reactors.setdefault(b62, {})\
+                         .setdefault(r['emoji'], [])\
+                         .append(r['handle'])
 
-        for row in reactor_rows:
-                clean_handle = '@' + row['handle'].lstrip('@')  # <- fix here
-                post_reactors.setdefault(row['post_id'], {}).setdefault(row['emoji'], []).append(clean_handle)
+    # --- Load vibe theme metadata ---
+    vibe_rows = db.execute('''
+        SELECT v.name      AS vibe,
+               t.bg_color   AS bg,
+               t.text_color AS text,
+               t.glow_color AS glow,
+               t.css_class  AS css_class
+        FROM vibes v
+        JOIN themes t ON v.theme_id = t.id
+    ''').fetchall()
+    vibe_metadata = {
+        row['vibe']: {
+            'bg':        row['bg'],
+            'text':      row['text'],
+            'glow':      row['glow'],
+            'css_class': row['css_class']
+        }
+        for row in vibe_rows
+    }
 
     return render_template(
         'feed.html',
         posts=posts_with_html,
         post_reactors=post_reactors,
         VALID_REACTS=VALID_REACTS,
-        vibe_slug='mixed'  # if you need this for CSS theming or styling
+        vibe_slug='mixed',             # for theming
+        vibe_metadata=vibe_metadata    # ← make this available in your partial
     )
-
 
 
 @app.route('/edit_post/<int:post_id>', methods=['GET', 'POST'])
@@ -1024,7 +1132,31 @@ def vibe_page(vibe_name):
         vibe=vibe  # ✅ always defined now
     )
 
+@app.route("/update_mood", methods=["POST"])
+def update_mood():
+    if "user_id" not in session:
+        flash("Please log in.", "error")
+        return redirect("/login")
 
+    new_mood = request.form.get("mood", "").strip()
+    db = get_db()
+    db.execute("UPDATE users SET mood = ? WHERE id = ?", (new_mood, session["user_id"]))
+    db.commit()
+    flash("Mood updated!", "success")
+    return redirect(f"/@{session['user_handle'].lstrip('@')}")
+
+@app.route("/update_haunts", methods=["POST"])
+def update_haunts():
+    if "user_id" not in session:
+        flash("Please log in.", "error")
+        return redirect("/login")
+
+    new_haunts = request.form.get("haunts", "").strip()
+    db = get_db()
+    db.execute("UPDATE users SET frequent_haunts = ? WHERE id = ?", (new_haunts, session["user_id"]))
+    db.commit()
+    flash("Haunts updated!", "success")
+    return redirect(f"/@{session['user_handle'].lstrip('@')}")
 
 @app.template_filter('datetimeformat')
 def datetimeformat(value, format='medium'):
