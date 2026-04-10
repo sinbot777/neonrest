@@ -1,0 +1,2305 @@
+diff --git a/__pycache__/app.cpython-313.pyc b/__pycache__/app.cpython-313.pyc
+index abc39bb..8d0d937 100644
+Binary files a/__pycache__/app.cpython-313.pyc and b/__pycache__/app.cpython-313.pyc differ
+diff --git a/app.py b/app.py
+index acd433f..5eb0c86 100644
+--- a/app.py
++++ b/app.py
+@@ -5,7 +5,6 @@ import logging
+ import re
+ import markdown2
+ 
+-
+ from flask_mail import Mail, Message
+ from werkzeug.security import generate_password_hash, check_password_hash
+ from email_validator import validate_email
+@@ -458,19 +457,21 @@ def user_page(user_id):
+ @app.route('/user_test/<int:user_id>')
+ def user_page_test(user_id):
+     db = get_db()
+-    user = db.execute('SELECT * FROM users WHERE id = ?', (user_id,)).fetchone()
+-    from utils.lastfm import get_now_playing  # make sure this is at the top if not already
++    user = db.execute(
++        'SELECT * FROM users WHERE id = ?',
++        (user_id,)
++    ).fetchone()
+ 
+-    # Now Playing (if lastfm_username is set)
++    # -- Now Playing --
+     now_playing_text = None
+     now_playing_url = None
+     if user and user['lastfm_username']:
+         try:
+-            now_playing = get_now_playing(user['lastfm_username'])
+-            now_playing_text = now_playing.get('track')
+-            now_playing_url = now_playing.get('url')
++            now = get_now_playing(user['lastfm_username'])
++            now_playing_text = now.get('track')
++            now_playing_url = now.get('url')
+         except Exception as e:
+-            print(f"[Last.fm] Error fetching now playing: {e}")
++            app.logger.warning(f"[Last.fm] Error: {e}")
+ 
+     if not user:
+         flash('User not found.', 'error')
+@@ -478,38 +479,29 @@ def user_page_test(user_id):
+ 
+     viewer_id = session.get('user_id')
+ 
+-    posts = db.execute('''
+-        SELECT posts.id, posts.user_id, posts.target_user_id, posts.content, posts.circle, posts.created_at,
+-               posts.last_edited, GROUP_CONCAT(vibes.name, ', ') AS vibes,
+-               u.handle AS author_handle, u.codename AS author_codename, u.avatar_path AS author_avatar,
+-               target.handle AS target_handle
+-        FROM posts
+-        JOIN users u ON posts.user_id = u.id
+-        LEFT JOIN users target ON posts.target_user_id = target.id
+-        LEFT JOIN post_vibes ON posts.id = post_vibes.post_id
+-        LEFT JOIN vibes ON post_vibes.vibe_id = vibes.id
+-        WHERE posts.user_id = ?
+-        GROUP BY posts.id
+-        ORDER BY posts.created_at DESC
+-    ''', (user_id,)).fetchall()
+-
+-    incoming_requests, outgoing_requests = get_friend_requests(viewer_id)
+-    pending_received_from = [r['sender_id'] for r in incoming_requests]
++    # -- Friend / follow data --
++    incoming, outgoing = get_friend_requests(viewer_id)
++    pending_received_from = [r['sender_id'] for r in incoming]
+     following_map = get_following_map(viewer_id)
+ 
++    # -- Friend Status Map --
+     friend_status_map = {}
+     if viewer_id:
+-        relationships = db.execute('''
++        relationships = db.execute(
++            '''
+             SELECT sender_id, receiver_id, status
+             FROM friend_requests
+             WHERE sender_id = ? OR receiver_id = ?
+-        ''', (viewer_id, viewer_id)).fetchall()
+-
++            ''',
++            (viewer_id, viewer_id)
++        ).fetchall()
+         for r in relationships:
+             other_id = r['receiver_id'] if r['sender_id'] == viewer_id else r['sender_id']
+             friend_status_map[other_id] = r['status']
+ 
+-    friends = db.execute('''
++    # -- Friends & Top Friends --
++    friends = db.execute(
++        '''
+         SELECT u.id, u.handle, u.codename
+         FROM users u
+         JOIN friend_requests fr ON (
+@@ -517,49 +509,73 @@ def user_page_test(user_id):
+             (fr.receiver_id = ? AND fr.sender_id = u.id)
+         )
+         WHERE fr.status = 'accepted'
+-    ''', (user_id, user_id)).fetchall()
+-
++        ''',
++        (user_id, user_id)
++    ).fetchall()
+     top_friends = get_top_friends(db, user['id'])
+ 
+-    posts_with_html = []
++    # -- Fetch posts --
++    rows = db.execute(
++        '''
++        SELECT posts.id, posts.user_id, posts.target_user_id, posts.content,
++               posts.circle, posts.created_at, posts.last_edited,
++               GROUP_CONCAT(vibes.name, ', ') AS vibes,
++               u.handle       AS author_handle,
++               u.codename     AS author_codename,
++               u.avatar_path  AS author_avatar,
++               target.handle  AS target_handle
++        FROM posts
++        JOIN users u ON posts.user_id = u.id
++        LEFT JOIN users target ON posts.target_user_id = target.id
++        LEFT JOIN post_vibes ON posts.id = post_vibes.post_id
++        LEFT JOIN vibes ON post_vibes.vibe_id = vibes.id
++        WHERE posts.user_id = ?
++        GROUP BY posts.id
++        ORDER BY posts.created_at DESC
++        ''',
++        (user_id,)
++    ).fetchall()
+ 
++    # -- Build posts_with_html & Base62 map --
+     posts_with_html = []
+     post_ids = []
+-    base62_post_ids = {}
+-
+-    for post in posts:
+-        post_dict = dict(post)
+-        post_dict['is_guestbook_outbound'] = (
+-            post['target_user_id'] is not None and post['target_user_id'] != post['user_id']
+-        )
+-        post_dict['html_content'] = markdown2.markdown(post['content'])
+-        post_dict['author_handle'] = post['author_handle'].lstrip('@')
+-        post_dict['target_handle'] = post['target_handle'].lstrip('@') if post['target_handle'] else None
+-        post_dict['author_avatar'] = post['author_avatar'] or '/static/default-avatar.png'
+-
+-        raw_id = post['id']
+-        base62_id = encode_base62(raw_id).rjust(8, 'A')  # Ensure it matches how comments are stored
+-        base62_post_ids[raw_id] = base62_id
+-        post_dict['id'] = base62_id  # Make sure templates see Base62 IDs
+-
+-        posts_with_html.append(post_dict)
+-        post_ids.append(base62_id)
+-
+-    # Reactions
+-    reaction_data = db.execute('''
+-        SELECT post_id, emoji, COUNT(*) as count
+-        FROM post_reactions
+-        GROUP BY post_id, emoji
+-    ''').fetchall()
+-
++    base62_map = {}
++    for row in rows:
++        raw_id = row['id']
++        b62 = encode_base62(raw_id).rjust(8, 'A')
++        post = dict(row)
++        post.update({
++            'id': raw_id,
++            'base62_id': b62,
++            'vibes': row['vibes'] or '',
++            'html_content': markdown2.markdown(row['content']),
++            'author_handle': row['author_handle'].lstrip('@'),
++            'target_handle': row['target_handle'].lstrip('@') if row['target_handle'] else None,
++            'author_avatar': row['author_avatar'] or '/static/default-avatar.png',
++            'is_guestbook_outbound': (
++                row['target_user_id'] is not None and
++                row['target_user_id'] != row['user_id']
++            )
++        })
++        posts_with_html.append(post)
++        post_ids.append(raw_id)
++        base62_map[raw_id] = b62
++
++    # -- Reactions & Reactors --
+     reaction_map = {}
+-    for row in reaction_data:
+-        reaction_map.setdefault(row['post_id'], {})[row['emoji']] = row['count']
+-
++    if post_ids:
++        placeholders = ','.join(['?'] * len(post_ids))
++        reaction_rows = db.execute(f'''
++            SELECT post_id, emoji, COUNT(*) AS count
++            FROM post_reactions
++            WHERE post_id IN ({placeholders})
++            GROUP BY post_id, emoji
++        ''', post_ids).fetchall()
++        for r in reaction_rows:
++            reaction_map.setdefault(r['post_id'], {})[r['emoji']] = r['count']
+     for post in posts_with_html:
+         post['reaction_counts'] = reaction_map.get(post['id'], {})
+ 
+-    # Reactors
+     post_reactors = {}
+     if post_ids:
+         placeholders = ','.join(['?'] * len(post_ids))
+@@ -569,50 +585,70 @@ def user_page_test(user_id):
+             JOIN users u ON pr.user_id = u.id
+             WHERE pr.post_id IN ({placeholders})
+         ''', post_ids).fetchall()
++        for r in reactor_rows:
++            b62 = base62_map.get(r['post_id'])
++            post_reactors.setdefault(b62, {}).setdefault(r['emoji'], []).append(r['handle'])
+ 
+-        for row in reactor_rows:
+-            post_reactors.setdefault(row['post_id'], {}).setdefault(row['emoji'], []).append(row['handle'])
+-
+-    # Comments
++    # -- Comments threaded --
+     comments_raw = []
+     if post_ids:
+         placeholders = ','.join(['?'] * len(post_ids))
+         comments_raw = db.execute(f'''
+             SELECT c.id, c.post_id, c.user_id, c.content, c.parent_comment_id,
+-                   u.handle, u.avatar_path
++                   c.last_edited, u.handle, u.avatar_path
+             FROM comments c
+             JOIN users u ON u.id = c.user_id
+             WHERE c.post_id IN ({placeholders})
+             ORDER BY c.created_at ASC
+         ''', post_ids).fetchall()
+-
+     post_comments = {}
+     for c in comments_raw:
++        pid, par = c['post_id'], c['parent_comment_id']
++        cid = encode_base62(c['id']).rjust(8, 'A')
+         comment = {
+-            'id': c['id'],
+-            'post_id': c['post_id'],
++            'id': cid,
++            'post_id': encode_base62(pid).rjust(8, 'A'),
++            'parent_comment_id': encode_base62(par).rjust(8, 'A') if par else None,
+             'user_id': c['user_id'],
+             'author_handle': c['handle'].lstrip('@'),
+             'avatar': c['avatar_path'] or '/static/default-avatar.png',
+-            'parent_comment_id': c['parent_comment_id'],
+-            'content': c['content']
++            'content': c['content'],
++            'last_edited': c['last_edited'],
++            'replies': []
+         }
+-        post_comments.setdefault(c['post_id'], []).append(comment)
+-
++        post_comments.setdefault(comment['post_id'], []).append(comment)
+     for post in posts_with_html:
+-        all_comments = post_comments.get(post['id'], [])
+-        post['comments'] = build_comment_tree(all_comments)
+-
+-
++        post['comments'] = build_comment_tree(post_comments.get(post['base62_id'], []))
++
++    # ——— Load vibe theme metadata ———
++    vibe_rows = db.execute('''
++        SELECT v.name       AS vibe,
++               t.bg_color   AS bg,
++               t.text_color AS text,
++               t.glow_color AS glow,
++               t.css_class  AS css_class
++        FROM vibes v
++        JOIN themes t ON v.theme_id = t.id
++    ''').fetchall()
++    vibe_metadata = {
++        row['vibe']: {
++            'bg':        row['bg'],
++            'text':      row['text'],
++            'glow':      row['glow'],
++            'css_class': row['css_class']
++        }
++        for row in vibe_rows
++    }
+ 
++    # -- Render --
+     return render_template(
+-        "user_test.html",
++        'user_test.html',
+         user=user,
+         posts=posts_with_html,
+         viewer_id=viewer_id,
+         following_map=following_map,
+-        incoming_requests=incoming_requests,
+-        outgoing_requests=outgoing_requests,
++        incoming_requests=incoming,
++        outgoing_requests=outgoing,
+         friend_status_map=friend_status_map,
+         pending_received_from=pending_received_from,
+         friends=friends,
+@@ -620,9 +656,12 @@ def user_page_test(user_id):
+         now_playing_text=now_playing_text,
+         now_playing_url=now_playing_url,
+         post_reactors=post_reactors,
+-        VALID_REACTS=VALID_REACTS
++        VALID_REACTS=VALID_REACTS,
++        vibe_metadata=vibe_metadata
+     )
+ 
++
++
+ @app.route('/update_bio', methods=['POST'])
+ def update_bio():
+     if 'user_id' not in session:
+@@ -751,60 +790,102 @@ def create_post():
+ @app.route('/create_comment', methods=['POST'])
+ def create_comment():
+     if 'user_id' not in session:
+-        return jsonify({"error": "Not logged in"}), 401
++        return jsonify({'error': 'Not logged in'}), 401
+ 
+-    try:
+-        content = request.form.get('content', '').strip()
+-        post_id = request.form.get('post_id')
+-        parent_id = request.form.get('parent_comment_id') or None
++    # 1) Grab & validate form fields
++    content        = request.form.get('content', '').strip()
++    raw_b62_post   = request.form.get('post_id')
++    raw_b62_parent = request.form.get('parent_comment_id') or None
+ 
+-        if not content or not post_id:
+-            return jsonify({"error": "Missing fields"}), 400
++    if not content or not raw_b62_post:
++        return jsonify({'error': 'Missing content or post_id'}), 400
+ 
+-        db = get_db()
+-        cur = db.execute("INSERT INTO comments (user_id, post_id, parent_comment_id, content) VALUES (?, ?, ?, ?)",
+-                         (session['user_id'], post_id, parent_id, content))
+-        raw_id = cur.lastrowid
+-        db.commit()
++    # Parse post_id (stored as a Base10 integer string) to int
++    try:
++        post_id = int(raw_b62_post)
+ 
+-        final_id = generate_prefixed_id(db, raw_id)
++    except ValueError:
++        return jsonify({"error": "Invalid post_id"}), 400
+ 
+-        print(f"[Comment] Inserted: post_id={post_id}, raw_id={raw_id}, parent={parent_id}, content={content}, final_id={final_id}")
++    if raw_b62_parent:
++        try:
++            parent_id = decode_prefixed_id(raw_b62_parent)
++        except:
++            return jsonify({'error': 'Invalid parent_comment_id'}), 400
++    else:
++        parent_id = None
+ 
+-        db.execute('UPDATE comments SET id = ? WHERE rowid = ?', (final_id, raw_id))
+-        db.commit()
++    # 3) Insert row, get its integer PK
++    db = get_db()
++    cur = db.execute(
++        'INSERT INTO comments (user_id, post_id, parent_comment_id, content) VALUES (?, ?, ?, ?)',
++        (session['user_id'], post_id, parent_id, content)
++    )
++    raw_id = cur.lastrowid
++    db.commit()
+ 
+-        return jsonify({"status": "ok", "id": final_id})
++    # 4) Generate the 8-char Base62 string from that integer
++    b62 = encode_base62(raw_id).rjust(8, 'A')
++
++    # 5) Return JSON (no 500s!)
++    return jsonify({
++        'status':            'ok',
++        'id':                b62,
++        'post_id':           raw_b62_post,
++        'parent_comment_id': raw_b62_parent
++    }), 201
+ 
+-    except Exception as e:
+-        import traceback
+-        traceback.print_exc()
+-        return jsonify({"error": str(e)}), 500
+ 
+ 
+ # EDIT COMMENT
+-@app.route('/edit_comment/<comment_id>', methods=['GET', 'POST'])
++@app.route('/edit_comment/<string:comment_id>', methods=['GET', 'POST'])
+ def edit_comment(comment_id):
+-    db = get_db()
++    # -- Authentication check --
++    if 'user_id' not in session:
++        flash('Please log in to edit comments.', 'error')
++        return redirect(request.referrer or '/')
++
++    # -- Decode Base62 comment ID to integer PK --
+     try:
+-        real_id = decode_prefixed_id(comment_id)
+-    except:
+-        flash("Invalid comment ID format.", "error")
+-        return redirect('/feed')
++        row_id = decode_prefixed_id(comment_id)
++    except Exception:
++        flash('Invalid comment ID.', 'error')
++        return redirect(request.referrer or '/')
+ 
+-    comment = db.execute('SELECT * FROM comments WHERE id = ?', (real_id,)).fetchone()
+-    if not comment or comment['user_id'] != session.get('user_id'):
+-        flash("Unauthorized or comment not found.", "error")
+-        return redirect('/feed')
++    # -- Lazy import to avoid circular dependency --
++    from app import get_db
++    db = get_db()
++
++    # -- Fetch the existing comment including last_edited --
++    comment = db.execute(
++        'SELECT id, user_id, content, last_edited FROM comments WHERE id = ?',
++        (row_id,)
++    ).fetchone()
++    if not comment:
++        flash('Comment not found.', 'error')
++        return redirect(request.referrer or '/')
++
++    # -- Authorization check --
++    if comment['user_id'] != session.get('user_id'):
++        flash('You do not have permission to edit this comment.', 'error')
++        return redirect(request.referrer or '/')
+ 
+     if request.method == 'POST':
+-        content = request.form.get('content', '').strip()
+-        if content:
+-            db.execute('UPDATE comments SET content = ? WHERE id = ?', (content, real_id))
+-            db.commit()
+-            flash("Comment updated!", "success")
+-        return redirect('/feed')
++        new_content = request.form.get('content', '').strip()
++        if not new_content:
++            flash('Content cannot be empty.', 'error')
++            return render_template('edit_comment.html', comment=comment)
++
++        # -- Update content and last_edited timestamp --
++        db.execute(
++            'UPDATE comments SET content = ?, last_edited = CURRENT_TIMESTAMP WHERE id = ?',
++            (new_content, row_id)
++        )
++        db.commit()
++        flash('Comment updated.', 'success')
++        return redirect(request.referrer or '/')
+ 
++    # -- Render edit form --
+     return render_template('edit_comment.html', comment=comment)
+ 
+ # DELETE COMMENT
+@@ -838,72 +919,99 @@ def feed():
+         return redirect('/login')
+ 
+     db = get_db()
+-    posts = db.execute('''
+-        SELECT posts.id, posts.user_id, posts.content, posts.circle, posts.created_at, posts.last_edited,
+-               users.handle AS author_handle, users.codename AS author_codename, users.avatar_path,
++    # --- Fetch posts ---
++    rows = db.execute('''
++        SELECT posts.id, posts.user_id, posts.content, posts.circle,
++               posts.created_at, posts.last_edited,
++               users.handle      AS author_handle,
++               users.codename    AS author_codename,
++               users.avatar_path,
+                GROUP_CONCAT(vibes.name, ', ') AS vibes
+         FROM posts
+         JOIN users ON users.id = posts.user_id
+         LEFT JOIN post_vibes ON posts.id = post_vibes.post_id
+-        LEFT JOIN vibes ON post_vibes.vibe_id = vibes.id
++        LEFT JOIN vibes      ON post_vibes.vibe_id = vibes.id
+         GROUP BY posts.id
+         ORDER BY posts.created_at DESC
+     ''').fetchall()
+ 
++    # --- Build HTML & Base62 map ---
+     posts_with_html = []
+-    for post in posts:
+-        post_dict = dict(post)
+-        post_dict['html_content'] = markdown2.markdown(post['content'])
+-        post_dict['author_handle'] = post['author_handle'].lstrip('@') if 'author_handle' in post.keys() and post['author_handle'] else None
+-        post_dict['author_avatar'] = post['avatar_path'] if 'avatar_path' in post.keys() else None  # <-- NEW
+-        post_dict['is_guestbook_outbound'] = False  # Feed posts aren't guestbook posts
+-        posts_with_html.append(post_dict)
+-
+-
+-    # Reaction counts
+-    reaction_data = db.execute('''
+-        SELECT post_id, emoji, COUNT(*) as count
+-        FROM post_reactions
+-        GROUP BY post_id, emoji
+-    ''').fetchall()
+-
++    post_ids, base62_map = [], {}
++    for row in rows:
++        raw_id = row['id']
++        b62    = encode_base62(raw_id).rjust(8, 'A')
++        post   = dict(row)
++        post.update({
++            'base62_id':            b62,
++            'html_content':         markdown2.markdown(row['content']),
++            'author_handle':        row['author_handle'].lstrip('@') if row['author_handle'] else None,
++            'author_avatar':        row['avatar_path'] or '/static/default-avatar.png',
++            'is_guestbook_outbound': False
++        })
++        posts_with_html.append(post)
++        post_ids.append(raw_id)
++        base62_map[raw_id] = b62
++
++    # --- Reaction counts ---
+     reaction_map = {}
+-    for row in reaction_data:
+-        post_id = row['post_id']
+-        emoji = row['emoji']
+-        count = row['count']
+-        reaction_map.setdefault(post_id, {})[emoji] = count
+-
++    if post_ids:
++        ph = ','.join('?'*len(post_ids))
++        for r in db.execute(f'''
++            SELECT post_id, emoji, COUNT(*) AS count
++            FROM post_reactions
++            WHERE post_id IN ({ph})
++            GROUP BY post_id, emoji
++        ''', post_ids):
++            reaction_map.setdefault(r['post_id'], {})[r['emoji']] = r['count']
+     for post in posts_with_html:
+         post['reaction_counts'] = reaction_map.get(post['id'], {})
+ 
+-    # Reaction hover tooltips
+-    post_ids = [post['id'] for post in posts_with_html]
++    # --- Reactors (who reacted) ---
+     post_reactors = {}
+-
+     if post_ids:
+-        placeholders = ','.join(['?'] * len(post_ids))
+-        reactor_rows = db.execute(f'''
++        ph = ','.join('?'*len(post_ids))
++        for r in db.execute(f'''
+             SELECT pr.post_id, pr.emoji, u.handle
+             FROM post_reactions pr
+-            JOIN users u ON pr.user_id = u.id
+-            WHERE pr.post_id IN ({placeholders})
+-        ''', post_ids).fetchall()
+-
+-        for row in reactor_rows:
+-                clean_handle = '@' + row['handle'].lstrip('@')  # <- fix here
+-                post_reactors.setdefault(row['post_id'], {}).setdefault(row['emoji'], []).append(clean_handle)
++            JOIN users u ON u.id = pr.user_id
++            WHERE pr.post_id IN ({ph})
++        ''', post_ids):
++            b62 = base62_map[r['post_id']]
++            post_reactors.setdefault(b62, {})\
++                         .setdefault(r['emoji'], [])\
++                         .append(r['handle'])
++
++    # --- Load vibe theme metadata ---
++    vibe_rows = db.execute('''
++        SELECT v.name      AS vibe,
++               t.bg_color   AS bg,
++               t.text_color AS text,
++               t.glow_color AS glow,
++               t.css_class  AS css_class
++        FROM vibes v
++        JOIN themes t ON v.theme_id = t.id
++    ''').fetchall()
++    vibe_metadata = {
++        row['vibe']: {
++            'bg':        row['bg'],
++            'text':      row['text'],
++            'glow':      row['glow'],
++            'css_class': row['css_class']
++        }
++        for row in vibe_rows
++    }
+ 
+     return render_template(
+         'feed.html',
+         posts=posts_with_html,
+         post_reactors=post_reactors,
+         VALID_REACTS=VALID_REACTS,
+-        vibe_slug='mixed'  # if you need this for CSS theming or styling
++        vibe_slug='mixed',             # for theming
++        vibe_metadata=vibe_metadata    # ← make this available in your partial
+     )
+ 
+ 
+-
+ @app.route('/edit_post/<int:post_id>', methods=['GET', 'POST'])
+ def edit_post(post_id):
+     if 'user_id' not in session:
+@@ -1024,7 +1132,31 @@ def vibe_page(vibe_name):
+         vibe=vibe  # ✅ always defined now
+     )
+ 
++@app.route("/update_mood", methods=["POST"])
++def update_mood():
++    if "user_id" not in session:
++        flash("Please log in.", "error")
++        return redirect("/login")
++
++    new_mood = request.form.get("mood", "").strip()
++    db = get_db()
++    db.execute("UPDATE users SET mood = ? WHERE id = ?", (new_mood, session["user_id"]))
++    db.commit()
++    flash("Mood updated!", "success")
++    return redirect(f"/@{session['user_handle'].lstrip('@')}")
+ 
++@app.route("/update_haunts", methods=["POST"])
++def update_haunts():
++    if "user_id" not in session:
++        flash("Please log in.", "error")
++        return redirect("/login")
++
++    new_haunts = request.form.get("haunts", "").strip()
++    db = get_db()
++    db.execute("UPDATE users SET frequent_haunts = ? WHERE id = ?", (new_haunts, session["user_id"]))
++    db.commit()
++    flash("Haunts updated!", "success")
++    return redirect(f"/@{session['user_handle'].lstrip('@')}")
+ 
+ @app.template_filter('datetimeformat')
+ def datetimeformat(value, format='medium'):
+diff --git a/static/post_overrides.css b/static/post_overrides.css
+index cfa4fba..7e8735b 100644
+--- a/static/post_overrides.css
++++ b/static/post_overrides.css
+@@ -1,224 +1,297 @@
+-/* post_overrides.css — Cleaned Version 🧹 */
+-
+-/* Post Preview Container */
+-
+-.post-preview {
+-  position: relative;
+-  background: rgb(0 0 0 / 46%);
+-  border-left: 4px solid #ffa7c4;
+-  border-radius: 12px;
+-  padding: 1rem;
+-  margin-bottom: 1.5rem;
+-  box-shadow: 0 2px 12px rgba(255, 167, 199, 0.2);
+-  color: var(--text-color, #fff);
+-}
+-
+-
+-/* Guestbook Outbound Specific */
+-.post-preview.guestbook-outbound {
+-  margin-left: 1cm;
+-  background-color: rgb(83 83 83 / 81%);
+-  border-left: 15px solid #ff9bc2;
+-  padding-left: 1.5rem;
+-  box-shadow: 0 0 6px rgba(255, 155, 194, 0.3);
+-  border-radius: 0.75em;
+-}
+-
+-/* Post Header */
+-.post-header {
+-  display: flex;
+-  align-items: flex-start;
+-  justify-content: space-between;
+-  gap: 0.75rem;
+-  position: relative;
+-  font-size: 0.8rem;
+-}
+-
+-.post-user-meta {
+-  flex: 1;
+-  display: flex;
+-  flex-direction: column;
+-  align-items: flex-start;
+-}
+-
+-/* Reaction Form + Buttons */
+-
+-.post-reactions-box.react-form {
+-  background: rgb(99 159 203);
+-  border-radius: 0.5em;
+-  padding: 0.25em;
+-  margin-top: 0.75em;
+-  display: flex;
+-  flex-wrap: wrap;
+-  gap: 0.4em;
+-  justify-content: flex-end;
+-}
+-
+-
+-.react-form {
+-  margin-top: 0.5em;
+-  display: flex;
+-  flex-wrap: wrap;
+-  gap: 0.25em 0.3em;  /* smaller row/column spacing */
+-  justify-content: flex-end;
+-}
+-
+-.react-form .icon-button {
+-  background: none;
+-  border: none;
+-  cursor: pointer;
+-  font-size: 1.1rem;
+-  line-height: 1;
+-  border-radius: 6px;
+-  color: #ffcde9;
+-  text-shadow: 0 0 1px black, 0 0 2px black;
+-  transition: transform 0.2s ease;
+-  margin: 0 -0.15rem;   /* ← Negative margin to pull buttons tighter together */
+-  padding: 0;
+-  position: relative;
+-}
+-
+-.react-form .icon-button:hover {
+-  transform: scale(1.15);
+-  color: #fff;
+-  text-shadow: 0 0 4px #ffa7c4;
+-}
+-
+-.react-form .icon-button.active {
+-  font-weight: bold;
+-  text-shadow: 0 0 6px #fff;
+-}
+-
+-.react-btn {
+-  background: transparent;
+-  border: none;
+-  font-size: 1rem;
+-  color: var(--text-color, #333);
+-  padding: 0.15em 0.25em;
+-  cursor: pointer;
+-  border-radius: 6px;
+-  transition: background 0.2s, transform 0.2s;
+-  text-shadow: 0 0 3px var(--reaction-glow, #ffa7d7);
+-  position: relative;
+-}
+-
+-.react-btn sub {
+-  position: absolute;
+-  bottom: -0.25em;
+-  right: -0.4em;
+-  font-size: 0.55em;
+-  font-weight: bold;
+-  color: #333;
+-  background: #fff;
+-  border-radius: 1em;
+-  padding: 0.1em 0.4em;
+-  line-height: 1;
+-  box-shadow: 0 0 2px rgba(0, 0, 0, 0.2);
+-  pointer-events: none;
+-}
+-
+-
+-.react-btn:hover {
+-  background-color: var(--reaction-hover-bg, rgba(0, 0, 0, 0.1));
+-  transform: scale(1.1);
+-}
+-
+-.react-btn.active {
+-  color: var(--reaction-active, #fff);
+-  text-shadow: 0 0 6px var(--reaction-glow, #ffa7d7);
+-  background-color: var(--reaction-hover-bg, rgba(255, 167, 199, 0.1));
+-  font-weight: bold;
+-  transform: scale(1.15);
+-}
+-
+-/* Post Content */
+-.post-content {
+-  color: #ffffff;
+-  white-space: pre-wrap;
+-  margin-bottom: 0.5rem;
+-}
+-
+-/* Post Actions Dropdown */
+-.post-actions {
+-  position: absolute;
+-  top: 8px;
+-  right: 8px;
+-  z-index: 2;
+-}
+-
+-.post-dropdown {
+-  position: absolute;
+-  background-color: #222;
+-  border: 1px solid #444;
+-  border-radius: 5px;
+-  padding: 0.5em;
+-  right: 0;
+-  top: 1.8em;
+-  z-index: 10;
+-}
+-
+-.post-dropdown a,
+-.post-dropdown button.link-button {
+-  display: block;
+-  padding: 0.25em 0.5em;
+-  color: #fdfdfd;
+-  background: none;
+-  border: none;
+-  text-align: left;
+-  width: 100%;
+-  text-decoration: none;
+-  cursor: pointer;
+-}
+-
+-.post-dropdown a:hover,
+-.post-dropdown button.link-button:hover {
+-  background-color: #333;
+-}
+-
+-.reply-thread {
+-  margin-left: 1.5rem;
+-  border-left: 2px dashed var(--accent-color, #ccc);
+-  padding-left: 1rem;
+-  margin-top: 0.5rem;
+-}
+-
+-.reply-comment .avatar-img.tiny {
+-  width: 20px;
+-  height: 20px;
+-}
+-
+-.comment-actions {
+-  position: absolute;
+-  top: 0;
+-  right: 0;
+-  z-index: 2;
+-}
+-
+-.comment-header {
+-  position: relative;
+-  display: flex;
+-  align-items: center;
+-  gap: 0.5em;
+-  font-size: 0.8rem;
+-}
+-
+-.comment-header {
+-  display: flex;
+-  align-items: center;
+-  justify-content: space-between;
+-  gap: 0.5rem;
+-}
+-
+-.comment-meta {
+-  display: flex;
+-  align-items: center;
+-  gap: 0.4rem;
+-}
+-
+-.avatar-img.tiny {
+-  width: 28px;
+-  height: 28px;
+-  object-fit: cover;
+-  border-radius: 50%;
+-  aspect-ratio: 1 / 1;
+-}
+\ No newline at end of file
++/* post_overrides.css — Cleaned Version 🧹 */
++
++/* Post Preview Container */
++
++.post-preview {
++  position: relative;
++  background: rgb(0 0 0 / 46%);
++  border-left: 4px solid #ffa7c4;
++  border-radius: 12px;
++  padding: 1rem;
++  margin-bottom: 1.5rem;
++  box-shadow: 0 2px 12px rgba(255, 167, 199, 0.2);
++  color: var(--text-color, #fff);
++}
++
++
++/* Guestbook Outbound Specific */
++.post-preview.guestbook-outbound {
++  margin-left: 1cm;
++  background-color: rgb(83 83 83 / 81%);
++  border-left: 15px solid #ff9bc2;
++  padding-left: 1.5rem;
++  box-shadow: 0 0 6px rgba(255, 155, 194, 0.3);
++  border-radius: 0.75em;
++}
++
++/* Post Header */
++.post-header {
++  display: flex;
++  align-items: flex-start;
++  justify-content: space-between;
++  gap: 0.75rem;
++  position: relative;
++  font-size: 0.8rem;
++}
++
++.post-user-meta {
++  flex: 1;
++  display: flex;
++  flex-direction: column;
++  align-items: flex-start;
++}
++
++/* Reaction Form + Buttons */
++
++.post-reactions-box.react-form {
++  background: rgb(99 159 203);
++  border-radius: 0.5em;
++  padding: 0.25em;
++  margin-top: 0.75em;
++  display: flex;
++  flex-wrap: wrap;
++  gap: 0.4em;
++  justify-content: flex-end;
++}
++
++
++.react-form {
++  margin-top: 0.5em;
++  display: flex;
++  flex-wrap: wrap;
++  gap: 0.25em 0.3em;  /* smaller row/column spacing */
++  justify-content: flex-end;
++}
++
++.react-form .icon-button {
++  background: none;
++  border: none;
++  cursor: pointer;
++  font-size: 1.1rem;
++  line-height: 1;
++  border-radius: 6px;
++  color: #ffcde9;
++  text-shadow: 0 0 1px black, 0 0 2px black;
++  transition: transform 0.2s ease;
++  margin: 0 -0.15rem;   /* ← Negative margin to pull buttons tighter together */
++  padding: 0;
++  position: relative;
++}
++
++.react-form .icon-button:hover {
++  transform: scale(1.15);
++  color: #fff;
++  text-shadow: 0 0 4px #ffa7c4;
++}
++
++.react-form .icon-button.active {
++  font-weight: bold;
++  text-shadow: 0 0 6px #fff;
++}
++
++.react-btn {
++  background: transparent;
++  border: none;
++  font-size: 1rem;
++  color: var(--text-color, #333);
++  padding: 0.15em 0.0005em;
++  cursor: pointer;
++  border-radius: 6px;
++  transition: background 0.2s, transform 0.2s;
++  text-shadow: 0 0 3px var(--reaction-glow, #ffa7d7);
++  position: relative;
++}
++
++.react-btn sub {
++  position: absolute;
++  bottom: -0.25em;
++  right: -0.4em;
++  font-size: 0.55em;
++  font-weight: bold;
++  color: #333;
++  background: #fff;
++  border-radius: 1em;
++  padding: 0.1em 0.4em;
++  line-height: 1;
++  box-shadow: 0 0 2px rgba(0, 0, 0, 0.2);
++  pointer-events: none;
++}
++
++
++.react-btn:hover {
++  background-color: var(--reaction-hover-bg, rgba(0, 0, 0, 0.1));
++  transform: scale(1.1);
++}
++
++.react-btn.active {
++  color: var(--reaction-active, #fff);
++  text-shadow: 0 0 6px var(--reaction-glow, #ffa7d7);
++  background-color: var(--reaction-hover-bg, rgba(255, 167, 199, 0.1));
++  font-weight: bold;
++  transform: scale(1.15);
++}
++
++/* Post Content */
++.post-content {
++  color: #ffffff;
++  white-space: pre-wrap;
++  margin-bottom: 0.5rem;
++}
++
++/* Post Actions Dropdown */
++.post-actions {
++  position: absolute;
++  top: 8px;
++  right: 8px;
++  z-index: 2;
++}
++
++.post-dropdown {
++  position: absolute;
++  background-color: #222;
++  border: 1px solid #444;
++  border-radius: 5px;
++  padding: 0.5em;
++  right: 0;
++  top: 1.8em;
++  z-index: 10;
++}
++
++.post-dropdown a,
++.post-dropdown button.link-button {
++  display: block;
++  padding: 0.25em 0.5em;
++  color: #fdfdfd;
++  background: none;
++  border: none;
++  text-align: left;
++  width: 100%;
++  text-decoration: none;
++  cursor: pointer;
++}
++
++.post-dropdown a:hover,
++.post-dropdown button.link-button:hover {
++  background-color: #333;
++}
++
++.reply-thread {
++  margin-left: 1.5rem;
++  border-left: 2px dashed var(--accent-color, #ccc);
++  padding-left: 1rem;
++  margin-top: 0.5rem;
++}
++
++.reply-comment .avatar-img.tiny {
++  width: 20px;
++  height: 20px;
++}
++
++.comment-actions {
++  position: absolute;
++  top: 0;
++  right: 0;
++  z-index: 2;
++}
++
++.comment-header {
++  position: relative;
++  display: flex;
++  align-items: center;
++  gap: 0.5em;
++  font-size: 0.8rem;
++}
++
++.comment-header {
++  display: flex;
++  align-items: center;
++  justify-content: space-between;
++  gap: 0.5rem;
++}
++
++.comment-meta {
++  display: flex;
++  align-items: center;
++  gap: 0.4rem;
++}
++
++.avatar-img.tiny {
++  width: 28px;
++  height: 28px;
++  object-fit: cover;
++  border-radius: 50%;
++  aspect-ratio: 1 / 1;
++}
++
++/* Reply link/button */
++.small-button {
++  display: inline-block;
++  background-color: #4e9ddc;                   /* same blue as “New Post” */
++  color: #fff;                                  /* white text */
++  padding: 0.3rem 0.75rem;                      /* comfortable hit-area */
++  border-radius: 6px;                           /* match your other buttons */
++  font-weight: 600;                             /* bold like the New Post button */
++  font-size: 0.85rem;                           /* slightly smaller than main buttons */
++  text-decoration: none;                        /* no underline */
++  cursor: pointer;
++  transition: background-color 0.3s ease,
++              transform 0.2s ease;
++  margin-top: 0.25rem;                          /* space above comments */
++}
++
++.small-button:hover {
++  background-color: #3a8cb5;                    /* a tad darker on hover */
++  transform: translateY(-1px);                  /* tiny lift effect */
++}
++
++/* Make edit-btn & link-button use the same “small-button” style */
++.edit-btn,
++.link-button {
++  background: none;
++  border: none;
++  padding: 0;
++  margin: 0 0.25em;
++  font-size: 0.9rem;
++  color: var(--accent-color, #4e9ddc);
++  text-decoration: none;
++  cursor: pointer;
++  transition: color 0.2s ease, text-shadow 0.2s ease;
++}
++
++.edit-btn:hover,
++.link-button:hover {
++  color: var(--accent-hover, #6ebff9);
++  text-decoration: underline;
++}
++
++.edit-btn:focus,
++.link-button:focus {
++  outline: none;
++  text-shadow: 0 0 2px var(--accent-hover, #6ebff9);
++}
++
++/* Wrap each comment in a very faint rounded box */
++.comments-section .comment {
++  background: rgba(255,255,255,0.03);
++  border: 1px solid rgba(255,255,255,0.1);
++  border-radius: 6px;
++  padding: 0.75rem;
++  margin: 0.5rem 0;
++}
++
++/* in post_overrides.css */
++
++.post-user-meta strong,
++.comment-meta strong {
++  font-family: 'Space Grotesk', sans-serif;
++  color: #fff8e7;
++  display: block;
++  text-align: center;
++  max-width: 100%;
++  word-break: break-word;
++  /* text-wrap: balance;  — currently only in Safari Technology Preview */
++  white-space: normal;
++  text-shadow: 0 0 10px #fcd9c4, 0 0 20px #fcb5a3;
++  margin-bottom: 0.5rem;
++  font-size: 0.85em;
++}
+diff --git a/static/style.css b/static/style.css
+index 663ebf7..ef30f49 100644
+--- a/static/style.css
++++ b/static/style.css
+@@ -52,7 +52,7 @@ body {
+ 
+ #main-content {
+   flex: 0 0 35%;  /* fixed to 35% of parent width */
+-  max-width: 400px;  /* optional: cap it */
++/*  max-width: 400px;  /* optional: cap it */
+   min-width: 260px;  /* optional: prevent collapse */
+ }
+ 
+@@ -1281,7 +1281,7 @@ input.glow-input:focus {
+ 
+ .top9-column {
+   flex: 2;
+-  max-width: 700px;
++  max-width: 350px;
+   padding: 1.5rem;
+   background: rgba(255, 255, 255, 0.02);
+   border: 2px solid rgba(255, 255, 255, 0.1);
+diff --git a/templates/edit_comment.html b/templates/edit_comment.html
+index fcdea74..e354604 100644
+--- a/templates/edit_comment.html
++++ b/templates/edit_comment.html
+@@ -1,13 +1,13 @@
+-{% extends 'base.html' %}
+-{% block title %}Edit Comment{% endblock %}
+-{% block content %}
+-<h2>Edit Comment</h2>
+-
+-<form method="POST">
+-  <textarea name="content" class="post-textarea" rows="5">{{ comment.content }}</textarea>
+-  <div class="actions">
+-    <button type="submit" class="btn btn-primary">Update Comment</button>
+-    <a href="{{ url_for('posts') }}" class="btn">Cancel</a>
+-  </div>
+-</form>
+-{% endblock %}
++{% extends 'base.html' %}
++{% block title %}Edit Comment{% endblock %}
++{% block content %}
++<h2>Edit Comment</h2>
++
++<form method="POST">
++  <textarea name="content" class="post-textarea" rows="5">{{ comment.content }}</textarea>
++  <div class="actions">
++    <button type="submit" class="btn btn-primary">Update Comment</button>
++    <a href="javascript:history.back()" class="btn">Cancel</a>
++  </div>
++</form>
++{% endblock %}
+diff --git a/templates/partials/posts.html b/templates/partials/posts.html
+index d3458d4..22ff7f3 100644
+--- a/templates/partials/posts.html
++++ b/templates/partials/posts.html
+@@ -1,185 +1,204 @@
+-<!-- templates/partials/posts.html -->
+-{% set posts = _posts if _posts is defined else posts %}
+-{% set post_reactors = _reactors if _reactors is defined else {} %}
+-{% set VALID_REACTS = _reacts if _reacts is defined else [] %}
+-{% set viewer_id = _viewer_id if _viewer_id is defined else None %}
+-
+-{% macro render_comment(comment) %}
+-  <div class="comment{% if comment.parent_comment_id %} reply-comment{% endif %}">
+-    <div class="comment-header">
+-      <div class="comment-meta">
+-        <img src="{{ comment.avatar or '/static/default-avatar.png' }}" class="avatar-img tiny">
+-        <strong>@{{ comment.author_handle }}</strong>
+-        {% if comment.prefix %}
+-          <span class="comment-prefix">{{ comment.prefix }}-</span>
+-        {% endif %}
+-      </div>
+-      {% if viewer_id == comment.user_id %}
+-      <div class="comment-actions">
+-        <button class="icon-button" onclick="toggleCommentMenu(this)">⋮</button>
+-        <div class="comment-dropdown" style="display: none;">
+-          <a href="/edit_comment/{{ comment.id }}">Edit</a>
+-          <form method="POST" action="/delete_comment/{{ comment.id }}" style="display:inline;" onsubmit="return confirm('Delete this comment?');">
+-            <button type="submit" class="link-button">Delete</button>
+-          </form>
+-        </div>
+-      </div>
+-      {% endif %}
+-    </div>
+-
+-    <div class="comment-body">{{ comment.content }}</div>
+-
+-    {% if viewer_id %}
+-      <a href="javascript:void(0);" class="small-button" onclick="setReplyTarget('{{ comment.id }}', '{{ comment.post_id }}')">Reply</a>
+-    {% endif %}
+-
+-    {% if comment.replies %}
+-      <div class="reply-thread">
+-        {% for reply in comment.replies %}
+-          {{ render_comment(reply) }}
+-        {% endfor %}
+-      </div>
+-    {% endif %}
+-  </div>
+-{% endmacro %}
+-
+-{% for post in posts %}
+-<div class="post-preview{% if post.is_guestbook_outbound %} guestbook-outbound{% endif %}">
+-  <div class="post-header">
+-    <img src="{{ post.author_avatar or '/static/default-avatar.png' }}" alt="avatar" class="avatar-img small">
+-    <div class="post-user-meta">
+-      {% if post.is_guestbook_outbound and post.target_handle %}
+-        <strong>
+-          <a href="/@{{ post.author_handle }}" class="user-handle">@{{ post.author_handle }}</a> ➔
+-          <a href="/@{{ post.target_handle }}" class="user-handle">@{{ post.target_handle }}</a>
+-        </strong>
+-      {% else %}
+-        <strong>
+-          <a href="/@{{ post.author_handle }}" class="user-handle">@{{ post.author_handle }}</a>
+-        </strong>
+-        {% if post.author_codename %}
+-          <span class="user-codename">({{ post.author_codename }})</span>
+-        {% endif %}
+-      {% endif %}
+-      <div class="post-meta-row">
+-        <span class="post-date">{{ post.created_at }}</span> ·
+-        <strong>Vibes:</strong>
+-        {% if post.vibes %}
+-          {% for vibe in post.vibes.split(',') %}
+-            <a href="/vibe/{{ vibe.strip() | urlencode }}">
+-              <span class="vibe-pill">{{ vibe.strip() }}</span>
+-            </a>
+-          {% endfor %}
+-        {% else %}
+-          <span>—</span>
+-        {% endif %}
+-        |
+-        <strong>Circle:</strong> {{ post.circle or '—' }}
+-      </div>
+-    </div>
+-    {% if viewer_id == post.user_id %}
+-    <div class="post-actions">
+-      <button class="icon-button" onclick="togglePostMenu(this)">⋮</button>
+-      <div class="post-dropdown" style="display: none;">
+-        <a href="/edit_post/{{ post.id }}">Edit</a>
+-        <form method="POST" action="/delete_post/{{ post.id }}" style="display:inline;" onsubmit="return confirm('Delete this post?');">
+-          <button type="submit" class="link-button">Delete</button>
+-        </form>
+-      </div>
+-    </div>
+-    {% endif %}
+-  </div>
+-
+-  <div class="post-content">{{ post.html_content | safe }}</div>
+-
+-  <div class="post-reactions-box react-form" data-post-id="{{ post.id }}">
+-    {% for react in VALID_REACTS %}
+-      {% set count = post.reaction_counts[react] if post.reaction_counts and react in post.reaction_counts else 0 %}
+-      {% set hover = post_reactors.get(post.id, {}).get(react, []) | join(', ') %}
+-      <button type="button" class="icon-button react-btn" data-emoji="{{ react }}" title="{{ hover }}">
+-        {{ react }}{% if count %}<sub>{{ count }}</sub>{% endif %}
+-      </button>
+-    {% endfor %}
+-  </div>
+-
+-{% if post.comments %}
+-  <div class="comments-section">
+-    {% for comment in post.comments %}
+-      {{ render_comment(comment) }}
+-    {% endfor %}
+-  </div>
+-{% endif %}
+-
+-
+-
+-
+-  {% if viewer_id %}
+-  <div class="comment-form">
+-    <form id="comment-form-{{ post.id }}" method="POST" action="/create_comment" data-post-id="{{ post.id }}">
+-      <input type="hidden" name="post_id" value="{{ post.id }}">
+-      <input type="hidden" name="parent_comment_id" id="parent_comment_id_{{ post.id }}" value="">
+-      <input type="text" name="content" placeholder="Leave a comment..." required class="comment-input">
+-      <button type="submit" class="comment-submit">Post</button>
+-    </form>
+-  </div>
+-  {% endif %}
+-</div>
+-{% endfor %}
+-
+-<script>
+-function toggleCommentMenu(btn) {
+-  const menu = btn.nextElementSibling;
+-  const showing = menu.style.display === 'block';
+-  document.querySelectorAll('.comment-dropdown').forEach(el => el.style.display = 'none');
+-  menu.style.display = showing ? 'none' : 'block';
+-}
+-
+-function setReplyTarget(commentId, postId) {
+-  const hiddenInput = document.querySelector(`#parent_comment_id_${postId}`);
+-  if (hiddenInput) {
+-    hiddenInput.value = commentId;
+-    const input = document.querySelector(`#comment-form-${postId} input[name="content"]`);
+-    if (input) input.focus();
+-  }
+-}
+-</script>
+-<script>
+-function toggleCommentMenu(btn) {
+-  const menu = btn.nextElementSibling;
+-  const showing = menu.style.display === 'block';
+-  document.querySelectorAll('.comment-dropdown').forEach(el => el.style.display = 'none');
+-  menu.style.display = showing ? 'none' : 'block';
+-}
+-
+-function setReplyTarget(commentId, postId) {
+-  const hiddenInput = document.querySelector(`#parent_comment_id_${postId}`);
+-  if (hiddenInput) {
+-    hiddenInput.value = commentId;
+-    const input = document.querySelector(`#comment-form-${postId} input[name="content"]`);
+-    if (input) input.focus();
+-  }
+-}
+-
+-async function submitComment(event, form) {
+-  event.preventDefault();
+-  const formData = new FormData(form);
+-  try {
+-    const res = await fetch(form.action, {
+-      method: "POST",
+-      body: formData,
+-    });
+-    if (!res.ok) throw new Error("Request failed");
+-    location.reload();  // In future: dynamically inject comment
+-  } catch (err) {
+-    alert("Error submitting comment");
+-    console.error(err);
+-  }
+-}
+-
+-// Attach to all comment forms after DOM is loaded
+-window.addEventListener("DOMContentLoaded", () => {
+-  document.querySelectorAll(".comment-form form").forEach(form => {
+-    form.addEventListener("submit", e => submitComment(e, form));
+-  });
+-});
+-</script>
++{% set posts = _posts if _posts is defined else posts %}
++{% set post_reactors = _reactors if _reactors is defined else {} %}
++{% set VALID_REACTS = _reacts if _reacts is defined else [] %}
++{% set viewer_id = _viewer_id if _viewer_id is defined else None %}
++
++{%- macro render_comment(comment, post) -%}
++  <div class="comment{% if comment.parent_comment_id %} reply-comment{% endif %}" data-comment-id="{{ comment.id }}">
++    <div class="comment-header">
++      <div class="comment-meta">
++        <a href="{{ url_for('user_page_test', user_id=comment.user_id) }}">
++          <img src="{{ comment.avatar or '/static/default-avatar.png' }}" class="avatar-img tiny">
++        </a>
++        <a href="{{ url_for('user_page_test', user_id=comment.user_id) }}">
++          <strong>@{{ comment.author_handle }}</strong>
++        </a>
++        {% if comment.last_edited %}
++          <small class="edited-label">(edited {{ comment.last_edited }})</small>
++        {% endif %}
++        {% if comment.prefix %}
++          <span class="comment-prefix">{{ comment.prefix }}-</span>
++        {% endif %}
++      </div>
++      {% if viewer_id == comment.user_id %}
++      <div class="comment-actions">
++        <button class="icon-button" onclick="toggleCommentMenu(this)">⋮</button>
++        <div class="comment-dropdown" style="display: none;">
++          <button type="button" class="link-button edit-btn">Edit</button>
++          <form method="POST" action="/delete_comment/{{ comment.id }}" style="display:inline;" onsubmit="return confirm('Delete this comment?');">
++            <button type="submit" class="link-button">Delete</button>
++          </form>
++        </div>
++      </div>
++      {% endif %}
++    </div>
++    <div class="comment-body comment-text">{{ comment.content }}</div>
++    <form class="edit-form" style="display:none;">
++      <textarea name="content">{{ comment.content }}</textarea>
++      <button type="button" class="save-btn">Save</button>
++      <button type="button" class="cancel-btn">Cancel</button>
++    </form>
++
++    {% if viewer_id %}
++      <a href="javascript:void(0);" class="small-button" onclick="setReplyTarget('{{ comment.id }}', '{{ post.id }}')">Reply</a>
++    {% endif %}
++
++    {% if comment.replies %}
++      <div class="reply-thread">
++        {% for reply in comment.replies %}
++          {{ render_comment(reply, post) }}
++        {% endfor %}
++      </div>
++    {% endif %}
++  </div>
++{%- endmacro -%}
++
++{% for post in posts %}
++<div class="post-preview{% if post.is_guestbook_outbound %} guestbook-outbound{% endif %}">
++  <div class="post-header">
++    <a href="{{ url_for('user_page_test', user_id=post.user_id) }}">
++      <img src="{{ post.author_avatar or '/static/default-avatar.png' }}" alt="avatar" class="avatar-img small">
++    </a>
++    <div class="post-user-meta">
++      <a href="{{ url_for('user_page_test', user_id=post.user_id) }}">
++        <strong>@{{ post.author_handle }}</strong>
++      </a>
++      {% if post.target_handle %}&rarr; <strong>@{{ post.target_handle }}</strong>{% endif %}
++      <small>{{ post.created_at }}</small>
++      {% if post.last_edited %}<small>(edited {{ post.last_edited }})</small>{% endif %}
++        {# Updated Vibe Links #}
++        {% if post.vibes %}
++          <div class="post-vibes">
++            {% for vibe in post.vibes.split(', ') %}
++              {% set meta = vibe_metadata.get(vibe) %}
++              <a
++                href="{{ url_for('vibe_page', vibe_name=vibe) }}"
++                class="vibe-tag {{ meta.css_class if meta }}"
++                style="{% if meta %}background-color: {{ meta.bg }}; color: {{ meta.text }};{% endif %}"
++              >#{{ vibe }}</a>
++            {% endfor %}
++          </div>
++        {% endif %}
++
++        {% if viewer_id == post.user_id %}
++        <div class="post-actions">
++          <button class="icon-button" onclick="togglePostMenu(this)">⋮</button>
++          <div class="post-dropdown" style="display:none;">
++            <a href="/edit_post/{{ post.id }}" class="link-button">Edit</a>
++            <form method="POST" action="/delete_post/{{ post.id }}" style="display:inline;" onsubmit="return confirm('Delete this post?');">
++              <button type="submit" class="link-button">Delete</button>
++            </form>
++          </div>
++        </div>
++        {% endif %}
++      </div>
++    </div>
++
++  <div class="post-content">{{ post.html_content | safe }}</div>
++
++  <div class="post-reactions-box react-form" data-post-id="{{ post.id }}">
++    {% for emoji in VALID_REACTS %}
++      <button class="react-btn{% if post.reaction_counts.get(emoji) %} active{% endif %}" data-emoji="{{ emoji }}" data-post-id="{{ post.id }}">
++        {{ emoji }}{% if post.reaction_counts.get(emoji) %}<sub>{{ post.reaction_counts.get(emoji) }}</sub>{% endif %}
++      </button>
++    {% endfor %}
++</div>
++
++  {% if post.comments %}
++  <div class="comments-section">
++    {% for comment in post.comments %}
++      {{ render_comment(comment, post) }}
++    {% endfor %}
++  </div>
++  {% endif %}
++
++  {% if viewer_id %}
++  <div class="comment-form">
++    <form id="comment-form-{{ post.id }}" method="POST" action="/create_comment" data-post-id="{{ post.id }}">
++      <input type="hidden" name="post_id" value="{{ post.id }}">
++      <input type="hidden" name="parent_comment_id" id="parent_comment_id_{{ post.id }}" value="">
++      <input type="text" name="content" placeholder="Leave a comment..." required class="comment-input">
++      <button type="submit" class="comment-submit">Post</button>
++    </form>
++  </div>
++  {% endif %}
++</div>
++{% endfor %}
++
++<script>
++function toggleCommentMenu(btn) {
++  const menu = btn.nextElementSibling;
++  document.querySelectorAll('.comment-dropdown').forEach(el => el.style.display = 'none');
++  menu.style.display = (menu.style.display === 'block' ? 'none' : 'block');
++}
++
++function togglePostMenu(btn) {
++  const menu = btn.nextElementSibling;
++  document.querySelectorAll('.post-dropdown').forEach(el => el.style.display = 'none');
++  menu.style.display = (menu.style.display === 'block' ? 'none' : 'block');
++}
++
++function setReplyTarget(commentId, postId) {
++  const parentInput = document.getElementById(`parent_comment_id_${postId}`);
++  if (parentInput) {
++    parentInput.value = commentId;
++    const contentInput = document.querySelector(`#comment-form-${postId} input[name='content']`);
++    if (contentInput) contentInput.focus();
++  }
++}
++
++async function submitComment(event, form) {
++  event.preventDefault();
++  const formData = new FormData(form);
++  try {
++    const res = await fetch(form.action, { method: 'POST', body: formData });
++    if (!res.ok) throw new Error('Request failed');
++    location.reload();
++  } catch (err) {
++    alert('Error submitting comment'); console.error(err);
++  }
++}
++
++window.addEventListener('DOMContentLoaded', () => {
++  document.querySelectorAll('.comment-form form').forEach(form => {
++    form.addEventListener('submit', e => submitComment(e, form));
++  });
++
++  // Inline edit handlers:
++  document.querySelectorAll('.edit-btn').forEach(btn => {
++    btn.onclick = () => {
++      const container = btn.closest('[data-comment-id]');
++      container.querySelectorAll('.comment-text, .edit-btn').forEach(el => el.style.display='none');
++      container.querySelector('.edit-form').style.display='block';
++    };
++  });
++  document.querySelectorAll('.cancel-btn').forEach(btn => {
++    btn.onclick = () => {
++      const container = btn.closest('[data-comment-id]');
++      container.querySelectorAll('.comment-text, .edit-btn').forEach(el => el.style.display='block');
++      container.querySelector('.edit-form').style.display='none';
++    };
++  });
++  document.querySelectorAll('.save-btn').forEach(btn => {
++    btn.onclick = async e => {
++      e.preventDefault();
++      const container = btn.closest('[data-comment-id]');
++      const commentId = container.dataset.commentId;
++      const content = container.querySelector('textarea').value;
++      try {
++        const res = await fetch(`/edit_comment/${commentId}`, {
++          method: 'POST',
++          headers: {'Content-Type':'application/x-www-form-urlencoded'},
++          body: new URLSearchParams({content})
++        });
++        if (!res.ok) throw new Error('Update failed');
++        container.querySelector('.comment-text').textContent = content;
++        container.querySelectorAll('.comment-text, .edit-btn').forEach(el => el.style.display='block');
++        container.querySelector('.edit-form').style.display='none';
++      } catch(err) {
++        alert('Failed to save'); console.error(err);
++      }
++    };
++  });
++});
++</script>
+diff --git a/templates/user_test.html b/templates/user_test.html
+index bfc5598..0732e62 100644
+--- a/templates/user_test.html
++++ b/templates/user_test.html
+@@ -1,340 +1,340 @@
+-{% extends 'base.html' %}
+-{% block title %}{{ user.handle }} - Neonrest{% endblock %}
+-{% from 'partials/posts.html' import render_comment %}
+-
+-{% block content %}
+-{% if user_theme %}
+-  <style>
+-    :root {
+-      --bg-color: {{ user_theme.bg_color or '#111' }};
+-      --text-color: {{ user_theme.text_color or '#fff' }};
+-      --accent-color: {{ user_theme.accent_color or '#ffa7c4' }};
+-      --meta-text: {{ user_theme.meta_text or '#aaa' }};
+-      --glow-color: {{ user_theme.glow_color or '#ffa7d7' }};
+-      --vibe-pill-bg: {{ user_theme.vibe_pill_bg or '#ffeebb' }};
+-      --vibe-pill-color: {{ user_theme.vibe_pill_color or '#333' }};
+-      --reaction-active: {{ user_theme.reaction_active or '#fff' }};
+-      --reaction-hover-bg: {{ user_theme.reaction_hover_bg or 'rgba(255, 167, 199, 0.1)' }};
+-      --reaction-glow: {{ user_theme.reaction_glow or '#ffa7d7' }};
+-      font-family: {{ user_theme.font_stack | safe }};
+-    }
+-    {{ user_theme.custom_css | safe }}
+-  </style>
+-{% endif %}
+-
+-<div class="main-and-top9">
+-  <!-- Left Column: User Identity -->
+-<div id="main-content">
+-  <div class="info-box">
+-    <div class="user-header">
+-      <img src="{{ user.avatar_path or '/static/default-avatar.png' }}" alt="Avatar" class="avatar-img">
+-      <h1 class="glow large">{{ user.handle }}</h1>
+-      <p class="nuid-badge">NUID: #{{ '%03d' | format(user['id']) }}</p>
+-      {% if user.codename %}
+-        <p><em>"{{ user.codename }}"</em></p>
+-      {% endif %}
+-        {% if viewer_id != user['id'] %}
+-          {% include 'partials/friend_buttons.html' %}
+-        {% endif %}
+-    </div>
+-
+-    <div class="user-section">
+-      <h2>Bio</h2>
+-      <p>{{ user.bio or "This user hasn’t written a bio yet." }}</p>
+-    </div>
+-  </div>
+-
+-    <div class="info-box">
+-      <div class="user-section">
+-        <h2>Details</h2>
+-        <p>Timezone: {{ user.timezone or "Unset" }}</p>
+-        <div class="mood-line">
+-          <span>Mood:</span>
+-          {% if session.user_id == user.id %}
+-            <form method="POST" action="/update_mood" class="inline-form">
+-              <input type="text" name="mood" value="{{ user.mood or '' }}" class="glow-input small" placeholder="Enter your mood…">
+-              <button type="submit" class="icon-button" title="Save mood">✏️</button>
+-            </form>
+-          {% else %}
+-            <span>{{ user.mood or "—" }}</span>
+-          {% endif %}
+-        </div>
+-        <div class="haunts-section">
+-          <span>Frequent haunts:</span>
+-          {% if session.user_id == user.id %}
+-            <form method="POST" action="/update_haunts" class="inline-form">
+-              <input type="text" name="haunts" value="{{ user.frequent_haunts or '' }}" class="glow-input small" placeholder="e.g. Retro Arcade, Blue Moon Café">
+-              <button type="submit" class="icon-button" title="Save haunts">📍</button>
+-            </form>
+-          {% else %}
+-            {% if user.frequent_haunts %}
+-              <ul class="haunt-list">
+-                {% for haunt in user.frequent_haunts.split(',') %}
+-                  <li><a href="https://www.google.com/maps/search/{{ haunt | urlencode }}" target="_blank">{{ haunt.strip() }}</a></li>
+-                {% endfor %}
+-              </ul>
+-            {% else %}
+-              <span>—</span>
+-            {% endif %}
+-          {% endif %}
+-        </div>
+-
+-<p>
+-  Now Playing:
+-  <span id="now-playing-text" aria-live="polite">—</span>
+-</p>
+-<div id="album-art" style="margin-top: 0.5rem;"></div>
+-
+-{% if user.lastfm_username %}
+-<script>
+-  window.addEventListener("DOMContentLoaded", function () {
+-    fetch("/now_playing/{{ user.lastfm_username }}")
+-      .then(res => res.json())
+-      .then(data => {
+-        const npText = document.getElementById("now-playing-text");
+-        const albumArt = document.getElementById("album-art");
+-
+-        if (data.track) {
+-          if (data.url) {
+-            npText.innerHTML = `<a href="${data.url}" target="_blank" title="View on Last.fm">${data.track}</a>`;
+-          } else {
+-            npText.textContent = data.track;
+-          }
+-        }
+-
+-        if (data.album_art) {
+-          albumArt.innerHTML = `<img src="${data.album_art}" alt="Album Art" style="max-width: 85%;">`;
+-        }
+-      })
+-      .catch(err => console.error("Now Playing fetch failed:", err));
+-  });
+-</script>
+-{% endif %}
+-
+-      </div>
+-    </div>
+-</div>
+-
+-<!-- Right Column: Top 9 and Posts -->
+-<div class="right-column">
+-  <aside class="top9-column">
+-<div class="top9-header-row">
+-  <h3 class="top9-label">Top 9 Friends</h3>
+-  {% if viewer_id == user['id'] %}
+-    <a href="/account/friends" class="top9-manage-link">+/-</a>
+-  {% endif %}
+-</div>
+-
+-
+-    {% if session.user_id == user.id %}
+-    <div id="top9-drag-container" class="top9-grid">
+-      {% for i in range(9) %}
+-        {% set friend = top_friends[i] if top_friends|length > i else None %}
+-        <div class="top9-slot{% if not friend or friend.placeholder %} placeholder{% endif %}"
+-             data-slot="{{ i }}"
+-             {% if friend and not friend.placeholder %}draggable="true"{% endif %}
+-             data-userid="{{ friend.id if friend and not friend.placeholder else '' }}">
+-
+-          {% if friend and not friend.placeholder %}
+-            <img src="{{ friend.avatar_path or '/static/default-avatar.png' }}" alt="avatar" class="avatar-img small">
+-            <div class="top9-name">
+-              {% if friend.codename %}
+-                <span class="user-handle">{{ friend.codename }}</span>
+-              {% endif %}
+-              <span class="user-handle">@{{ friend.handle.lstrip('@') }}</span>
+-            </div>
+-
+-
+-          {% else %}
+-            <div class="avatar-frame add-friend-trigger" data-slot="{{ i }}">+</div>
+-            <div class="top9-name">Empty</div>
+-          {% endif %}
+-
+-        </div>
+-      {% endfor %}
+-    </div>
+-<input type="hidden" id="slot_order" name="slot_order">
+-
+-    {% else %}
+-    <div class="top9-grid">
+-      {% for friend in top_friends %}
+-        <div class="top9-slot {% if friend.placeholder %}placeholder{% endif %}">
+-          {% if friend.placeholder %}
+-            <div class="avatar-frame">+</div>
+-            <a href="#" class="user-handle">Add</a>
+-          {% else %}
+-            <a href="/@{{ friend.handle.lstrip('@') }}">
+-              <div class="avatar-frame">
+-                <img src="{{ friend.avatar_path or '/static/default-avatar.png' }}" alt="Avatar" class="avatar-img small">
+-              </div>
+-                <div class="top9-name">
+-                  <span class="user-handle">{{ friend.codename }}</span><br>
+-                  <span class="user-handle">@{{ friend.handle.lstrip('@') }}</span>
+-                </div>
+-            </a>
+-          {% endif %}
+-        </div>
+-      {% endfor %}
+-    </div>
+-    {% endif %}
+-  </aside>
+-
+-  {% if session.user_id %}
+-    {% if session.user_id == user.id %}
+-      <button id="toggle-post-form" class="button">New Post</button>
+-    {% else %}
+-      <button id="toggle-post-form" class="button">Sign Guestbook</button>
+-    {% endif %}
+-    <div class="inline-post-form" id="inline-post-form" style="display: none;">
+-      <form method="POST" action="/create_post">
+-        <textarea name="content" placeholder="Write something..." required></textarea>
+-        <input type="hidden" name="target_user_id" value="{{ user.id }}">
+-        <input type="text" name="vibes" placeholder="Vibes (comma separated)">
+-        <input type="text" name="circle" placeholder="Circle (optional)">
+-        <button type="submit" class="post-action update-post">Post</button>
+-      </form>
+-    </div>
+-  {% endif %}
+-
+-<div class="recent-posts">
+-  <h3>Recent Posts</h3>
+-  {% if posts %}
+-    {% set _posts = posts %}
+-    {% set _reactors = post_reactors %}
+-    {% set _reacts = VALID_REACTS %}
+-    {% set _viewer_id = viewer_id %}
+-    {% include 'partials/posts.html' %}
+-  {% else %}
+-    <p>No posts yet.</p>
+-  {% endif %}
+-</div>
+-
+-
+-
+-</div> <!-- end .right-column -->
+-
+-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+-<script>
+-document.addEventListener("DOMContentLoaded", () => {
+-  const container = document.getElementById('top9-drag-container');
+-  let saveTimeout = null;
+-
+-  if (container) {
+-    new Sortable(container, {
+-      animation: 150,
+-      ghostClass: 'dragging',
+-      onEnd: () => {
+-        clearTimeout(saveTimeout);
+-        showFlash("💾 Saving...", "info");
+-
+-        saveTimeout = setTimeout(() => {
+-          const ids = [...container.querySelectorAll('.top9-slot')]
+-            .map(el => el.dataset.userid || '');
+-          fetch("/update_top9", {
+-            method: "POST",
+-            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+-            body: new URLSearchParams({ slot_order: ids.join(',') })
+-          }).then(res => {
+-            if (res.ok) {
+-              showFlash("Top 9 saved.", "success");
+-            } else {
+-              showFlash("Save failed.", "error");
+-            }
+-          }).catch(() => showFlash("Network error.", "error"));
+-        }, 2500);
+-      }
+-    });
+-  }
+-
+-    function showFlash(message, level = "info") {
+-      const flash = document.createElement("div");
+-      flash.className = `flash ${level}`;
+-      flash.textContent = message;
+-
+-      // Style it with inline styles if your .flash CSS isn't visible
+-      flash.style.position = "fixed";
+-      flash.style.top = "1rem";
+-      flash.style.right = "1rem";
+-      flash.style.backgroundColor = "#222";
+-      flash.style.color = "#fff";
+-      flash.style.padding = "0.5rem 1rem";
+-      flash.style.borderRadius = "8px";
+-      flash.style.zIndex = "9999";
+-      flash.style.boxShadow = "0 0 5px rgba(0,0,0,0.3)";
+-
+-      document.body.appendChild(flash);
+-      setTimeout(() => flash.remove(), 2500);
+-    }
+-
+-});
+-</script>
+-<script>
+-  document.addEventListener("DOMContentLoaded", () => {
+-    document.querySelectorAll(".react-form").forEach(form => {
+-      const postId = form.dataset.postId;
+-
+-      form.querySelectorAll("button").forEach(btn => {
+-        btn.addEventListener("click", () => {
+-          const emoji = btn.dataset.emoji;
+-          console.log("Clicked:", emoji, "Post ID:", postId);  // 🧪 DEBUG
+-
+-          fetch(`/react/${postId}`, {
+-            method: "POST",
+-            headers: {
+-              "Content-Type": "application/json"
+-            },
+-            body: JSON.stringify({ emoji })
+-          })
+-          .then(res => res.json())
+-            .then(data => {
+-              if (data.status === "ok") {
+-                const emoji = data.emoji;
+-                const count = data.count || 0;
+-                const action = data.action;
+-
+-                btn.classList.toggle("active", action === "added");
+-                btn.textContent = `${emoji} ${count > 0 ? count : ""}`;
+-              } else {
+-                console.error("Reaction failed:", data.message);
+-              }
+-            })
+-          .catch(err => console.error("Fetch error:", err));
+-        });
+-      });
+-    });
+-  });
+-</script>
+-
+-
+-<script>
+-  document.addEventListener("DOMContentLoaded", function () {
+-    const toggleButton = document.getElementById("toggle-post-form");
+-    const form = document.getElementById("inline-post-form");
+-
+-    if (toggleButton && form) {
+-      toggleButton.addEventListener("click", function () {
+-        const isHidden = form.style.display === "none";
+-        form.style.display = isHidden ? "block" : "none";
+-        toggleButton.textContent = isHidden ? "Hide Post" : "New Post";
+-      });
+-    }
+-  });
+-</script>
+-<script>
+-function togglePostMenu(button) {
+-  const menu = button.nextElementSibling;
+-  document.querySelectorAll('.post-dropdown').forEach(el => {
+-    if (el !== menu) el.style.display = 'none';
+-  });
+-  menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+-}
+-
+-document.addEventListener('click', function (e) {
+-  if (!e.target.closest('.post-actions')) {
+-    document.querySelectorAll('.post-dropdown').forEach(el => el.style.display = 'none');
+-  }
+-});
+-</script>
+-
+-
++{% extends 'base.html' %}
++{% block title %}{{ user.handle }} - Neonrest{% endblock %}
++{% from 'partials/posts.html' import render_comment %}
++
++{% block content %}
++{% if user_theme %}
++  <style>
++    :root {
++      --bg-color: {{ user_theme.bg_color or '#111' }};
++      --text-color: {{ user_theme.text_color or '#fff' }};
++      --accent-color: {{ user_theme.accent_color or '#ffa7c4' }};
++      --meta-text: {{ user_theme.meta_text or '#aaa' }};
++      --glow-color: {{ user_theme.glow_color or '#ffa7d7' }};
++      --vibe-pill-bg: {{ user_theme.vibe_pill_bg or '#ffeebb' }};
++      --vibe-pill-color: {{ user_theme.vibe_pill_color or '#333' }};
++      --reaction-active: {{ user_theme.reaction_active or '#fff' }};
++      --reaction-hover-bg: {{ user_theme.reaction_hover_bg or 'rgba(255, 167, 199, 0.1)' }};
++      --reaction-glow: {{ user_theme.reaction_glow or '#ffa7d7' }};
++      font-family: {{ user_theme.font_stack | safe }};
++    }
++    {{ user_theme.custom_css | safe }}
++  </style>
++{% endif %}
++
++<div class="main-and-top9">
++  <!-- Left Column: User Identity -->
++<div id="main-content">
++  <div class="info-box">
++    <div class="user-header">
++      <img src="{{ user.avatar_path or '/static/default-avatar.png' }}" alt="Avatar" class="avatar-img">
++      <h1 class="glow large">{{ user.handle }}</h1>
++      <p class="nuid-badge">NUID: #{{ '%03d' | format(user['id']) }}</p>
++      {% if user.codename %}
++        <p><em>"{{ user.codename }}"</em></p>
++      {% endif %}
++        {% if viewer_id != user['id'] %}
++          {% include 'partials/friend_buttons.html' %}
++        {% endif %}
++    </div>
++
++    <div class="user-section">
++      <h2>Bio</h2>
++      <p>{{ user.bio or "This user hasn’t written a bio yet." }}</p>
++    </div>
++  </div>
++
++    <div class="info-box">
++      <div class="user-section">
++        <h2>Details</h2>
++        <p>Timezone: {{ user.timezone or "Unset" }}</p>
++        <div class="mood-line">
++          <span>Mood:</span>
++          {% if session.user_id == user.id %}
++            <form method="POST" action="/update_mood" class="inline-form">
++              <input type="text" name="mood" value="{{ user.mood or '' }}" class="glow-input small" placeholder="Enter your mood…">
++              <button type="submit" class="icon-button" title="Save mood">✏️</button>
++            </form>
++          {% else %}
++            <span>{{ user.mood or "—" }}</span>
++          {% endif %}
++        </div>
++        <div class="haunts-section">
++          <span>Frequent haunts:</span>
++          {% if session.user_id == user.id %}
++            <form method="POST" action="/update_haunts" class="inline-form">
++              <input type="text" name="haunts" value="{{ user.frequent_haunts or '' }}" class="glow-input small" placeholder="e.g. Retro Arcade, Blue Moon Café">
++              <button type="submit" class="icon-button" title="Save haunts">📍</button>
++            </form>
++          {% else %}
++            {% if user.frequent_haunts %}
++              <ul class="haunt-list">
++                {% for haunt in user.frequent_haunts.split(',') %}
++                  <li><a href="https://www.google.com/maps/search/{{ haunt | urlencode }}" target="_blank">{{ haunt.strip() }}</a></li>
++                {% endfor %}
++              </ul>
++            {% else %}
++              <span>—</span>
++            {% endif %}
++          {% endif %}
++        </div>
++
++<p>
++  Now Playing:
++  <span id="now-playing-text" aria-live="polite">—</span>
++</p>
++<div id="album-art" style="margin-top: 0.5rem;"></div>
++
++{% if user.lastfm_username %}
++<script>
++  window.addEventListener("DOMContentLoaded", function () {
++    fetch("/now_playing/{{ user.lastfm_username }}")
++      .then(res => res.json())
++      .then(data => {
++        const npText = document.getElementById("now-playing-text");
++        const albumArt = document.getElementById("album-art");
++
++        if (data.track) {
++          if (data.url) {
++            npText.innerHTML = `<a href="${data.url}" target="_blank" title="View on Last.fm">${data.track}</a>`;
++          } else {
++            npText.textContent = data.track;
++          }
++        }
++
++        if (data.album_art) {
++          albumArt.innerHTML = `<img src="${data.album_art}" alt="Album Art" style="max-width: 85%;">`;
++        }
++      })
++      .catch(err => console.error("Now Playing fetch failed:", err));
++  });
++</script>
++{% endif %}
++
++      </div>
++    </div>
++</div>
++
++<!-- Right Column: Top 9 and Posts -->
++<div class="right-column">
++  <aside class="top9-column">
++<div class="top9-header-row">
++  <h3 class="top9-label">Top 9 Friends</h3>
++  {% if viewer_id == user['id'] %}
++    <a href="/account/friends" class="top9-manage-link">+/-</a>
++  {% endif %}
++</div>
++
++
++    {% if session.user_id == user.id %}
++    <div id="top9-drag-container" class="top9-grid">
++      {% for i in range(9) %}
++        {% set friend = top_friends[i] if top_friends|length > i else None %}
++        <div class="top9-slot{% if not friend or friend.placeholder %} placeholder{% endif %}"
++             data-slot="{{ i }}"
++             {% if friend and not friend.placeholder %}draggable="true"{% endif %}
++             data-userid="{{ friend.id if friend and not friend.placeholder else '' }}">
++
++          {% if friend and not friend.placeholder %}
++            <img src="{{ friend.avatar_path or '/static/default-avatar.png' }}" alt="avatar" class="avatar-img small">
++            <div class="top9-name">
++              {% if friend.codename %}
++                <span class="user-handle">{{ friend.codename }}</span>
++              {% endif %}
++              <span class="user-handle">@{{ friend.handle.lstrip('@') }}</span>
++            </div>
++
++
++          {% else %}
++            <div class="avatar-frame add-friend-trigger" data-slot="{{ i }}">+</div>
++            <div class="top9-name">Empty</div>
++          {% endif %}
++
++        </div>
++      {% endfor %}
++    </div>
++<input type="hidden" id="slot_order" name="slot_order">
++
++    {% else %}
++    <div class="top9-grid">
++      {% for friend in top_friends %}
++        <div class="top9-slot {% if friend.placeholder %}placeholder{% endif %}">
++          {% if friend.placeholder %}
++            <div class="avatar-frame">+</div>
++            <a href="#" class="user-handle">Add</a>
++          {% else %}
++            <a href="/@{{ friend.handle.lstrip('@') }}">
++              <div class="avatar-frame">
++                <img src="{{ friend.avatar_path or '/static/default-avatar.png' }}" alt="Avatar" class="avatar-img small">
++              </div>
++                <div class="top9-name">
++                  <span class="user-handle">{{ friend.codename }}</span><br>
++                  <span class="user-handle">@{{ friend.handle.lstrip('@') }}</span>
++                </div>
++            </a>
++          {% endif %}
++        </div>
++      {% endfor %}
++    </div>
++    {% endif %}
++  </aside>
++
++  {% if session.user_id %}
++    {% if session.user_id == user.id %}
++      <button id="toggle-post-form" class="button">New Post</button>
++    {% else %}
++      <button id="toggle-post-form" class="button">Sign Guestbook</button>
++    {% endif %}
++    <div class="inline-post-form" id="inline-post-form" style="display: none;">
++      <form method="POST" action="/create_post">
++        <textarea name="content" placeholder="Write something..." required></textarea>
++        <input type="hidden" name="target_user_id" value="{{ user.id }}">
++        <input type="text" name="vibes" placeholder="Vibes (comma separated)">
++        <input type="text" name="circle" placeholder="Circle (optional)">
++        <button type="submit" class="post-action update-post">Post</button>
++      </form>
++    </div>
++  {% endif %}
++
++<div class="recent-posts">
++  <h3>Recent Posts</h3>
++  {% if posts %}
++    {% set _posts = posts %}
++    {% set _reactors = post_reactors %}
++    {% set _reacts = VALID_REACTS %}
++    {% set _viewer_id = viewer_id %}
++    {% include 'partials/posts.html' %}
++  {% else %}
++    <p>No posts yet.</p>
++  {% endif %}
++</div>
++
++
++
++</div> <!-- end .right-column -->
++
++<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
++<script>
++document.addEventListener("DOMContentLoaded", () => {
++  const container = document.getElementById('top9-drag-container');
++  let saveTimeout = null;
++
++  if (container) {
++    new Sortable(container, {
++      animation: 150,
++      ghostClass: 'dragging',
++      onEnd: () => {
++        clearTimeout(saveTimeout);
++        showFlash("💾 Saving...", "info");
++
++        saveTimeout = setTimeout(() => {
++          const ids = [...container.querySelectorAll('.top9-slot')]
++            .map(el => el.dataset.userid || '');
++          fetch("/update_top9", {
++            method: "POST",
++            headers: { "Content-Type": "application/x-www-form-urlencoded" },
++            body: new URLSearchParams({ slot_order: ids.join(',') })
++          }).then(res => {
++            if (res.ok) {
++              showFlash("Top 9 saved.", "success");
++            } else {
++              showFlash("Save failed.", "error");
++            }
++          }).catch(() => showFlash("Network error.", "error"));
++        }, 2500);
++      }
++    });
++  }
++
++    function showFlash(message, level = "info") {
++      const flash = document.createElement("div");
++      flash.className = `flash ${level}`;
++      flash.textContent = message;
++
++      // Style it with inline styles if your .flash CSS isn't visible
++      flash.style.position = "fixed";
++      flash.style.top = "1rem";
++      flash.style.right = "1rem";
++      flash.style.backgroundColor = "#222";
++      flash.style.color = "#fff";
++      flash.style.padding = "0.5rem 1rem";
++      flash.style.borderRadius = "8px";
++      flash.style.zIndex = "9999";
++      flash.style.boxShadow = "0 0 5px rgba(0,0,0,0.3)";
++
++      document.body.appendChild(flash);
++      setTimeout(() => flash.remove(), 2500);
++    }
++
++});
++</script>
++<script>
++  document.addEventListener("DOMContentLoaded", () => {
++    document.querySelectorAll(".react-form").forEach(form => {
++      const postId = form.dataset.postId;
++
++      form.querySelectorAll("button").forEach(btn => {
++        btn.addEventListener("click", () => {
++          const emoji = btn.dataset.emoji;
++          console.log("Clicked:", emoji, "Post ID:", postId);  // 🧪 DEBUG
++
++          fetch(`/react/${postId}`, {
++            method: "POST",
++            headers: {
++              "Content-Type": "application/json"
++            },
++            body: JSON.stringify({ emoji })
++          })
++          .then(res => res.json())
++            .then(data => {
++              if (data.status === "ok") {
++                const emoji = data.emoji;
++                const count = data.count || 0;
++                const action = data.action;
++
++                btn.classList.toggle("active", action === "added");
++                btn.textContent = `${emoji} ${count > 0 ? count : ""}`;
++              } else {
++                console.error("Reaction failed:", data.message);
++              }
++            })
++          .catch(err => console.error("Fetch error:", err));
++        });
++      });
++    });
++  });
++</script>
++
++
++<script>
++  document.addEventListener("DOMContentLoaded", function () {
++    const toggleButton = document.getElementById("toggle-post-form");
++    const form = document.getElementById("inline-post-form");
++
++    if (toggleButton && form) {
++      toggleButton.addEventListener("click", function () {
++        const isHidden = form.style.display === "none";
++        form.style.display = isHidden ? "block" : "none";
++        toggleButton.textContent = isHidden ? "Hide Post" : "New Post";
++      });
++    }
++  });
++</script>
++<script>
++function togglePostMenu(button) {
++  const menu = button.nextElementSibling;
++  document.querySelectorAll('.post-dropdown').forEach(el => {
++    if (el !== menu) el.style.display = 'none';
++  });
++  menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
++}
++
++document.addEventListener('click', function (e) {
++  if (!e.target.closest('.post-actions')) {
++    document.querySelectorAll('.post-dropdown').forEach(el => el.style.display = 'none');
++  }
++});
++</script>
++
++
+ {% endblock %}
+\ No newline at end of file
+diff --git a/utils/utils.py b/utils/utils.py
+index 5520f55..d9253e7 100644
+--- a/utils/utils.py
++++ b/utils/utils.py
+@@ -57,12 +57,17 @@ def generate_prefixed_id(db, raw_id: int, prefix: str | None = None):
+ 
+ 
+ def decode_prefixed_id(prefixed_id: str) -> int:
+-    for i,c in enumerate(prefixed_id):
+-        if c in ALPHABET:
+-            base62_part = prefixed_id[i:]; break
+-    else: raise ValueError("No Base62 segment found")
++    # strip any prefix & then drop leading 'A's (your pad character)
++    # soAAAABCD → ABCD, then decode ABCD from Base62 → integer
++    # (if the entire string was padding, fall back to full string)
++    # first strip non-ALPHABET prefix (for future prefixes):
++    base = ''.join(ch for ch in prefixed_id if ch in ALPHABET)
++    # now remove leading pad-chars:
++    base62_part = base.lstrip('A') or base
++
+     n = 0
+-    for ch in base62_part: n = n*62 + ALPHABET.index(ch)
++    for ch in base62_part:
++        n = n * 62 + ALPHABET.index(ch)
+     return n
+ 
+ def build_comment_tree(comments):
