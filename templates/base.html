@@ -29,9 +29,9 @@
   {% endif %}
 
 <link rel="stylesheet" href="{{ url_for('static', filename='post_overrides.css') }}">
-{% if vibe_css and vibe_slug != 'fresh-starts' %}
+{% if vibe_slug and vibe_slug != 'fresh-starts' %}
 <link rel="stylesheet" href="{{ url_for('static', filename='vibes/vibe_base.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename=vibe_css) }}">
+{% if vibe_css %}<link rel="stylesheet" href="{{ url_for('static', filename=vibe_css) }}">{% endif %}
 {% endif %}
 
 
