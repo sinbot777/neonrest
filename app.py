@@ -1134,7 +1134,9 @@ def edit_theme(slug, mode):
 
         action = request.form.get('action')
         if action == 'save_and_preview':
-            return redirect(f'/themes/preview/{slug}/{mode}')
+            if vibe:
+                return redirect(url_for('vibe_page', vibe_name=vibe['name'], mode=mode))
+            return redirect(url_for('theme_preview', slug=slug, mode=mode))
         else:
             return redirect(url_for('edit_theme', slug=slug, mode=mode))
 
