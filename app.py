@@ -982,13 +982,6 @@ def vibe_page(vibe_name):
         'SELECT * FROM themes WHERE slug = ? AND mode = ?',
         (slug, theme_mode)
     ).fetchone()
-    # A missing database variant should not disable a Vibe's stylesheet.
-    if not theme:
-        theme = db.execute(
-            'SELECT * FROM themes WHERE slug = ? AND mode = ?',
-            (slug, 'night' if theme_mode == 'day' else 'day')
-        ).fetchone()
-
     vibe_css = f'vibes/vibe_{slug}.css'
     if not os.path.isfile(os.path.join(app.static_folder, vibe_css)):
         vibe_css = None
