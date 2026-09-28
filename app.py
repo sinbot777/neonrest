@@ -1017,7 +1017,8 @@ def vibe_page(vibe_name):
         custom_css=theme['custom_css'] if theme else None,
         extra_css=theme['extra_css'] if theme else None,
         posts=posts,
-        vibe=vibe
+        vibe=vibe,
+        skip_static_css=(slug == 'fresh-starts')
     )
 
 
@@ -1044,22 +1045,49 @@ def theme_preview(slug, mode):
 
     return render_template('theme-preview.html', theme=theme)
 
+@app.route('/themes/edit')
+def edit_theme_index():
+    """Open the first Vibe whose theme settings this user can edit."""
+    db = get_db()
+    user_id = session.get('user_id')
+    for theme in db.execute("SELECT * FROM themes WHERE mode IN ('day', 'night') ORDER BY slug, mode").fetchall():
+        if can_edit_theme(user_id, theme):
+            return redirect(url_for('edit_theme', slug=theme['slug'], mode=theme['mode']))
+    flash("You don’t have permission to edit Vibe settings.", "error")
+    return redirect('/feed')
+
+
 @app.route('/themes/edit/<slug>/<mode>', methods=['GET', 'POST'])
 def edit_theme(slug, mode):
     db = get_db()
     theme = db.execute('SELECT * FROM themes WHERE slug = ? AND mode = ?', (slug, mode)).fetchone()
-    vibe = db.execute('SELECT * FROM vibes WHERE theme_id = ?', (theme['id'],)).fetchone()
-
     if not theme:
-        flash("Theme not found.", "error")
-        return redirect('/feed')
+        abort(404)
 
     user_id = session.get('user_id')
     if not can_edit_theme(user_id, theme):
-        flash("You don’t have permission to edit this theme.", "error")
-        return redirect('/feed')
+        abort(403)
 
-    editable_themes = db.execute('SELECT * FROM themes').fetchall() if user_id == 1 else []
+    # A Vibe points to one theme ID, but both day and night variants edit its settings.
+    vibes = db.execute('SELECT * FROM vibes ORDER BY name').fetchall()
+    vibe_by_slug = {
+        re.sub(r'[^a-z0-9-]+', '-', item['name'].strip().lower()).strip('-'): item
+        for item in vibes
+    }
+    vibe = vibe_by_slug.get(slug)
+
+    # Only include modes the user may edit. Reuse the same check as the POST guard.
+    editable_modes_by_slug = {}
+    for candidate in db.execute("SELECT * FROM themes WHERE mode IN ('day', 'night') ORDER BY slug, mode").fetchall():
+        if can_edit_theme(user_id, candidate):
+            editable_modes_by_slug.setdefault(candidate['slug'], []).append(candidate['mode'])
+    editable_vibes = [
+        {'name': item['name'], 'slug': vibe_slug,
+         'mode': mode if mode in editable_modes_by_slug[vibe_slug] else editable_modes_by_slug[vibe_slug][0]}
+        for vibe_slug, item in vibe_by_slug.items()
+        if vibe_slug in editable_modes_by_slug
+    ]
+    editable_modes = editable_modes_by_slug.get(slug, [])
 
     def sanitize_color(value):
         return value if value and not value.isspace() else None
@@ -1124,7 +1152,8 @@ def edit_theme(slug, mode):
     return render_template(
     'edit_theme.html',
     theme=theme,
-    editable_themes=editable_themes,
+    editable_vibes=editable_vibes,
+    editable_modes=editable_modes,
     vibe=vibe
 )
 
