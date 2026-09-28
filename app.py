@@ -1050,8 +1050,12 @@ def edit_theme_index():
     """Open the first Vibe whose theme settings this user can edit."""
     db = get_db()
     user_id = session.get('user_id')
+    available_slugs = {
+        re.sub(r'[^a-z0-9-]+', '-', vibe['name'].strip().lower()).strip('-')
+        for vibe in db.execute('SELECT name FROM vibes').fetchall()
+    }
     for theme in db.execute("SELECT * FROM themes WHERE mode IN ('day', 'night') ORDER BY slug, mode").fetchall():
-        if can_edit_theme(user_id, theme):
+        if theme['slug'] in available_slugs and can_edit_theme(user_id, theme):
             return redirect(url_for('edit_theme', slug=theme['slug'], mode=theme['mode']))
     flash("You don’t have permission to edit Vibe settings.", "error")
     return redirect('/feed')
