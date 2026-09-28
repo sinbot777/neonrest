@@ -960,35 +960,39 @@ def delete_post(post_id):
 @app.route('/vibe/<vibe_name>')
 def vibe_page(vibe_name):
     db = get_db()
-
-    # Always get vibe first
     vibe = db.execute('SELECT * FROM vibes WHERE name = ?', (vibe_name,)).fetchone()
     if not vibe:
         flash("That vibe doesn't exist yet.", "error")
         return redirect('/feed')
 
-    slug = vibe['name'].lower().replace(" ", "-")
-
-    # Auto-detect time for default theme mode
-    from zoneinfo import ZoneInfo
+    # Use one slug for the body class, stylesheet, and theme lookup.
+    slug = re.sub(r'[^a-z0-9-]+', '-', vibe['name'].strip().lower()).strip('-')
+    from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
     user = get_logged_in_user()
-    tz = user['timezone'] if user and user['timezone'] else 'UTC'
-    now = datetime.now(ZoneInfo(tz))
-    hour = now.hour
-    theme_mode = 'day' if 6 <= hour < 18 else 'night'
+    timezone = user['timezone'] if user and user['timezone'] else 'UTC'
+    try:
+        local_now = datetime.now(ZoneInfo(timezone))
+    except (ZoneInfoNotFoundError, ValueError):
+        local_now = datetime.now(ZoneInfo('UTC'))
+    automatic_mode = 'day' if 6 <= local_now.hour < 18 else 'night'
+    requested_mode = request.args.get('mode')
+    theme_mode = requested_mode if requested_mode in ('day', 'night') else automatic_mode
 
-    # Get theme
-    theme = db.execute('SELECT * FROM themes WHERE slug = ? AND mode = ?', (slug, theme_mode)).fetchone()
+    theme = db.execute(
+        'SELECT * FROM themes WHERE slug = ? AND mode = ?',
+        (slug, theme_mode)
+    ).fetchone()
+    # A missing database variant should not disable a Vibe's stylesheet.
     if not theme:
-        theme = db.execute('SELECT * FROM themes WHERE slug = ? AND mode = ?', (slug, 'night')).fetchone() or \
-                db.execute('SELECT * FROM themes WHERE slug = ? AND mode = ?', (slug, 'day')).fetchone()
-        theme_mode = theme['mode'] if theme else 'base'
+        theme = db.execute(
+            'SELECT * FROM themes WHERE slug = ? AND mode = ?',
+            (slug, 'night' if theme_mode == 'day' else 'day')
+        ).fetchone()
 
-    # Get both versions for CSS toggling
-    alt_themes = db.execute('SELECT mode, custom_css FROM themes WHERE slug = ?', (slug,)).fetchall()
-    custom_css_map = {row['mode']: row['custom_css'] for row in alt_themes}
+    vibe_css = f'vibes/vibe_{slug}.css'
+    if not os.path.isfile(os.path.join(app.static_folder, vibe_css)):
+        vibe_css = None
 
-    # Fetch posts tagged with this vibe
     posts = db.execute('''
         SELECT posts.id, posts.user_id, posts.content, posts.circle, posts.created_at,
                posts.last_edited, users.handle,
@@ -1007,23 +1011,21 @@ def vibe_page(vibe_name):
     return render_template(
         'vibe_page.html',
         vibe_name=vibe_name,
-        vibe_slug=theme['slug'] if theme else slug,
-        theme_slug=theme['slug'] if theme else None,
-        theme_mode=theme['mode'] if theme else 'base',
+        vibe_slug=slug,
+        theme_slug=slug,
+        theme_mode=theme_mode,
+        vibe_css=vibe_css,
         bg_color=theme['bg_color'] if theme else None,
         text_color=theme['text_color'] if theme else None,
         glow_color=theme['glow_color'] if theme else None,
-        background_layers=theme['background_layers'] if theme else '',
-        blend_mode=theme['blend_mode'] if theme else '',
-        font_stack=theme['font_stack'] if theme else '',
-        custom_css=theme['custom_css'] if theme else '',
-        custom_css_day=custom_css_map.get('day', ''),
-        custom_css_night=custom_css_map.get('night', ''),
+        background_layers=theme['background_layers'] if theme else None,
+        blend_mode=theme['blend_mode'] if theme else None,
+        font_stack=theme['font_stack'] if theme else None,
+        custom_css=theme['custom_css'] if theme else None,
+        extra_css=theme['extra_css'] if theme else None,
         posts=posts,
-        skip_static_css=True,
-        vibe=vibe  # ✅ always defined now
+        vibe=vibe
     )
-
 
 
 @app.template_filter('datetimeformat')
