@@ -4,25 +4,36 @@
 {% block content %}
 <div class="user-page">
   <div class="user-header">
-    <div class="glow large">Edit Theme: {{ theme.name }} ({{ theme.mode }})</div>
-    <p>You are editing the <strong>{{ theme.slug }}</strong> theme variant.</p>
+    <div class="glow large">Edit Vibe CSS: {{ vibe.name if vibe else theme.name }} ({{ theme.mode }})</div>
+    <p>Choose a Vibe and its day or night variant. Changes to the logo apply to both variants.</p>
   </div>
 
-  <!-- Dropdown: Switch Between Editable Themes -->
-  <form method="get" action="/themes/edit/{{ editable_themes[0].slug }}/{{ editable_themes[0].mode if editable_themes else 'day' }}" class="theme-selector">
-    <label for="theme-select">Switch Theme:</label>
-    <select id="theme-select" onchange="location.href=this.value;">
-      {% for t in editable_themes %}
-        <option value="/themes/edit/{{ t.slug }}/{{ t.mode }}"
-                {% if t.id == theme.id %}selected{% endif %}>
-          {{ t.name }} ({{ t.mode }})
-        </option>
+  <div class="theme-selector">
+    <label for="vibe-select">Vibe</label>
+    <select id="vibe-select" onchange="window.location.assign(this.value)">
+      {% for item in editable_vibes %}
+        <option value="{{ url_for('edit_theme', slug=item.slug, mode=item.mode) }}"
+                {% if item.slug == theme.slug %}selected{% endif %}>{{ item.name }}</option>
       {% endfor %}
     </select>
-  </form>
+    {% if editable_modes %}
+      <div class="vibe-mode-switch" aria-label="CSS variant">
+        <span>CSS variant:</span>
+        {% for available_mode in editable_modes %}
+          <a href="{{ url_for('edit_theme', slug=theme.slug, mode=available_mode) }}"
+             {% if available_mode == theme.mode %}aria-current="page"{% endif %}>{{ available_mode|capitalize }}</a>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
 
   <!-- Main Theme Editor Form -->
   <form method="post" class="theme-editor-form">
+    <div class="form-wide">
+      <label for="custom_css">Custom CSS for this Vibe ({{ theme.mode }})</label>
+      <textarea id="custom_css" name="custom_css" rows="16" spellcheck="false">{{ theme.custom_css or '' }}</textarea>
+      <p>Saved CSS appears on this Vibe's {{ theme.mode }} page. Other Vibes and the other mode have separate CSS.</p>
+    </div>
     <div class="theme-grid">
 
       <!-- Base Colors -->
@@ -84,20 +95,20 @@
     </div>
     <div class="form-wide">
       <label for="logo_width">Logo Width (e.g. 800px or 80%)</label>
-      <input type="text" id="logo_width" name="logo_width" value="{{ vibe.logo_width or '' }}">
+      <input type="text" id="logo_width" name="logo_width" value="{{ vibe.logo_width if vibe else '' }}">
     </div>
     <div class="form-wide">
       <label for="logo_height">Logo Height (optional)</label>
-      <input type="text" id="logo_height" name="logo_height" value="{{ vibe.logo_height or '' }}">
+      <input type="text" id="logo_height" name="logo_height" value="{{ vibe.logo_height if vibe else '' }}">
     </div>
     <div class="form-wide">
       <label for="logo_padding">Logo Padding (e.g. 1rem or 10px)</label>
-      <input type="text" id="logo_padding" name="logo_padding" value="{{ vibe.logo_padding or '' }}">
+      <input type="text" id="logo_padding" name="logo_padding" value="{{ vibe.logo_padding if vibe else '' }}">
     </div>
     <div class="form-wide">
       <label for="logo_align">Logo Alignment</label>
       <select id="logo_align" name="logo_align">
-        <option value="center" {% if vibe.logo_align == 'center' %}selected{% endif %}>Center</option>
+        <option value="center" {% if vibe and vibe.logo_align == 'center' %}selected{% endif %}>Center</option>
         <option value="left" {% if vibe.logo_align == 'left' %}selected{% endif %}>Left</option>
         <option value="right" {% if vibe.logo_align == 'right' %}selected{% endif %}>Right</option>
       </select>
@@ -135,11 +146,6 @@
       </select>
     </div>
 
-
-    <div class="form-wide">
-      <label for="custom_css">Custom CSS (advanced):</label>
-      <textarea id="custom_css" name="custom_css" rows="10">{{ theme.custom_css or '' }}</textarea>
-    </div>
 
     <div class="form-actions">
       <button type="submit" name="action" value="save">Save Changes</button>
