@@ -1100,34 +1100,19 @@ def edit_theme(slug, mode):
         text_color = None if request.form.get('null_text_color') else sanitize_color(request.form.get('text_color'))
         glow_color = None if request.form.get('null_glow_color') else sanitize_color(request.form.get('glow_color'))
 
-        # New fields
-        bg_url = request.form.get('bg_url', '').strip() or None
-        bg_midi_url = request.form.get('bg_midi_url', '').strip() or None
-        button_style = request.form.get('button_style', '').strip() or None
-        extra_css = request.form.get('extra_css', '').strip() or None
-        description = request.form.get('description', '').strip() or None
-        tags = request.form.get('tags', '').strip() or None
-        preview_url = request.form.get('preview_url', '').strip() or None
-        is_public = 1 if request.form.get('is_public') else 0
-        remixable = 1 if request.form.get('remixable') else 0
-
         bg_layers = request.form.get('background_layers', '').strip()
         blend_mode = request.form.get('blend_mode', '').strip()
         font_stack = request.form.get('font_stack', '').strip()
 
+        # Update only fields rendered by this editor, preserving unrelated metadata.
         db.execute('''
             UPDATE themes SET
                 custom_css = ?, bg_color = ?, text_color = ?, glow_color = ?,
-                background_layers = ?, blend_mode = ?, font_stack = ?,
-                bg_url = ?, bg_midi_url = ?, button_style = ?, extra_css = ?,
-                description = ?, tags = ?, preview_url = ?, is_public = ?, remixable = ?
+                background_layers = ?, blend_mode = ?, font_stack = ?
             WHERE id = ?
         ''', (
             new_css, bg_color, text_color, glow_color,
-            bg_layers, blend_mode, font_stack,
-            bg_url, bg_midi_url, button_style, extra_css,
-            description, tags, preview_url, is_public, remixable,
-            theme['id']
+            bg_layers, blend_mode, font_stack, theme['id']
         ))
         if vibe:
             logo_url = request.form.get('logo_url', '').strip()
