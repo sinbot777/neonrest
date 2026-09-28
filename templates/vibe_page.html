@@ -18,7 +18,9 @@
         class="vibe-logo"
         style="
           {% if vibe.logo_width %}width: {{ vibe.logo_width }};{% endif %}
-          {% if vibe.logo_height %}height: {{ vibe.logo_height }};{% endif %}
+          {% if vibe.logo_height %}height: {{ vibe.logo_height }};{% else %}height: auto;{% endif %}
+          max-width: 100%;
+          box-sizing: border-box;
           {% if vibe.logo_padding %}padding: {{ vibe.logo_padding }};{% endif %}
           display: block;
           margin-left: {% if vibe.logo_align == 'left' %}0{% elif vibe.logo_align == 'right' %}auto{% else %}auto{% endif %};
