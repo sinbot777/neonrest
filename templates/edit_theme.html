@@ -84,8 +84,8 @@
       <label for="logo_align">Logo Alignment</label>
       <select id="logo_align" name="logo_align">
         <option value="center" {% if vibe and vibe.logo_align == 'center' %}selected{% endif %}>Center</option>
-        <option value="left" {% if vibe.logo_align == 'left' %}selected{% endif %}>Left</option>
-        <option value="right" {% if vibe.logo_align == 'right' %}selected{% endif %}>Right</option>
+        <option value="left" {% if vibe and vibe.logo_align == 'left' %}selected{% endif %}>Left</option>
+        <option value="right" {% if vibe and vibe.logo_align == 'right' %}selected{% endif %}>Right</option>
       </select>
     </div>
     <div class="form-wide">
