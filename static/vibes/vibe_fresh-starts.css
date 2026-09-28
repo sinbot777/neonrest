@@ -1,3 +1,21 @@
+body.vibe-fresh-starts--day {
+  --vibe-panel: #fff9e7;
+  --vibe-ink: #2a2d4a;
+  --vibe-accent: #925354;
+  --vibe-glow: #f9d1a6;
+  --vibe-border: #b6a88a;
+  --vibe-pill: #fff4d6;
+  --vibe-pill-ink: #2a2d4a;
+}
+body.vibe-fresh-starts--night {
+  --vibe-panel: #292535;
+  --vibe-ink: #fefcf3;
+  --vibe-accent: #ffe8c2;
+  --vibe-glow: #f8ddaf;
+  --vibe-border: #7a6c77;
+  --vibe-pill: #554354;
+  --vibe-pill-ink: #fefcf3;
+}
 .vibe-fresh-starts .user-header,
 .vibe-fresh-starts .vibe-label {
   background-color: #fff4d6; /* pale yellow */
