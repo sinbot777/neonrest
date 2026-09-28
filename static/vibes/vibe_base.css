@@ -1,0 +1,57 @@
+/* Shared Vibe page structure. Individual files set these tokens per mode. */
+body[class*="vibe-"] #main-content {
+  flex: 1 1 auto;
+  width: min(100%, 900px);
+  max-width: none;
+  min-width: 0;
+}
+body[class*="vibe-"] .page-wrapper {
+  width: min(100% - 2rem, 760px);
+  margin: 2rem auto 4rem;
+}
+body[class*="vibe-"] .page-wrapper .user-page {
+  width: 100%;
+  max-width: none;
+  color: var(--vibe-ink, #fdfdfd);
+  background: var(--vibe-panel, rgba(0, 0, 0, .7));
+  border: 1px solid var(--vibe-border, rgba(255, 255, 255, .2));
+}
+body[class*="vibe-"] .page-wrapper .user-header {
+  color: var(--vibe-ink, #fdfdfd);
+}
+body[class*="vibe-"] .page-wrapper .glow {
+  color: var(--vibe-accent, #fcb5a3);
+  text-shadow: 0 0 8px var(--vibe-glow, #fcb5a3);
+}
+body[class*="vibe-"] .page-wrapper a:not(.vibe-label) {
+  color: var(--vibe-accent, #fcb5a3);
+}
+body[class*="vibe-"] .page-wrapper .vibe-label {
+  color: var(--vibe-pill-ink, var(--vibe-ink, #fdfdfd));
+  background: var(--vibe-pill, rgba(255, 255, 255, .1));
+  border-color: var(--vibe-border, rgba(255, 255, 255, .2));
+}
+.vibe-mode-switch {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  flex-wrap: wrap;
+  padding: .8rem 1rem;
+  margin: 0 0 1rem;
+  color: var(--vibe-ink, #fdfdfd);
+  background: var(--vibe-panel, rgba(0, 0, 0, .7));
+  border: 1px solid var(--vibe-border, rgba(255, 255, 255, .2));
+  border-radius: 12px;
+  font-size: .95rem;
+}
+.vibe-mode-switch a {
+  color: var(--vibe-accent, #fcb5a3);
+  padding: .3rem .7rem;
+  border-radius: 7px;
+}
+.vibe-mode-switch a[aria-current="page"] {
+  color: var(--vibe-pill-ink, #1c1c1c);
+  background: var(--vibe-pill, #fcb5a3);
+  font-weight: 700;
+  text-decoration: none;
+}

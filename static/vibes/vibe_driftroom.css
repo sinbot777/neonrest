@@ -1,6 +1,22 @@
-.vibe-driftroom .user-header,
-.vibe-driftroom .vibe-label {
-  background-color: #132237;
-  color: #a8e4ff;
-  text-shadow: 0 0 5px #72c2ff;
+body.vibe-driftroom--day {
+  --vibe-panel: #f3f9fc;
+  --vibe-ink: #223d52;
+  --vibe-accent: #356d96;
+  --vibe-glow: #a7d8ee;
+  --vibe-border: #aec9d8;
+  --vibe-pill: #d2eaf6;
+  --vibe-pill-ink: #223d52;
+  background: #e5eef3;
+  color: var(--vibe-ink);
+}
+body.vibe-driftroom--night {
+  --vibe-panel: #172b43;
+  --vibe-ink: #e4f6ff;
+  --vibe-accent: #a8e4ff;
+  --vibe-glow: #72c2ff;
+  --vibe-border: #4b6981;
+  --vibe-pill: #294967;
+  --vibe-pill-ink: #e4f6ff;
+  background: #101b2d;
+  color: var(--vibe-ink);
 }

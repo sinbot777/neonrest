@@ -1,24 +1,22 @@
-/* Removed: extra .vibe-backporch, .vibe-driftroom, etc. definitions that were identical */
-
-/* ✅ All cleanup complete: No more duplication, merged shared classes, and your full theme system is preserved. */
-
-/* Reset & Base */
-body {
-  margin: 0;
-  font-family: 'Space Grotesk', sans-serif;
-  background: linear-gradient(to bottom, #1c1c1c, #0d0d0d);
-  color: #fdfdfd;
-  min-height: 100vh;
-  background-image: url('/static/bg-cassette-fuzz.png');
-  background-size: cover;
-  background-blend-mode: overlay;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+body.vibe-backporch--day {
+  --vibe-panel: #fff8f4;
+  --vibe-ink: #392c3d;
+  --vibe-accent: #805277;
+  --vibe-glow: #e5b5c4;
+  --vibe-border: #cdb9c5;
+  --vibe-pill: #f4dce6;
+  --vibe-pill-ink: #392c3d;
+  background: #eee7e5;
+  color: var(--vibe-ink);
 }
-.vibe-backporch .user-header,
-.vibe-backporch .vibe-label {
-  background-color: #2b2132;
-  color: #ffd2f3;
-  text-shadow: 0 0 5px #fcb5a3;
+body.vibe-backporch--night {
+  --vibe-panel: #2b2132;
+  --vibe-ink: #ffeaf4;
+  --vibe-accent: #ffd2f3;
+  --vibe-glow: #fcb5a3;
+  --vibe-border: #6a5366;
+  --vibe-pill: #563a52;
+  --vibe-pill-ink: #ffeaf4;
+  background: #1b1724;
+  color: var(--vibe-ink);
 }

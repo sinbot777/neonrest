@@ -960,35 +960,32 @@ def delete_post(post_id):
 @app.route('/vibe/<vibe_name>')
 def vibe_page(vibe_name):
     db = get_db()
-
-    # Always get vibe first
     vibe = db.execute('SELECT * FROM vibes WHERE name = ?', (vibe_name,)).fetchone()
     if not vibe:
         flash("That vibe doesn't exist yet.", "error")
         return redirect('/feed')
 
-    slug = vibe['name'].lower().replace(" ", "-")
-
-    # Auto-detect time for default theme mode
-    from zoneinfo import ZoneInfo
+    # Use one slug for the body class, stylesheet, and theme lookup.
+    slug = re.sub(r'[^a-z0-9-]+', '-', vibe['name'].strip().lower()).strip('-')
+    from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
     user = get_logged_in_user()
-    tz = user['timezone'] if user and user['timezone'] else 'UTC'
-    now = datetime.now(ZoneInfo(tz))
-    hour = now.hour
-    theme_mode = 'day' if 6 <= hour < 18 else 'night'
+    timezone = user['timezone'] if user and user['timezone'] else 'UTC'
+    try:
+        local_now = datetime.now(ZoneInfo(timezone))
+    except (ZoneInfoNotFoundError, ValueError):
+        local_now = datetime.now(ZoneInfo('UTC'))
+    automatic_mode = 'day' if 6 <= local_now.hour < 18 else 'night'
+    requested_mode = request.args.get('mode')
+    theme_mode = requested_mode if requested_mode in ('day', 'night') else automatic_mode
 
-    # Get theme
-    theme = db.execute('SELECT * FROM themes WHERE slug = ? AND mode = ?', (slug, theme_mode)).fetchone()
-    if not theme:
-        theme = db.execute('SELECT * FROM themes WHERE slug = ? AND mode = ?', (slug, 'night')).fetchone() or \
-                db.execute('SELECT * FROM themes WHERE slug = ? AND mode = ?', (slug, 'day')).fetchone()
-        theme_mode = theme['mode'] if theme else 'base'
+    theme = db.execute(
+        'SELECT * FROM themes WHERE slug = ? AND mode = ?',
+        (slug, theme_mode)
+    ).fetchone()
+    vibe_css = f'vibes/vibe_{slug}.css'
+    if not os.path.isfile(os.path.join(app.static_folder, vibe_css)):
+        vibe_css = None
 
-    # Get both versions for CSS toggling
-    alt_themes = db.execute('SELECT mode, custom_css FROM themes WHERE slug = ?', (slug,)).fetchall()
-    custom_css_map = {row['mode']: row['custom_css'] for row in alt_themes}
-
-    # Fetch posts tagged with this vibe
     posts = db.execute('''
         SELECT posts.id, posts.user_id, posts.content, posts.circle, posts.created_at,
                posts.last_edited, users.handle,
@@ -1007,23 +1004,22 @@ def vibe_page(vibe_name):
     return render_template(
         'vibe_page.html',
         vibe_name=vibe_name,
-        vibe_slug=theme['slug'] if theme else slug,
-        theme_slug=theme['slug'] if theme else None,
-        theme_mode=theme['mode'] if theme else 'base',
+        vibe_slug=slug,
+        theme_slug=slug,
+        theme_mode=theme_mode,
+        vibe_css=vibe_css,
         bg_color=theme['bg_color'] if theme else None,
         text_color=theme['text_color'] if theme else None,
         glow_color=theme['glow_color'] if theme else None,
-        background_layers=theme['background_layers'] if theme else '',
-        blend_mode=theme['blend_mode'] if theme else '',
-        font_stack=theme['font_stack'] if theme else '',
-        custom_css=theme['custom_css'] if theme else '',
-        custom_css_day=custom_css_map.get('day', ''),
-        custom_css_night=custom_css_map.get('night', ''),
+        background_layers=theme['background_layers'] if theme else None,
+        blend_mode=theme['blend_mode'] if theme else None,
+        font_stack=theme['font_stack'] if theme else None,
+        custom_css=theme['custom_css'] if theme else None,
+        extra_css=theme['extra_css'] if theme else None,
         posts=posts,
-        skip_static_css=True,
-        vibe=vibe  # ✅ always defined now
+        vibe=vibe,
+        skip_static_css=(slug == 'fresh-starts')
     )
-
 
 
 @app.template_filter('datetimeformat')
@@ -1049,22 +1045,53 @@ def theme_preview(slug, mode):
 
     return render_template('theme-preview.html', theme=theme)
 
+@app.route('/themes/edit')
+def edit_theme_index():
+    """Open the first Vibe whose theme settings this user can edit."""
+    db = get_db()
+    user_id = session.get('user_id')
+    available_slugs = {
+        re.sub(r'[^a-z0-9-]+', '-', vibe['name'].strip().lower()).strip('-')
+        for vibe in db.execute('SELECT name FROM vibes').fetchall()
+    }
+    for theme in db.execute("SELECT * FROM themes WHERE mode IN ('day', 'night') ORDER BY slug, mode").fetchall():
+        if theme['slug'] in available_slugs and can_edit_theme(user_id, theme):
+            return redirect(url_for('edit_theme', slug=theme['slug'], mode=theme['mode']))
+    flash("You don’t have permission to edit Vibe settings.", "error")
+    return redirect('/feed')
+
+
 @app.route('/themes/edit/<slug>/<mode>', methods=['GET', 'POST'])
 def edit_theme(slug, mode):
     db = get_db()
     theme = db.execute('SELECT * FROM themes WHERE slug = ? AND mode = ?', (slug, mode)).fetchone()
-    vibe = db.execute('SELECT * FROM vibes WHERE theme_id = ?', (theme['id'],)).fetchone()
-
     if not theme:
-        flash("Theme not found.", "error")
-        return redirect('/feed')
+        abort(404)
 
     user_id = session.get('user_id')
     if not can_edit_theme(user_id, theme):
-        flash("You don’t have permission to edit this theme.", "error")
-        return redirect('/feed')
+        abort(403)
 
-    editable_themes = db.execute('SELECT * FROM themes').fetchall() if user_id == 1 else []
+    # A Vibe points to one theme ID, but both day and night variants edit its settings.
+    vibes = db.execute('SELECT * FROM vibes ORDER BY name').fetchall()
+    vibe_by_slug = {
+        re.sub(r'[^a-z0-9-]+', '-', item['name'].strip().lower()).strip('-'): item
+        for item in vibes
+    }
+    vibe = vibe_by_slug.get(slug)
+
+    # Only include modes the user may edit. Reuse the same check as the POST guard.
+    editable_modes_by_slug = {}
+    for candidate in db.execute("SELECT * FROM themes WHERE mode IN ('day', 'night') ORDER BY slug, mode").fetchall():
+        if can_edit_theme(user_id, candidate):
+            editable_modes_by_slug.setdefault(candidate['slug'], []).append(candidate['mode'])
+    editable_vibes = [
+        {'name': item['name'], 'slug': vibe_slug,
+         'mode': mode if mode in editable_modes_by_slug[vibe_slug] else editable_modes_by_slug[vibe_slug][0]}
+        for vibe_slug, item in vibe_by_slug.items()
+        if vibe_slug in editable_modes_by_slug
+    ]
+    editable_modes = editable_modes_by_slug.get(slug, [])
 
     def sanitize_color(value):
         return value if value and not value.isspace() else None
@@ -1077,34 +1104,19 @@ def edit_theme(slug, mode):
         text_color = None if request.form.get('null_text_color') else sanitize_color(request.form.get('text_color'))
         glow_color = None if request.form.get('null_glow_color') else sanitize_color(request.form.get('glow_color'))
 
-        # New fields
-        bg_url = request.form.get('bg_url', '').strip() or None
-        bg_midi_url = request.form.get('bg_midi_url', '').strip() or None
-        button_style = request.form.get('button_style', '').strip() or None
-        extra_css = request.form.get('extra_css', '').strip() or None
-        description = request.form.get('description', '').strip() or None
-        tags = request.form.get('tags', '').strip() or None
-        preview_url = request.form.get('preview_url', '').strip() or None
-        is_public = 1 if request.form.get('is_public') else 0
-        remixable = 1 if request.form.get('remixable') else 0
-
         bg_layers = request.form.get('background_layers', '').strip()
         blend_mode = request.form.get('blend_mode', '').strip()
         font_stack = request.form.get('font_stack', '').strip()
 
+        # Update only fields rendered by this editor, preserving unrelated metadata.
         db.execute('''
             UPDATE themes SET
                 custom_css = ?, bg_color = ?, text_color = ?, glow_color = ?,
-                background_layers = ?, blend_mode = ?, font_stack = ?,
-                bg_url = ?, bg_midi_url = ?, button_style = ?, extra_css = ?,
-                description = ?, tags = ?, preview_url = ?, is_public = ?, remixable = ?
+                background_layers = ?, blend_mode = ?, font_stack = ?
             WHERE id = ?
         ''', (
             new_css, bg_color, text_color, glow_color,
-            bg_layers, blend_mode, font_stack,
-            bg_url, bg_midi_url, button_style, extra_css,
-            description, tags, preview_url, is_public, remixable,
-            theme['id']
+            bg_layers, blend_mode, font_stack, theme['id']
         ))
         if vibe:
             logo_url = request.form.get('logo_url', '').strip()
@@ -1122,14 +1134,17 @@ def edit_theme(slug, mode):
 
         action = request.form.get('action')
         if action == 'save_and_preview':
-            return redirect(f'/themes/preview/{slug}/{mode}')
+            if vibe:
+                return redirect(url_for('vibe_page', vibe_name=vibe['name'], mode=mode))
+            return redirect(url_for('theme_preview', slug=slug, mode=mode))
         else:
             return redirect(url_for('edit_theme', slug=slug, mode=mode))
 
     return render_template(
     'edit_theme.html',
     theme=theme,
-    editable_themes=editable_themes,
+    editable_vibes=editable_vibes,
+    editable_modes=editable_modes,
     vibe=vibe
 )
 
