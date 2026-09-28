@@ -1,6 +1,22 @@
-.vibe-analog .user-header,
-.vibe-analog .vibe-label {
-  background-color: #1c1c1c;
-  color: #90ffb5;
-  text-shadow: 0 0 4px #00ffaa;
+body.vibe-analog--day {
+  --vibe-panel: #f3f7ef;
+  --vibe-ink: #23392e;
+  --vibe-accent: #276b4c;
+  --vibe-glow: #9adaad;
+  --vibe-border: #aec9b4;
+  --vibe-pill: #d4ecd9;
+  --vibe-pill-ink: #23392e;
+  background: #e8eee4;
+  color: var(--vibe-ink);
+}
+body.vibe-analog--night {
+  --vibe-panel: #1b2a25;
+  --vibe-ink: #e8ffee;
+  --vibe-accent: #90ffb5;
+  --vibe-glow: #00ffaa;
+  --vibe-border: #456c58;
+  --vibe-pill: #294837;
+  --vibe-pill-ink: #e8ffee;
+  background: #101c17;
+  color: var(--vibe-ink);
 }
