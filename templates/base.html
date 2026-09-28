@@ -29,7 +29,7 @@
   {% endif %}
 
 <link rel="stylesheet" href="{{ url_for('static', filename='post_overrides.css') }}">
-{% if vibe_css %}
+{% if vibe_css and vibe_slug != 'fresh-starts' %}
 <link rel="stylesheet" href="{{ url_for('static', filename='vibes/vibe_base.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename=vibe_css) }}">
 {% endif %}
@@ -73,6 +73,27 @@
   </div>
 
 
+  <!-- Keep Fresh Starts' existing database CSS path intact. -->
+{% if vibe_slug == 'fresh-starts' and theme_mode in ['day', 'night'] %}
+  <style>
+    #site-logo { position: absolute; top: 1rem; left: 1rem; z-index: 1000; }
+    .site-logo-img { height: clamp(64px, 9vw, 120px); width: auto; }
+    body.vibe-fresh-starts--{{ theme_mode }} {
+      --bg_color: {{ bg_color }};
+      --text_color: {{ text_color }};
+      --glow_color: {{ glow_color }};
+      background-color: {{ bg_color }};
+      color: {{ text_color }};
+      {{ custom_css | safe }}
+    }
+    {% if font_stack %}
+    body.vibe-fresh-starts--{{ theme_mode }},
+    body.vibe-fresh-starts--{{ theme_mode }} * {
+      font-family: {{ font_stack | safe }} !important;
+    }
+    {% endif %}
+  </style>
+{% else %}
   <!-- The per-Vibe file sets defaults; saved editor values override that mode. -->
 {% if theme_slug and theme_mode in ['day', 'night'] %}
   <style>
@@ -89,6 +110,7 @@
 {% endif %}
 {% if custom_css %}
   <style>{{ custom_css | safe }}</style>
+{% endif %}
 {% endif %}
 
   <footer id="footer-tagline">✨ Stay human, stay weird ✨</footer>
