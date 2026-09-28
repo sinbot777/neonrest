@@ -1,9 +1,14 @@
 {% extends 'base.html' %}
 {% block title %}{{ vibe_name }} - Neonrest{% endblock %}
-{% block body_class %}theme-{{ theme_slug or 'default' }} vibe-{{ theme_slug or 'default' }}--{{ theme_mode or 'base' }}{% endblock %}
+{% block body_class %}theme-{{ theme_slug }} vibe-{{ vibe_slug }} vibe-{{ vibe_slug }}--{{ theme_mode }}{% endblock %}
 
 {% block content %}
 <div class="page-wrapper">
+  <nav class="vibe-mode-switch" aria-label="Theme mode">
+    <span>View this Vibe:</span>
+    <a href="{{ url_for('vibe_page', vibe_name=vibe_name, mode='day') }}" {% if theme_mode == 'day' %}aria-current="page"{% endif %}>Day</a>
+    <a href="{{ url_for('vibe_page', vibe_name=vibe_name, mode='night') }}" {% if theme_mode == 'night' %}aria-current="page"{% endif %}>Night</a>
+  </nav>
   <div class="user-page">
     <div class="user-header">
     {% if vibe.logo_url %}
@@ -52,7 +57,4 @@
   </div>
 </div>
 
-{% if custom_css %}
-  <style>{{ custom_css | safe }}</style>
-{% endif %}
-{% endblock %}
+...{% endblock %}
