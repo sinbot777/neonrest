@@ -109,7 +109,13 @@
   </style>
 {% endif %}
 {% if custom_css %}
-  <style>{{ custom_css | safe }}</style>
+  <style>
+    {% if '{' in custom_css %}
+      {{ custom_css | safe }}
+    {% else %}
+      body.vibe-{{ vibe_slug }}--{{ theme_mode }} { {{ custom_css | safe }} }
+    {% endif %}
+  </style>
 {% endif %}
 {% endif %}
 
