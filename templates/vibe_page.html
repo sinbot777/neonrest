@@ -1,9 +1,14 @@
 {% extends 'base.html' %}
 {% block title %}{{ vibe_name }} - Neonrest{% endblock %}
-{% block body_class %}theme-{{ theme_slug or 'default' }} vibe-{{ theme_slug or 'default' }}--{{ theme_mode or 'base' }}{% endblock %}
+{% block body_class %}theme-{{ theme_slug }} vibe-{{ vibe_slug }} vibe-{{ vibe_slug }}--{{ theme_mode }}{% endblock %}
 
 {% block content %}
 <div class="page-wrapper">
+  <nav class="vibe-mode-switch" aria-label="Theme mode">
+    <span>View this Vibe:</span>
+    <a href="{{ url_for('vibe_page', vibe_name=vibe_name, mode='day') }}" {% if theme_mode == 'day' %}aria-current="page"{% endif %}>Day</a>
+    <a href="{{ url_for('vibe_page', vibe_name=vibe_name, mode='night') }}" {% if theme_mode == 'night' %}aria-current="page"{% endif %}>Night</a>
+  </nav>
   <div class="user-page">
     <div class="user-header">
     {% if vibe.logo_url %}
@@ -13,7 +18,9 @@
         class="vibe-logo"
         style="
           {% if vibe.logo_width %}width: {{ vibe.logo_width }};{% endif %}
-          {% if vibe.logo_height %}height: {{ vibe.logo_height }};{% endif %}
+          {% if vibe.logo_height %}height: {{ vibe.logo_height }};{% else %}height: auto;{% endif %}
+          max-width: 100%;
+          box-sizing: border-box;
           {% if vibe.logo_padding %}padding: {{ vibe.logo_padding }};{% endif %}
           display: block;
           margin-left: {% if vibe.logo_align == 'left' %}0{% elif vibe.logo_align == 'right' %}auto{% else %}auto{% endif %};
@@ -52,7 +59,7 @@
   </div>
 </div>
 
-{% if custom_css %}
+{% if vibe_slug == 'fresh-starts' and custom_css %}
   <style>{{ custom_css | safe }}</style>
 {% endif %}
 {% endblock %}
