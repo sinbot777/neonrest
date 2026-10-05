@@ -16,7 +16,7 @@ import itsdangerous
 from datetime import datetime
 from utils.friend_helpers import are_friends, get_friend_requests, get_following_map, get_top_friends
 from utils.vibe_lifecycle import (add_post_vibes, approve_vibe, can_approve_vibes,
-                                  init_vibe_tables, is_pending, minimum_users,
+                                  default_vibe_css, init_vibe_tables, is_pending, minimum_users,
                                   supporter_count, vibe_slug)
 from utils.image_uploads import allowed_file   # ✅ Your image upload helper
 
@@ -1273,7 +1273,8 @@ def edit_theme(slug, mode):
     ).fetchone()
     theme = dict(theme_row) if theme_row else {
         'id': None, 'name': vibe['name'], 'slug': slug, 'mode': mode,
-        'custom_css': '', 'bg_color': None, 'text_color': None,
+        'custom_css': default_vibe_css(slug, mode),
+        'bg_color': None, 'text_color': None,
         'glow_color': None, 'background_layers': '', 'blend_mode': '',
         'font_stack': ''
     }
