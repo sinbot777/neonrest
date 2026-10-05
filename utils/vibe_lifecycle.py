@@ -37,6 +37,27 @@ def vibe_slug(name):
     return re.sub(r'[^a-z0-9-]+', '-', name.strip().lower()).strip('-')
 
 
+def default_vibe_css(slug, mode):
+    palettes = {
+        'day': ('#f8f7fa', '#272638', '#7257a7', '#c9b9e7',
+                '#c8c3d6', '#e9e3f4', '#e9e8ef'),
+        'night': ('#242537', '#f5f1fc', '#d6b5ff', '#9b78c5',
+                  '#55536e', '#423a58', '#151622'),
+    }
+    panel, ink, accent, glow, border, pill, background = palettes[mode]
+    return (f'body.vibe-{slug}--{mode} {{\n'
+            f'  --vibe-panel: {panel};\n'
+            f'  --vibe-ink: {ink};\n'
+            f'  --vibe-accent: {accent};\n'
+            f'  --vibe-glow: {glow};\n'
+            f'  --vibe-border: {border};\n'
+            f'  --vibe-pill: {pill};\n'
+            f'  --vibe-pill-ink: {ink};\n'
+            f'  background-color: {background};\n'
+            f'  color: var(--vibe-ink);\n'
+            '}')
+
+
 def is_pending(db, vibe_id):
     return db.execute(
         'SELECT 1 FROM pending_vibes WHERE vibe_id = ?', (vibe_id,)
