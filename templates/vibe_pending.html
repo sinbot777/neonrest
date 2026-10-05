@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block title %}{{ vibe.name }} is gathering support - Neonrest{% endblock %}
+{% block content %}
+<div class="user-page">
+  <div class="user-header">
+    <h1>{{ vibe.name }} is gathering support</h1>
+    <p>{{ supporters }} of {{ threshold }} distinct people have used this Vibe on posts.</p>
+    <p>Once {{ threshold }} people use it, its public page will open with the default Vibe style.</p>
+  </div>
+  {% if can_approve %}
+    <form method="post" action="{{ url_for('staff_approve_vibe', vibe_id=vibe.id) }}">
+      <input type="hidden" name="approval_token" value="{{ approval_token }}">
+      <button type="submit">Approve this Vibe now</button>
+    </form>
+    <p><a href="{{ url_for('pending_vibes') }}">Review pending Vibes</a></p>
+  {% endif %}
+</div>
+{% endblock %}
