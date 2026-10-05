@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block title %}Pending Vibes - Neonrest{% endblock %}
+{% block content %}
+<div class="user-page">
+  <h1>Pending Vibes</h1>
+  <p>A Vibe opens automatically after {{ threshold }} distinct people use it on posts.</p>
+  {% if candidates %}
+    <ul class="vibe-list">
+      {% for candidate in candidates %}
+        <li>
+          <strong>{{ candidate.name }}</strong> — {{ candidate.supporters }} of {{ threshold }} people
+          <form method="post" action="{{ url_for('staff_approve_vibe', vibe_id=candidate.id) }}">
+            <input type="hidden" name="approval_token" value="{{ approval_token }}">
+            <button type="submit">Approve</button>
+          </form>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>There are no pending Vibes.</p>
+  {% endif %}
+</div>
+{% endblock %}

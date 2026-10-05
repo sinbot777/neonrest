@@ -29,12 +29,16 @@
   {% endif %}
 
 <link rel="stylesheet" href="{{ url_for('static', filename='post_overrides.css') }}">
+{% if vibe_slug and vibe_slug != 'fresh-starts' %}
+<link rel="stylesheet" href="{{ url_for('static', filename='vibes/vibe_base.css') }}">
+{% if vibe_css %}<link rel="stylesheet" href="{{ url_for('static', filename=vibe_css) }}">{% endif %}
+{% endif %}
 
 
 </head>
 
 <body id="theme-root"
-      class="{% block body_class %}{% if theme_slug %}vibe-{{ vibe_slug }}--{{ theme_mode or 'base' }} theme-{{ theme_slug }}{% else %}default-theme{% endif %}{% endblock %}"
+      class="{% block body_class %}{% if theme_slug %}vibe-{{ vibe_slug }} vibe-{{ vibe_slug }}--{{ theme_mode or 'base' }} theme-{{ theme_slug }}{% else %}default-theme{% endif %}{% endblock %}"
       data-mode="{{ theme_mode or 'base' }}">
 
   {% if request.path != '/' %}
@@ -68,13 +72,13 @@
     {% block content %}{% endblock %}
   </div>
 
-  <!-- Debug info (optional) -->
-  <p style="color:red">Debug theme_mode: {{ theme_mode }}</p>
 
-  <!-- Scoped Theme Styles -->
-{% if theme_mode in ['day', 'night'] %}
+  <!-- Keep Fresh Starts' existing database CSS path intact. -->
+{% if vibe_slug == 'fresh-starts' and theme_mode in ['day', 'night'] %}
   <style>
-    body.vibe-{{ vibe_slug }}--{{ theme_mode }} {
+    #site-logo { position: absolute; top: 1rem; left: 1rem; z-index: 1000; }
+    .site-logo-img { height: clamp(64px, 9vw, 120px); width: auto; }
+    body.vibe-fresh-starts--{{ theme_mode }} {
       --bg_color: {{ bg_color }};
       --text_color: {{ text_color }};
       --glow_color: {{ glow_color }};
@@ -82,18 +86,38 @@
       color: {{ text_color }};
       {{ custom_css | safe }}
     }
-
-
     {% if font_stack %}
-    body.vibe-{{ vibe_slug }}--{{ theme_mode }},
-    body.vibe-{{ vibe_slug }}--{{ theme_mode }} * {
+    body.vibe-fresh-starts--{{ theme_mode }},
+    body.vibe-fresh-starts--{{ theme_mode }} * {
       font-family: {{ font_stack | safe }} !important;
     }
     {% endif %}
   </style>
+{% else %}
+  <!-- The per-Vibe file sets defaults; saved editor values override that mode. -->
+{% if theme_slug and theme_mode in ['day', 'night'] %}
+  <style>
+    body.vibe-{{ vibe_slug }}--{{ theme_mode }} {
+      {% if bg_color %}--bg_color: {{ bg_color }}; background-color: {{ bg_color }};{% endif %}
+      {% if text_color %}--text_color: {{ text_color }}; color: {{ text_color }};{% endif %}
+      {% if glow_color %}--glow_color: {{ glow_color }};{% endif %}
+      {% if background_layers %}background-image: {{ background_layers | safe }};{% endif %}
+      {% if blend_mode %}background-blend-mode: {{ blend_mode }};{% endif %}
+      {% if font_stack %}font-family: {{ font_stack | safe }};{% endif %}
+      {% if extra_css %}{{ extra_css | safe }}{% endif %}
+    }
+  </style>
 {% endif %}
-
-
+{% if custom_css %}
+  <style>
+    {% if '{' in custom_css %}
+      {{ custom_css | safe }}
+    {% else %}
+      body.vibe-{{ vibe_slug }}--{{ theme_mode }} { {{ custom_css | safe }} }
+    {% endif %}
+  </style>
+{% endif %}
+{% endif %}
 
   <footer id="footer-tagline">✨ Stay human, stay weird ✨</footer>
 
