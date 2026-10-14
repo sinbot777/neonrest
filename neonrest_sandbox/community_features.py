@@ -684,7 +684,7 @@ def register(app, core):
             pending_secret=pending_secret,backup_codes=backup_codes,
             enrollment_qr=enrollment_image(pending_secret,user['handle'],issuer) if pending_secret else None))
         response.headers['Cache-Control']='private, no-store'
-        response.headers['Referrer-Policy']='no-referrer'
+        response.headers['Referrer-Policy']='same-origin'
         return response
 
     @app.route('/password-reset',methods=['GET','POST'])

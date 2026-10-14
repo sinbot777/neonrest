@@ -1,0 +1,21 @@
+{
+  "installed": true,
+  "web_reload_pending": false,
+  "qr_origin_checks": 80,
+  "account_checks": 142,
+  "pre_fix_reproductions": 2,
+  "source_hashes": {
+    "neonrest": {
+      "community_features.py": "8fbd19a7f25879970a07c7bb887dcf160b63ab03f8d527863851620ba6e71d70",
+      "templates/dev_summary.html": "c77ae64475649d4d3cbc5af14d3c0bbda24eb1ebb712048f107e6ee2d7e5bb68",
+      "tests/verify_authenticator_qr.py": "7ebdef4d4befe783abe7f5873f7ebbce1a3db31607e49321291d7e0186c4fb44"
+    },
+    "neonrest_sandbox": {
+      "community_features.py": "89c2ebb76c5a73cdf67fc84395322e642523d1c87d2b3c6f9761780fd2803371",
+      "templates/dev_summary.html": "077744d32270923bbc5aa0dfd585732354eb9094ed556a1907baad41e0ee6d1b",
+      "tests/verify_authenticator_qr.py": "7ebdef4d4befe783abe7f5873f7ebbce1a3db31607e49321291d7e0186c4fb44"
+    }
+  },
+  "live_verified": true,
+  "live_checks": 18
+}
