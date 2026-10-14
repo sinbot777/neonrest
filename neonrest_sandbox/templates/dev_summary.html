@@ -5,6 +5,7 @@
 <p>Newer entries describe Sandbox work. Dates use Pacific time; production deployment is tracked separately.</p>
 <h3>📅 October 14, 2026</h3>
 <ul>
+<li><strong>🔐 Replace a lost authenticator:</strong> Account safety now offers a replacement button for enabled accounts. Existing password and recent factor/recovery-code authorization remains required. The old factor stays active until the new QR is confirmed; replacement creates new recovery codes and signs out other sessions. Verified 61 disposable-account checks in each environment. No real account factor was changed by deployment.</li>
 <li><strong>🔐 Authenticator setup repaired:</strong> Account safety now retains the same-site request origin when submitting setup and other security forms. Reproduced the previous Forbidden response with a valid disposable code, then verified both environments with 80 QR/origin checks and 142 account-lifecycle checks. CSRF, null/foreign-origin rejection, recent authorization, recovery and replay protection remain active. No real account factor or credential was changed.</li>
 <li><strong>📦 Source baseline preserved:</strong> Captured the current Sandbox and Production source separately on a dedicated GitHub snapshot branch. Private runtime data and authentication values are excluded; export-only Last.fm key redactions are documented. Final Production mail and owner two-factor acceptance remain open.</li>
 </ul>

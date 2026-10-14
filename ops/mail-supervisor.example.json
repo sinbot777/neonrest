@@ -1,0 +1,34 @@
+{
+  "lock": "/home/sinbot/private/neonrest_mail/supervisor.lock",
+  "workers": [
+    {
+      "label": "sandbox",
+      "command": [
+        "/usr/local/bin/python3.13",
+        "-u",
+        "/home/sinbot/neonrest_sandbox/mail_queue.py"
+      ],
+      "cwd": "/home/sinbot",
+      "environment": {
+        "NEONREST_SANDBOX_DATABASE": "/home/sinbot/db/neonrest_sandbox.db",
+        "NEONREST_SANDBOX_MAIL_QUEUE": "1",
+        "NEONREST_SANDBOX_MAIL_QUEUE_DIR": "/home/sinbot/private/neonrest_sandbox/mail_queue"
+      }
+    },
+    {
+      "label": "production",
+      "command": [
+        "/usr/local/bin/python3.13",
+        "-u",
+        "/home/sinbot/neonrest/mail_queue.py"
+      ],
+      "cwd": "/home/sinbot",
+      "environment": {
+        "NEONREST_PRODUCTION_DATABASE": "/home/sinbot/db/neonrest.db",
+        "NEONREST_PRODUCTION_MAIL_QUEUE": "1",
+        "NEONREST_PRODUCTION_MAIL_QUEUE_DIR": "/home/sinbot/private/neonrest_production/mail_queue"
+      },
+      "enabled_file": "/home/sinbot/private/neonrest_mail/production.enabled"
+    }
+  ]
+}

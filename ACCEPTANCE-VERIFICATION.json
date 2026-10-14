@@ -1,0 +1,26 @@
+{
+  "production_isolated_checks": 1728,
+  "authenticator_replacement_checks": 122,
+  "supervisor_checks": 13,
+  "live_checks": 53,
+  "both_managed_workers_healthy": true,
+  "production_queue_enabled": true,
+  "backup_restore_verified": true,
+  "real_accounts_and_factors_preserved": true,
+  "real_acceptance_emails_sent": false,
+  "production_automatic_erasure_enabled": false,
+  "full_release_signed_off": false,
+  "source_sha256": {
+    "neonrest": {
+      "templates/community.html": "d3d139206257db7c8451d54c81871be2670ad1a8b397383a4e65d5eeef47acb4",
+      "templates/dev_summary.html": "5eb1b091d3543a1ad28d0a686d8bc9e7b6359ffbb04a59f2a5f492ba2228cb08",
+      "tests/verify_authenticator_replacement.py": "39a3695b3e1ea91c87e869b05879949d03f1fb3ffac7232055fd6d1a1ee28c32"
+    },
+    "neonrest_sandbox": {
+      "templates/community.html": "d3d139206257db7c8451d54c81871be2670ad1a8b397383a4e65d5eeef47acb4",
+      "templates/dev_summary.html": "47a4af7c2b991178e523e38e8b04a6666fe5aaee7bc1733e44f1dd90b77101d5",
+      "tests/verify_authenticator_replacement.py": "39a3695b3e1ea91c87e869b05879949d03f1fb3ffac7232055fd6d1a1ee28c32"
+    }
+  },
+  "supervisor_sha256": "e62f4015ef779f58535c45a32b7d9af58fb727c2d4299e57ffb264bc628ecccf"
+}

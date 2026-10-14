@@ -18,7 +18,7 @@
 {% elif page == 'security' %}
 <section><h2>Email address</h2><p>Verify a new sign-in address before switching. Your current email stays active until you confirm.</p><a class="button" href="{{ url_for('account_email') }}">Change email</a></section>
 <section><h2>Two-factor authentication</h2><p>{{ 'Enabled. Staff sign-ins require a verification code.' if enabled else 'Not enabled. Staff must enable it before using management tools.' }}</p>
-{% if not enabled and not pending_secret %}<form method="post">{{ csrf() }}<button name="action" value="begin">Set up authenticator</button></form>{% endif %}
+{% if not pending_secret %}<form method="post">{{ csrf() }}<button name="action" value="begin">{{ "Replace authenticator" if enabled else "Set up authenticator" }}</button></form>{% if enabled %}<p>To replace a lost authenticator, confirm your sign-in with your password and an unused recovery code when prompted. Your current authenticator stays active until you verify the new one. Replacement creates new recovery codes and signs out other sessions.</p>{% endif %}{% endif %}
 {% if pending_secret %}
 <style>.authenticator-setup{max-width:36rem}.authenticator-qr{display:block;width:280px;max-width:100%;height:auto;background:#fff;border:8px solid #fff;border-radius:0;box-sizing:border-box;image-rendering:pixelated;margin:1rem 0}.authenticator-fallback{margin:1rem 0}.authenticator-fallback summary{cursor:pointer}.authenticator-fallback .secret-key{overflow-wrap:anywhere;word-break:break-all}</style>
 <div class="authenticator-setup">
