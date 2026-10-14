@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block title %}Manage {{ vibe.name }} - Neonrest{% endblock %}
+{% block content %}
+<div class="management-page">
+  <a href="{{ url_for('manage_home') }}">← Management</a>
+  <h1>Manage {{ vibe.name }}</h1>
+  <p>Choose a theme mode to edit its colors, CSS, logo, and welcome message.</p>
+  <div class="manage-grid">
+    <article><h2>Day</h2>
+      <a href="{{ url_for('edit_theme', slug=vibe.slug, mode='day') }}">Edit Day</a>
+      <a href="{{ url_for('vibe_page', vibe_name=vibe.name, mode='day') }}">View Day</a>
+    </article>
+    <article><h2>Night</h2>
+      <a href="{{ url_for('edit_theme', slug=vibe.slug, mode='night') }}">Edit Night</a>
+      <a href="{{ url_for('vibe_page', vibe_name=vibe.name, mode='night') }}">View Night</a>
+    </article>
+  </div>
+</div>
+<style>
+.management-page{max-width:950px;margin:2rem auto;padding:clamp(1.2rem,3vw,2.2rem);background:#171d2b;color:#f5f0e8;border:1px solid #526071;border-radius:22px}
+.management-page a{color:#aee4d8}.management-page a:focus-visible{outline:3px solid #ffd68a;outline-offset:3px}
+.manage-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1rem}
+.manage-grid article{padding:1rem;border:1px solid #526071;border-radius:14px;background:#242e3e}
+.manage-grid article a{display:inline-block;margin-right:1rem}
+</style>
+{% endblock %}

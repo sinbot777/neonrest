@@ -1,0 +1,9 @@
+<div class="midi-card" data-midi-src="{{ url_for('media_file', filename=midi_filename) }}">
+  <div class="midi-card-heading">♫ <strong>{{ midi_title }}</strong> <span class="midi-duration"></span></div>
+  <canvas class="midi-roll" width="560" height="72" aria-label="Piano roll preview for {{ midi_title }}"></canvas>
+  <div class="midi-controls">
+    <button type="button" class="midi-play" aria-label="Play {{ midi_title }}">Play</button>
+    <button type="button" class="midi-stop" aria-label="Stop {{ midi_title }}">Stop</button>
+    <span class="midi-status" role="status"></span>
+  </div>
+</div>

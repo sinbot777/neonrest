@@ -1,0 +1,106 @@
+"""Retention verification against a temporary database and temporary files only."""
+import importlib.util,sqlite3,tempfile,time,os
+from pathlib import Path
+spec=importlib.util.spec_from_file_location('retention',str(Path(os.environ.get('NEONREST_TEST_SOURCE','/home/sinbot/neonrest_sandbox'))/'retention.py'));r=importlib.util.module_from_spec(spec);spec.loader.exec_module(r)
+checks=0
+def check(v,label):
+ global checks
+ assert v,label
+ checks+=1
+with tempfile.TemporaryDirectory(prefix='neonrest-retention-test-') as temp:
+ root=Path(temp);db=sqlite3.connect(root/'test.db')
+ live=sqlite3.connect('file:/home/sinbot/db/neonrest_sandbox.db?mode=ro',uri=True);before=live.execute('SELECT count(*) FROM users').fetchone()[0];live.backup(db)
+ r.initialize(db);now=int(time.time())
+ roots={k:str(root/k) for k in ('avatars','media','consent','backups')}
+ for value in roots.values():Path(value).mkdir()
+ uid=db.execute('SELECT max(id)+1 FROM users').fetchone()[0];peer=uid+1
+ for n in (uid,peer):db.execute('INSERT INTO users(id,email,handle,password_hash,verified,created_at) VALUES (?,?,?,?,1,CURRENT_TIMESTAMP)',(n,str(n)+'@test.invalid','@retention'+str(n),'test-only'))
+ avatar=Path(roots['avatars'])/'owned.webp';avatar.write_bytes(b'avatar')
+ shared=Path(roots['media'])/'shared.webp';shared.write_bytes(b'shared')
+ owned=Path(roots['media'])/'owned.webp';owned.write_bytes(b'owned')
+ poster=Path(roots['media'])/'poster.jpg';poster.write_bytes(b'poster')
+ db.execute('UPDATE users SET avatar=?,avatar_path=? WHERE id=?',('owned.webp','uploads/avatars/owned.webp',uid))
+ p=db.execute("INSERT INTO posts(user_id,content,circle) VALUES (?,'secret','public')",(uid,)).lastrowid
+ other=db.execute("INSERT INTO posts(user_id,content,circle) VALUES (?,'keep','public')",(peer,)).lastrowid
+ c=db.execute("INSERT INTO comments(post_id,user_id,content) VALUES (?,?,'erase')",(other,uid)).lastrowid
+ reply=db.execute("INSERT INTO comments(post_id,user_id,content,parent_comment_id) VALUES (?,?,'keep',?)",(other,peer,c)).lastrowid
+ db.execute("INSERT INTO comments(post_id,user_id,content) VALUES (?,?,'thread')",(p,peer))
+ db.execute("INSERT INTO post_media(post_id,kind,filename,poster) VALUES (?,'image','owned.webp','poster.jpg')",(p,))
+ db.execute("INSERT INTO post_media(post_id,kind,filename) VALUES (?,'gif','shared.webp')",(p,))
+ db.execute("INSERT INTO post_media(post_id,kind,filename) VALUES (?,'image','shared.webp')",(other,))
+ db.execute("INSERT INTO post_edit_history(post_id,content,version_at,replaced_at) VALUES (?,'old secret',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)",(p,))
+ db.execute("INSERT INTO friend_requests(sender_id,receiver_id,status) VALUES (?,?,'accepted')",(uid,peer))
+ db.execute('INSERT INTO top_friends(user_id,friend_id,position_t9) VALUES (?,?,1)',(peer,uid))
+ db.execute("INSERT INTO notifications(user_id,actor_id,kind,message,path) VALUES (?,?,'comments','secret','/posts/1')",(peer,uid))
+ db.execute("INSERT INTO account_safety(user_id,deletion_requested_at) VALUES (?,datetime(?,'unixepoch'))",(uid,now-29*r.DAY))
+ db.execute('INSERT INTO active_sessions VALUES (?,?,?,?,?,?,0)',('expired-retention',uid,now-20*r.DAY,now-20*r.DAY,now-8*r.DAY,'test'))
+ db.execute('INSERT INTO active_sessions VALUES (?,?,?,?,?,?,0)',('live-retention',peer,now,now,now+r.DAY,'test'))
+ db.execute("INSERT INTO email_verifications VALUES (?,?,?, ?,?,0)",('expired-test',uid,'test',now-10*r.DAY,now-8*r.DAY))
+ db.execute("INSERT INTO email_verifications VALUES (?,?,?, ?,?,0)",('current-test',peer,'test',now,now+3600))
+ db.execute('INSERT INTO rate_buckets VALUES (?,?,?,?,?)',('test-new','test',1,1,now))
+ db.execute('INSERT INTO rate_buckets VALUES (?,?,?,?,?)',('test-old','test',1,1,now-2*r.DAY))
+
+ abandoned=Path(roots['media'])/'abandoned.webp';abandoned.write_bytes(b'orphan');os.utime(abandoned,(now-31*r.DAY,now-31*r.DAY))
+ recent=Path(roots['media'])/'recent.webp';recent.write_bytes(b'new upload')
+ used_old=Path(roots['media'])/'profile.mid';used_old.write_bytes(b'used');os.utime(used_old,(now-31*r.DAY,now-31*r.DAY))
+ db.execute("INSERT INTO media_settings(user_id,profile_midi) VALUES (?,'profile.mid')",(peer,))
+ child=peer+1;db.execute('INSERT INTO users(id,email,handle,password_hash,verified,created_at) VALUES (?,?,?,?,1,CURRENT_TIMESTAMP)',(child,'child@test.invalid','@retentionchild','test'))
+ db.execute("INSERT INTO family_links(parent_id,child_id,status) VALUES (?,?,'approved')",(peer,child))
+ approved=Path(roots['consent'])/'approved.pdf';approved.write_bytes(b'consent')
+ unused=Path(roots['consent'])/'unused.pdf';unused.write_bytes(b'pending')
+ for key,childid in [('approved.pdf',child),('unused.pdf',child+1)]:db.execute("INSERT INTO family_consent_documents(parent_id,child_id,storage_key,media_type,created_at) VALUES (?,?,?,'application/pdf',datetime(?,'unixepoch'))",(peer,childid,key,now-31*r.DAY))
+ db.execute("INSERT INTO operations_events(kind,detail,created_at) VALUES ('retention-old','test',datetime(?,'unixepoch'))",(now-31*r.DAY,))
+ db.execute("INSERT INTO operations_events(kind,detail) VALUES ('retention-current','test')")
+ db.execute("INSERT INTO abuse_events(action,created_at) VALUES ('retention-old',datetime(?,'unixepoch'))",(now-91*r.DAY,))
+ # T05 uses the live schema only in this disposable database copy.
+ for key,owner,age in [('email-old',peer,8),('email-current',peer,0),('email-owned',uid,0)]:
+  db.execute('INSERT INTO email_changes(token_hash,user_id,old_email,new_email,created_at,expires_at,delivered) VALUES (?,?,?,?,?,?,1)',(key,owner,'old@example.com','new@example.com',now-age*r.DAY,now-age*r.DAY+3600))
+ for owner,age in [(uid,0),(peer,0),(peer,91)]:db.execute("INSERT INTO account_lifecycle_events(user_id,action,created_at) VALUES (?,'email-changed',datetime(?,'unixepoch'))",(owner,now-age*r.DAY))
+ evidence_before=db.execute('SELECT count(*) FROM case_evidence').fetchone()[0]
+ db.commit()
+ preview=r.run(db,roots,False,now)
+ check(uid not in preview['account_ids'],'30-day grace respected')
+ check(db.execute('SELECT 1 FROM users WHERE id=?',(uid,)).fetchone(),'preview never deletes')
+ check(avatar.exists(),'preview preserves files')
+ db.execute("UPDATE account_safety SET deletion_requested_at=datetime(?,'unixepoch') WHERE user_id=?",(now-30*r.DAY,uid));db.commit()
+ backup=Path(roots['backups'])/'neonrest-old.db';backup.write_bytes(b'backup');os.utime(backup,(now-31*r.DAY,now-31*r.DAY))
+ untouched=Path(roots['backups'])/'production.db';untouched.write_bytes(b'not managed');os.utime(untouched,(now-50*r.DAY,now-50*r.DAY))
+ outside=root/'outside';outside.write_bytes(b'private');(Path(roots['media'])/'symlink').symlink_to(outside)
+ r.queue(db,Path(roots['media'])/'../outside',roots['media']);r.queue(db,Path(roots['media'])/'symlink',roots['media']);db.commit()
+ check(db.execute('SELECT count(*) FROM retention_file_queue').fetchone()[0]==0,'traversal and symlinks rejected')
+ result=r.run(db,roots,True,now)
+ check(not db.execute('SELECT 1 FROM users WHERE id=?',(uid,)).fetchone(),'account erased at deadline')
+ check(db.execute('SELECT 1 FROM users WHERE id=?',(peer,)).fetchone(),'other account survives')
+ check(not db.execute('SELECT 1 FROM posts WHERE id=?',(p,)).fetchone(),'owned post erased')
+ check(db.execute('SELECT 1 FROM posts WHERE id=?',(other,)).fetchone(),'other post survives')
+ check(not db.execute('SELECT 1 FROM post_edit_history WHERE post_id=?',(p,)).fetchone(),'post history erased')
+ check(not db.execute('SELECT 1 FROM comments WHERE id=?',(c,)).fetchone(),'reply erased')
+ check(db.execute('SELECT parent_comment_id FROM comments WHERE id=?',(reply,)).fetchone()==(None,),'other reply preserved without dangling parent')
+ for table,col in [('friend_requests','sender_id'),('top_friends','friend_id'),('notifications','actor_id'),('active_sessions','user_id'),('account_safety','user_id')]:check(not db.execute('SELECT 1 FROM '+table+' WHERE '+col+'=?',(uid,)).fetchone(),table+' cleared')
+ check(not avatar.exists() and not owned.exists() and not poster.exists(),'owned media removed')
+ check(shared.exists(),'shared media preserved')
+ check(outside.exists(),'outside file preserved')
+ check(not backup.exists() and untouched.exists(),'only aged managed backup erased')
+ check(db.execute("SELECT 1 FROM active_sessions WHERE token_hash='live-retention'").fetchone(),'current session survives')
+ check(db.execute("SELECT 1 FROM email_verifications WHERE token_hash='current-test'").fetchone(),'valid email token survives')
+ check(db.execute("SELECT 1 FROM rate_buckets WHERE subject='test-new'").fetchone(),'active rate limit survives')
+ check(not db.execute("SELECT 1 FROM rate_buckets WHERE subject='test-old'").fetchone(),'expired rate limit cleared')
+
+ check(not abandoned.exists(),'aged orphan media removed')
+ check(recent.exists(),'recent orphan upload preserved')
+ check(used_old.exists(),'old referenced profile MIDI preserved')
+ check(approved.exists() and not unused.exists(),'approved consent retained; unused consent expired')
+ check(db.execute('SELECT 1 FROM family_links WHERE parent_id=? AND child_id=?',(peer,child)).fetchone(),'unrelated parent relationship preserved')
+ check(not db.execute("SELECT 1 FROM operations_events WHERE kind='retention-old'").fetchone(),'operations events expire at 30 days')
+ check(db.execute("SELECT 1 FROM operations_events WHERE kind='retention-current'").fetchone(),'current operation event preserved')
+ check(not db.execute("SELECT 1 FROM abuse_events WHERE action='retention-old'").fetchone(),'abuse events expire at 90 days')
+ check(db.execute('SELECT count(*) FROM case_evidence').fetchone()[0]==evidence_before,'immutable moderation evidence preserved')
+ check(not db.execute("SELECT 1 FROM email_changes WHERE token_hash='email-old'").fetchone(),'expired email-change token removed after seven days')
+ check(db.execute("SELECT 1 FROM email_changes WHERE token_hash='email-current'").fetchone(),'current email-change token preserved')
+ check(not db.execute('SELECT 1 FROM email_changes WHERE user_id=?',(uid,)).fetchone(),'deleted account email-change tokens erased')
+ check(not db.execute('SELECT 1 FROM account_lifecycle_events WHERE user_id=?',(uid,)).fetchone(),'deleted account lifecycle events erased')
+ check(db.execute('SELECT count(*) FROM account_lifecycle_events WHERE user_id=?',(peer,)).fetchone()[0]==1,'lifecycle event expires after 90 days; current event preserved')
+ check(result['file_errors']==0,'file cleanup completed')
+ check(r.run(db,roots,True,now)['accounts']==0,'repeated cleanup is idempotent')
+ check(live.execute('SELECT count(*) FROM users').fetchone()[0]==before,'live database unchanged');live.close();db.close()
+ print('PASS:',checks,'isolated retention checks; live accounts and files unchanged')

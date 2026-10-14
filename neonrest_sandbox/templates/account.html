@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% block title %}Account Settings - Neonrest{% endblock %}
+
+{% block content %}
+
+
+<div class="user-page account-settings-page">
+  {% include 'partials/account_navigation.html' %}
+  <div class="user-header">
+    <div class="glow large">Account Settings</div>
+    <p>{{ session.user_email }}</p>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flash-container">
+        {% for category, message in messages %}
+          <div class="flash flash-{{ category }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+<div class="user-section">
+  <h2>Update Handle & Codename</h2>
+  <form method="POST" action="/sandbox/account"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
+    <label for="handle">Handle:</label>
+    <input type="text" name="handle" value="{{ session.user_handle }}" class="glow-input" required>
+
+    <label for="codename">Codename (optional):</label>
+    <input type="text" name="codename" value="{{ user['codename'] or '' }}" class="glow-input">
+
+    <label for="timezone">Preferred Timezone:</label>
+    <select name="timezone" id="timezone" class="glow-input">
+      <option value="">(use server time)</option>
+      <option value="America/Los_Angeles" {% if user.timezone == "America/Los_Angeles" %}selected{% endif %}>America/Los_Angeles (Pacific)</option>
+      <option value="America/New_York" {% if user.timezone == "America/New_York" %}selected{% endif %}>America/New_York (Eastern)</option>
+      <option value="Europe/London" {% if user.timezone == "Europe/London" %}selected{% endif %}>Europe/London</option>
+      <option value="Asia/Tokyo" {% if user.timezone == "Asia/Tokyo" %}selected{% endif %}>Asia/Tokyo</option>
+      <option value="Australia/Sydney" {% if user.timezone == "Australia/Sydney" %}selected{% endif %}>Australia/Sydney</option>
+    </select>
+
+    <label for="lastfm_username">Last.fm Username</label>
+    <input type="text" name="lastfm_username" value="{{ user.lastfm_username or '' }}" class="glow-input">
+
+    <button type="submit">Save</button>
+  </form>
+</div>
+
+<div class="user-section">
+  <h2>Upload Avatar</h2>
+  <form method="post" action="{{ url_for('upload_avatar') }}" enctype="multipart/form-data"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
+    <input type="hidden" name="profile_edit_token" value="{{ profile_edit_token() }}">
+    <label for="avatar">Upload Avatar:</label>
+    <input type="file" name="avatar" accept="image/*">
+    <button type="submit">Upload</button>
+  </form>
+
+  {% if user.avatar_path %}
+    <img src="{{ user.avatar_path }}" alt="Your avatar" class="avatar-img">
+  {% endif %}
+</div>
+
+
+  <p><a class="button" href="{{ url_for('community_security') }}">Change password and manage active sessions</a></p>
+</div>
+{% endblock %}

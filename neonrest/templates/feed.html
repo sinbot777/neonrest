@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ 'Post' if single_post else 'Feed' }} - Neonrest{% endblock %}
+
+{% block body_class %}default-theme feed-page{% endblock %}
+
+{% block content %}
+<div class="feed-ad-layout{% if rail_ads %} with-ads{% endif %}"><main class="feed-main">
+  <h1 class="glow large">{{ 'Post' if single_post else 'Feed' }}</h1>
+
+  <div class="recent-posts">
+    {% if not single_post %}<h3>Your Feed</h3>{% endif %}
+    {% if posts %}
+      {% set _viewer_id = session.get('user_id') %}
+      {% set _posts = posts %}
+      {% set _reactors = post_reactors %}
+      {% set _reacts = VALID_REACTS %}
+      {% include 'partials/posts.html' %}
+    {% else %}
+      <p>No posts yet.</p>
+    {% endif %}
+  </div>
+  {% include 'post_pagination.html' %}
+</main>
+{% if rail_ads %}<aside class="feed-ad-rail" aria-label="Advertisements">{% include 'ad_rail.html' %}</aside>{% endif %}
+</div>
+{% include 'ad_banner.html' %}
+<style>
+body.feed-page > #footer-tagline { box-sizing: border-box; max-width: 100%; }
+body.feed-page > #main-content { flex: 0 0 auto; width: calc(100% - 2rem); max-width: 1040px; min-width: 0; margin: 0 auto; }
+.feed-ad-layout { width: 100%; max-width: 760px; margin: 0 auto; }
+.feed-ad-layout.with-ads { max-width: 1040px; display: grid; grid-template-columns: minmax(0, 760px) minmax(190px, 240px); gap: 1.25rem; align-items: start; }
+.feed-ad-layout .feed-main, .feed-ad-rail { min-width: 0; }
+.feed-main .post-preview { box-sizing: border-box; max-width: 100%; overflow-wrap: anywhere; }
+@media(max-width:800px) { .feed-ad-layout.with-ads { display: block; max-width: 760px; } .feed-ad-rail { margin-top: 1.5rem; } }
+</style>
+{% endblock %}

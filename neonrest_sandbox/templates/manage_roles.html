@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block title %}Management roles - Neonrest{% endblock %}
+{% block content %}
+<div class="management-page"><a href="{{ url_for('manage_home') }}">← Management</a><h1>Staff roles</h1>
+<p>Permissions are checked on the server for each request. Roles add capabilities; editing a Vibe is assigned separately per Vibe. This page reviews assignments and the current policy.</p>
+<div class="role-grid">
+<article><h2>Owner</h2><p>Reserved for the site founder. All current staff capabilities; protected from moderation.</p></article>
+<article><h2>Admin</h2><p>Staff oversight, account and post moderation, Vibe approvals, and moderator assignment.</p></article>
+<article><h2>Manager</h2><p>Vibe approvals, account and post moderation, and review history.</p></article>
+<article><h2>Moderator</h2><p>User lookup, bans, restrictions, post hiding and restoration, and review history.</p></article>
+<article><h2>Vibe editor</h2><p>Only assigned Vibes and their CSS. No sitewide moderation access.</p></article>
+</div>
+<section><h2>Current staff assignments</h2><ul><li>Site founder: protected owner account</li>{% for assignment in assignments %}<li><a href="{{ url_for('manage_user_detail', target_id=assignment.id) }}">{{ assignment.handle }}</a> · {{ assignment.role }}</li>{% endfor %}</ul>{% if may_assign %}<h2>Assign or remove a role</h2><p>Enter the member’s numeric NUID. Each change requires a reason and appears in review history. Admins can appoint moderators; only the owner can grant manager or admin.</p><form id="role-form" method="post"><input type="hidden" name="theme_csrf_token" value="{{ management_token }}"><label>NUID <input id="role-id" type="number" min="2" required></label><label>Role <select name="role"><option value="moderator">Moderator</option>{% if is_owner %}<option value="manager">Manager</option><option value="admin">Admin</option>{% endif %}</select></label><label>Reason <input name="reason" maxlength="500" required></label><button name="action" value="add">Add role</button><button name="action" value="remove">Remove role</button></form><script>document.getElementById('role-form').addEventListener('submit',function(){this.action='{{ url_for('manage_roles') }}/'+document.getElementById('role-id').value})</script>{% endif %}</section>
+</div>
+<style>.management-page{max-width:1050px;margin:2rem auto;padding:clamp(1.2rem,3vw,2.2rem);background:#171d2b;color:#f5f0e8;border:1px solid #526071;border-radius:22px}.management-page a{color:#aee4d8}.role-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;margin-bottom:1.25rem}.management-page article,.management-page section{padding:1rem;border:1px solid #526071;border-radius:14px;background:#242e3e}.management-page h2{margin:.2rem 0}.management-page li{margin:.5rem 0}.management-page input,.management-page select{padding:.5rem;margin:.35rem;background:#121b27;color:white;border:1px solid #839196}.management-page button{padding:.6rem;margin:.3rem;background:#315750;color:white;border:1px solid #9dddc8;border-radius:8px}</style>
+{% endblock %}

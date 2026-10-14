@@ -1,0 +1,325 @@
+{
+  "accounts": [
+    {
+      "id": 1,
+      "handle": "@brendoom",
+      "classification": "real-family"
+    },
+    {
+      "id": 2,
+      "handle": "@A_Wobbly_Jack",
+      "classification": "real-family"
+    },
+    {
+      "id": 3,
+      "handle": "@Kickin1381",
+      "classification": "real-family"
+    },
+    {
+      "id": 4,
+      "handle": "@chatgpt",
+      "classification": "reserved-helper"
+    },
+    {
+      "id": 5,
+      "handle": "@HelpLine",
+      "classification": "helper-candidate"
+    },
+    {
+      "id": 7,
+      "handle": "@testo",
+      "classification": "test-candidate"
+    },
+    {
+      "id": 9,
+      "handle": "skoihqxdth",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 10,
+      "handle": "@tapeghost",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 11,
+      "handle": "@pixelmoth",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 12,
+      "handle": "@porchlight_amy",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 13,
+      "handle": "@crt_sam",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 14,
+      "handle": "@cloudwatcher_jules",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 15,
+      "handle": "@arcadefern",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 16,
+      "handle": "@moonlitmara",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 17,
+      "handle": "@buttonjar",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 18,
+      "handle": "@midnight_dial",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 19,
+      "handle": "@lanternfox",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 20,
+      "handle": "@softstatic",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 21,
+      "handle": "@sidequest_lee",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 22,
+      "handle": "@riverstones",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 23,
+      "handle": "@glitterbyte",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 24,
+      "handle": "@noodle_radio",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 25,
+      "handle": "@polaroid_pete",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 26,
+      "handle": "@bluecassette",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 27,
+      "handle": "@maplewindow",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 28,
+      "handle": "@nebula_nick",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 29,
+      "handle": "@slowmodem",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 30,
+      "handle": "@chalksky",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 31,
+      "handle": "@marigold_arc",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 32,
+      "handle": "@cozy_comet",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 33,
+      "handle": "@rustykey",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 34,
+      "handle": "@vinyl_willow",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 35,
+      "handle": "@dusk_bicycle",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 36,
+      "handle": "@coffeeorbit",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 37,
+      "handle": "@patchwork_kit",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 38,
+      "handle": "@starlit_erin",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 39,
+      "handle": "@oldgameplus",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 40,
+      "handle": "@weathered_wren",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 41,
+      "handle": "@eon_noodle",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 42,
+      "handle": "@quietquasar",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 43,
+      "handle": "@tinrobot",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 44,
+      "handle": "@peachfuzz",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 45,
+      "handle": "@firefly_faye",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 46,
+      "handle": "@rewind_rosa",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 47,
+      "handle": "@mossykeyboard",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 48,
+      "handle": "@record_rain",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 49,
+      "handle": "@marblemoon",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 50,
+      "handle": "@beacon_ben",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 51,
+      "handle": "@twilight_tess",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 52,
+      "handle": "@static_sparrow",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 53,
+      "handle": "@subway_sunset",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 54,
+      "handle": "@moonroom",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 55,
+      "handle": "@buttonmash_ari",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 56,
+      "handle": "@cedarpath",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 57,
+      "handle": "@magnet_june",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 58,
+      "handle": "@sunroom_sol",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 59,
+      "handle": "@last_train_lou",
+      "classification": "test-candidate"
+    },
+    {
+      "id": 60,
+      "handle": "@signup-test-1008",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 61,
+      "handle": "@Ang-morpork",
+      "classification": "real-family"
+    },
+    {
+      "id": 62,
+      "handle": "@cassetekid",
+      "classification": "test-candidate"
+    },
+    {
+      "id": 63,
+      "handle": "@demo_sprout13",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 64,
+      "handle": "@demo_static15",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 65,
+      "handle": "@demo_orbit17",
+      "classification": "test-fixture"
+    },
+    {
+      "id": 66,
+      "handle": "@demo_cassette20",
+      "classification": "test-fixture"
+    }
+  ],
+  "note": "Classification does not authorize deletion; uncertain/helper accounts require review."
+}

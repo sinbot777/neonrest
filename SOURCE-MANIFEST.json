@@ -1,0 +1,1393 @@
+{
+  "captured_utc": "2026-10-14",
+  "scope": "Current deployed Sandbox and Production source; pre-2FA repair",
+  "private_runtime_excluded": true,
+  "export_only_redactions": [
+    {
+      "file": "neonrest_sandbox/utils/lastfm.py",
+      "change": "Hard-coded API key replaced with LASTFM_API_KEY environment reference in export only"
+    },
+    {
+      "file": "neonrest/utils/lastfm.py",
+      "change": "Hard-coded API key replaced with LASTFM_API_KEY environment reference in export only"
+    }
+  ],
+  "known_issue": "2FA enable reports 403 Forbidden in browser; diagnosis pending",
+  "files": {
+    "neonrest_sandbox/.gitignore": {
+      "sha256": "7bd0170fab1b33ddaf2355b5dad219c652ecac4c673ada32ed8c245766fbc2d3",
+      "source_sha256": "7bd0170fab1b33ddaf2355b5dad219c652ecac4c673ada32ed8c245766fbc2d3",
+      "bytes": 220
+    },
+    "neonrest_sandbox/CHANGELOG.md": {
+      "sha256": "c5ec091fc4224e4042899b1fdc8c4b6fda76a637446c1daf0b365ea5a60536ca",
+      "source_sha256": "c5ec091fc4224e4042899b1fdc8c4b6fda76a637446c1daf0b365ea5a60536ca",
+      "bytes": 746
+    },
+    "neonrest_sandbox/CLA.md": {
+      "sha256": "13cf7ba1b2d906eff63bfca486c9d92e690da141e658f7c493140a8759ec70ee",
+      "source_sha256": "13cf7ba1b2d906eff63bfca486c9d92e690da141e658f7c493140a8759ec70ee",
+      "bytes": 625
+    },
+    "neonrest_sandbox/COPYRIGHT.md": {
+      "sha256": "d02276806361ac71e864238b6d0ae96a67b7f146b79d41043f3222f295efb0c0",
+      "source_sha256": "d02276806361ac71e864238b6d0ae96a67b7f146b79d41043f3222f295efb0c0",
+      "bytes": 256
+    },
+    "neonrest_sandbox/LICENSE.source-available": {
+      "sha256": "7b138025706a557c3ae95321d5c5b007423ea12fb8b2fe975a41e03b1b9dc08d",
+      "source_sha256": "7b138025706a557c3ae95321d5c5b007423ea12fb8b2fe975a41e03b1b9dc08d",
+      "bytes": 955
+    },
+    "neonrest_sandbox/LICENSE.themes-only": {
+      "sha256": "cd76210ddf462608a6410c88daf760c67aecdf74f9a2ed7cbde70237edb6bd71",
+      "source_sha256": "cd76210ddf462608a6410c88daf760c67aecdf74f9a2ed7cbde70237edb6bd71",
+      "bytes": 1078
+    },
+    "neonrest_sandbox/README.md": {
+      "sha256": "a2c58e1a64b8790f5282fc44315d443e0cce72c75faa0979706d744f98985cdf",
+      "source_sha256": "a2c58e1a64b8790f5282fc44315d443e0cce72c75faa0979706d744f98985cdf",
+      "bytes": 1089
+    },
+    "neonrest_sandbox/RETENTION.md": {
+      "sha256": "8ded9955961a855187f104ea8545f3634b99abb7c18bca333b305d37917a0c7d",
+      "source_sha256": "8ded9955961a855187f104ea8545f3634b99abb7c18bca333b305d37917a0c7d",
+      "bytes": 3815
+    },
+    "neonrest_sandbox/__init__.py": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "neonrest_sandbox/account_disabling.py": {
+      "sha256": "ba4846c0f229ff099552326fae01cb5665f9db737537e02185c13af0a58d6a9e",
+      "source_sha256": "ba4846c0f229ff099552326fae01cb5665f9db737537e02185c13af0a58d6a9e",
+      "bytes": 2204
+    },
+    "neonrest_sandbox/age_clock.py": {
+      "sha256": "3ea33f2b6a679609c13f1aa92663de85e404c81118754f47b82b6f9ba77bbc43",
+      "source_sha256": "3ea33f2b6a679609c13f1aa92663de85e404c81118754f47b82b6f9ba77bbc43",
+      "bytes": 4430
+    },
+    "neonrest_sandbox/age_policy.py": {
+      "sha256": "b6c561a146bd43fd7ee754abaedf73021d3d2ffae8a41ca4c97861ba768a9605",
+      "source_sha256": "b6c561a146bd43fd7ee754abaedf73021d3d2ffae8a41ca4c97861ba768a9605",
+      "bytes": 25236
+    },
+    "neonrest_sandbox/app.py": {
+      "sha256": "83e494ba542deb4613dc837ac7a8a63fe8a163effd200b7e28af74acbbfda7b1",
+      "source_sha256": "83e494ba542deb4613dc837ac7a8a63fe8a163effd200b7e28af74acbbfda7b1",
+      "bytes": 116922
+    },
+    "neonrest_sandbox/authenticator_qr.py": {
+      "sha256": "9aa2f086d610715811741045972dd31357619001b65c91b4aa4cf6266a4ce030",
+      "source_sha256": "9aa2f086d610715811741045972dd31357619001b65c91b4aa4cf6266a4ce030",
+      "bytes": 1401
+    },
+    "neonrest_sandbox/community_features.py": {
+      "sha256": "3e3a401cd6448b12cd8da1f56c7f9efef555b3fd715b655ea48e77c8738e6a62",
+      "source_sha256": "3e3a401cd6448b12cd8da1f56c7f9efef555b3fd715b655ea48e77c8738e6a62",
+      "bytes": 65027
+    },
+    "neonrest_sandbox/email_change.py": {
+      "sha256": "2655a101791d24cb9ac7f3a2b3be82191fe444d355da87defc4e8aab07881da1",
+      "source_sha256": "2655a101791d24cb9ac7f3a2b3be82191fe444d355da87defc4e8aab07881da1",
+      "bytes": 9689
+    },
+    "neonrest_sandbox/email_delivery.py": {
+      "sha256": "b898adbe3554d43ff4445721190f6b4c290dc767bdc7313ab3e81d0bf0146ce8",
+      "source_sha256": "b898adbe3554d43ff4445721190f6b4c290dc767bdc7313ab3e81d0bf0146ce8",
+      "bytes": 4811
+    },
+    "neonrest_sandbox/email_verification.py": {
+      "sha256": "e5958af4ea56dac9728588c44900b5ed4164046f0e13964e0f65a82788ee94d5",
+      "source_sha256": "e5958af4ea56dac9728588c44900b5ed4164046f0e13964e0f65a82788ee94d5",
+      "bytes": 5260
+    },
+    "neonrest_sandbox/family_consent.py": {
+      "sha256": "155c011e934786ac41f9294da315d5436967efbee6efd885d227427946a6af5c",
+      "source_sha256": "155c011e934786ac41f9294da315d5436967efbee6efd885d227427946a6af5c",
+      "bytes": 4939
+    },
+    "neonrest_sandbox/family_data.py": {
+      "sha256": "a25b02cf0737bfdca9e2a18e660349fdf4b729773200b0889717d8dc096fc05f",
+      "source_sha256": "a25b02cf0737bfdca9e2a18e660349fdf4b729773200b0889717d8dc096fc05f",
+      "bytes": 8781
+    },
+    "neonrest_sandbox/mail_queue.py": {
+      "sha256": "7a0894b4bd106b775eb23ef64bc40c24e266eff04c2b76baac97df25f662a7d4",
+      "source_sha256": "7a0894b4bd106b775eb23ef64bc40c24e266eff04c2b76baac97df25f662a7d4",
+      "bytes": 21490
+    },
+    "neonrest_sandbox/management_audit.py": {
+      "sha256": "2a6c55b52ea7f2aad0a7e7e5eea0b0dfe186f687af54343080be9564f723e3e4",
+      "source_sha256": "2a6c55b52ea7f2aad0a7e7e5eea0b0dfe186f687af54343080be9564f723e3e4",
+      "bytes": 1836
+    },
+    "neonrest_sandbox/media_features.py": {
+      "sha256": "612b80545d03bb11c85fe41ad4b4abba2e2993779bf2fab484d0c8f113f0e60d",
+      "source_sha256": "612b80545d03bb11c85fe41ad4b4abba2e2993779bf2fab484d0c8f113f0e60d",
+      "bytes": 15693
+    },
+    "neonrest_sandbox/models.py": {
+      "sha256": "0855cdbb87bc1d23e3a6e0162ca0e4b5a86e5692638894670cb82a4cd1b210d7",
+      "source_sha256": "0855cdbb87bc1d23e3a6e0162ca0e4b5a86e5692638894670cb82a4cd1b210d7",
+      "bytes": 22
+    },
+    "neonrest_sandbox/operations_health.py": {
+      "sha256": "337a6184fc9ebfdba3fb9af78536260103abaa8638a66521495ff6bc61b328c9",
+      "source_sha256": "337a6184fc9ebfdba3fb9af78536260103abaa8638a66521495ff6bc61b328c9",
+      "bytes": 7555
+    },
+    "neonrest_sandbox/public_ids.py": {
+      "sha256": "fc9aff37df63b7dc949d7882bf6f1292dae6c50fd82f6ba105e91bcb306053f5",
+      "source_sha256": "fc9aff37df63b7dc949d7882bf6f1292dae6c50fd82f6ba105e91bcb306053f5",
+      "bytes": 11308
+    },
+    "neonrest_sandbox/requirements.txt": {
+      "sha256": "76f8bae45e807865955344c1a58882d38c8ceb4f855f58091642b7d48290af97",
+      "source_sha256": "76f8bae45e807865955344c1a58882d38c8ceb4f855f58091642b7d48290af97",
+      "bytes": 6
+    },
+    "neonrest_sandbox/retention.py": {
+      "sha256": "909218d187580194fd3a5a693f672c1ac9f160a44a43e6a92833b9ecdde798b0",
+      "source_sha256": "909218d187580194fd3a5a693f672c1ac9f160a44a43e6a92833b9ecdde798b0",
+      "bytes": 16668
+    },
+    "neonrest_sandbox/welcome.py": {
+      "sha256": "46c651737ef29c55500a6f57fce2ce4037fe3444b44352a767d145b7e2cfe406",
+      "source_sha256": "46c651737ef29c55500a6f57fce2ce4037fe3444b44352a767d145b7e2cfe406",
+      "bytes": 5116
+    },
+    "neonrest_sandbox/routes/auth.py": {
+      "sha256": "75edaf3c37b011d520c1a831e65e159902935ac0fd7ce6e450bbdeab8f76b51b",
+      "source_sha256": "75edaf3c37b011d520c1a831e65e159902935ac0fd7ce6e450bbdeab8f76b51b",
+      "bytes": 130
+    },
+    "neonrest_sandbox/routes/friends.py": {
+      "sha256": "a5c5fffb9ee115bf9448c1492fc77fa21fae428c7ea64791038519ab8f175550",
+      "source_sha256": "a5c5fffb9ee115bf9448c1492fc77fa21fae428c7ea64791038519ab8f175550",
+      "bytes": 8868
+    },
+    "neonrest_sandbox/routes/post.py": {
+      "sha256": "5c50fd7e83b81ad92a2a77d35c114df0f1fee690deb924c2d0c3df58bb91f69a",
+      "source_sha256": "5c50fd7e83b81ad92a2a77d35c114df0f1fee690deb924c2d0c3df58bb91f69a",
+      "bytes": 136
+    },
+    "neonrest_sandbox/routes/vibes.py": {
+      "sha256": "e4b51da9269ce745d3a41dc5859f23faf53fec612242dbba8fd036ec96f03423",
+      "source_sha256": "e4b51da9269ce745d3a41dc5859f23faf53fec612242dbba8fd036ec96f03423",
+      "bytes": 138
+    },
+    "neonrest_sandbox/utils/__init__.py": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "neonrest_sandbox/utils/filters.py": {
+      "sha256": "5626cb49a916fb376423d8e35fff6ec7ff491dfe0ff10ce015ec6c5f5642dcb8",
+      "source_sha256": "5626cb49a916fb376423d8e35fff6ec7ff491dfe0ff10ce015ec6c5f5642dcb8",
+      "bytes": 32
+    },
+    "neonrest_sandbox/utils/friend_helpers.py": {
+      "sha256": "0f7240af32323cde39de0cb74ca7c20d2000ee7a803f09954b1657e1fc06514b",
+      "source_sha256": "0f7240af32323cde39de0cb74ca7c20d2000ee7a803f09954b1657e1fc06514b",
+      "bytes": 3335
+    },
+    "neonrest_sandbox/utils/generate_handle.py": {
+      "sha256": "c27fac48a0ae1c2657a17840db66a895b878a37a0cbc57c25e5d20c4e1ada1a5",
+      "source_sha256": "c27fac48a0ae1c2657a17840db66a895b878a37a0cbc57c25e5d20c4e1ada1a5",
+      "bytes": 463
+    },
+    "neonrest_sandbox/utils/generate_unique_handle.py": {
+      "sha256": "1a23669484734ecdb86a786fe573e981ecdb04a141c2129ca47d3eddd782270e",
+      "source_sha256": "1a23669484734ecdb86a786fe573e981ecdb04a141c2129ca47d3eddd782270e",
+      "bytes": 393
+    },
+    "neonrest_sandbox/utils/image_uploads.py": {
+      "sha256": "ff5feb1e776e78ce66f1390387d92175ddc10bd31c6d7262af82104b8bf937c6",
+      "source_sha256": "ff5feb1e776e78ce66f1390387d92175ddc10bd31c6d7262af82104b8bf937c6",
+      "bytes": 225
+    },
+    "neonrest_sandbox/utils/lastfm.py": {
+      "sha256": "ac75c4ce856ca5993aa04d1b5f2ac0fb231efbcbf2e343f12936f9ba0db027f0",
+      "source_sha256": "c95edb618679f736b3e684db56ba4c30095724e1b9b3a1d9897280ab435b867f",
+      "bytes": 1283
+    },
+    "neonrest_sandbox/utils/utils.py": {
+      "sha256": "fcbcaa6ef03c8f54db666cbd2df23820928310ceb2aa81c0537f7a0caf1415dc",
+      "source_sha256": "fcbcaa6ef03c8f54db666cbd2df23820928310ceb2aa81c0537f7a0caf1415dc",
+      "bytes": 2998
+    },
+    "neonrest_sandbox/utils/vibe_lifecycle.py": {
+      "sha256": "a92d61942264a7c6407d56e6bead7d826f6450606f73a78b8c28bf84e456bbd9",
+      "source_sha256": "a92d61942264a7c6407d56e6bead7d826f6450606f73a78b8c28bf84e456bbd9",
+      "bytes": 4852
+    },
+    "neonrest_sandbox/templates/about-mailersend.html": {
+      "sha256": "43dac77de1b552b29f23df4fc4dcf8a3c05d501092990515cd09af3241c0ad6a",
+      "source_sha256": "43dac77de1b552b29f23df4fc4dcf8a3c05d501092990515cd09af3241c0ad6a",
+      "bytes": 1378
+    },
+    "neonrest_sandbox/templates/about.html": {
+      "sha256": "c0f187819a5bfbd475558bd4348a63eeb5856bb314531bb3074dbd018f1bf6d9",
+      "source_sha256": "c0f187819a5bfbd475558bd4348a63eeb5856bb314531bb3074dbd018f1bf6d9",
+      "bytes": 1129
+    },
+    "neonrest_sandbox/templates/account.html": {
+      "sha256": "85d1200ff5b23fca1c8efa21e8b87f05cc516831f4904f1fab54f3d247f9ed12",
+      "source_sha256": "85d1200ff5b23fca1c8efa21e8b87f05cc516831f4904f1fab54f3d247f9ed12",
+      "bytes": 2904
+    },
+    "neonrest_sandbox/templates/ad_banner.html": {
+      "sha256": "55782a6ad76a3c1133e2600245f92c62388e388e7ff2e3bbda3a5f40e267df7d",
+      "source_sha256": "55782a6ad76a3c1133e2600245f92c62388e388e7ff2e3bbda3a5f40e267df7d",
+      "bytes": 435
+    },
+    "neonrest_sandbox/templates/ad_rail.html": {
+      "sha256": "2d6919180ab2341c4d8d169921c6cf22e624bb04e50ce06494a473666cbd4f78",
+      "source_sha256": "2d6919180ab2341c4d8d169921c6cf22e624bb04e50ce06494a473666cbd4f78",
+      "bytes": 475
+    },
+    "neonrest_sandbox/templates/ad_style.html": {
+      "sha256": "41f802ff19ece418d502aeee2d7422959cae21b9899ea32a1b2d034efb6272e9",
+      "source_sha256": "41f802ff19ece418d502aeee2d7422959cae21b9899ea32a1b2d034efb6272e9",
+      "bytes": 892
+    },
+    "neonrest_sandbox/templates/base.html": {
+      "sha256": "1f89d90d7773698c95a8277e37d958251d60f609fbf8a34c8560f18ef7a9a828",
+      "source_sha256": "1f89d90d7773698c95a8277e37d958251d60f609fbf8a34c8560f18ef7a9a828",
+      "bytes": 7675
+    },
+    "neonrest_sandbox/templates/community.html": {
+      "sha256": "4f49285bb552c7dbebcdbdebe6790fbeb9c0b562d7fcb22abdde8aa8b2505514",
+      "source_sha256": "4f49285bb552c7dbebcdbdebe6790fbeb9c0b562d7fcb22abdde8aa8b2505514",
+      "bytes": 22156
+    },
+    "neonrest_sandbox/templates/create_post.html": {
+      "sha256": "7da811832b3f42082b689f5eef78c0e723eac65167d9cc78a2817baea8629af1",
+      "source_sha256": "7da811832b3f42082b689f5eef78c0e723eac65167d9cc78a2817baea8629af1",
+      "bytes": 5370
+    },
+    "neonrest_sandbox/templates/dev_summary.html": {
+      "sha256": "813521c37490f4d1364501ce3fe59f6f63517da1959412df7d0351c910c83752",
+      "source_sha256": "813521c37490f4d1364501ce3fe59f6f63517da1959412df7d0351c910c83752",
+      "bytes": 30130
+    },
+    "neonrest_sandbox/templates/edit_comment.html": {
+      "sha256": "19f95c5ed0aa9d8d65f9ba9928a38bf42e8222d76aac042248941c2116654cd3",
+      "source_sha256": "19f95c5ed0aa9d8d65f9ba9928a38bf42e8222d76aac042248941c2116654cd3",
+      "bytes": 495
+    },
+    "neonrest_sandbox/templates/edit_post.html": {
+      "sha256": "2a5dc3769f6d5c47bebd40c6cb07cd0748bbd819795daa4cc47546339b8fe661",
+      "source_sha256": "2a5dc3769f6d5c47bebd40c6cb07cd0748bbd819795daa4cc47546339b8fe661",
+      "bytes": 5212
+    },
+    "neonrest_sandbox/templates/edit_profile_style.html": {
+      "sha256": "3364cfa8c4ea5f13f271a25cf540393a913156e45790df1bcbe04a50efea835c",
+      "source_sha256": "3364cfa8c4ea5f13f271a25cf540393a913156e45790df1bcbe04a50efea835c",
+      "bytes": 13757
+    },
+    "neonrest_sandbox/templates/edit_theme.html": {
+      "sha256": "86bff3219feab7cd34066f7db5b582d687f3b4b327d640f8b8eaf3df36ba1049",
+      "source_sha256": "86bff3219feab7cd34066f7db5b582d687f3b4b327d640f8b8eaf3df36ba1049",
+      "bytes": 20919
+    },
+    "neonrest_sandbox/templates/email_change.html": {
+      "sha256": "8680756857b7c04a39b2094119ff25d63fc4c4d270aa387712e2183ceb35c1af",
+      "source_sha256": "8680756857b7c04a39b2094119ff25d63fc4c4d270aa387712e2183ceb35c1af",
+      "bytes": 1644
+    },
+    "neonrest_sandbox/templates/email_verification.html": {
+      "sha256": "886e988a2aacc86ace53051bf0c2913e4b0e46a4a5f85a578b2cf7aa1e8f7f23",
+      "source_sha256": "886e988a2aacc86ace53051bf0c2913e4b0e46a4a5f85a578b2cf7aa1e8f7f23",
+      "bytes": 2217
+    },
+    "neonrest_sandbox/templates/explore.html": {
+      "sha256": "f1677c13650888951a9b175178e8cf0eb1473d548fd962b8fc57c9268529006a",
+      "source_sha256": "f1677c13650888951a9b175178e8cf0eb1473d548fd962b8fc57c9268529006a",
+      "bytes": 1085
+    },
+    "neonrest_sandbox/templates/family_requests.html": {
+      "sha256": "2ca648b461e59b4855a7caae24512c8b4e1cf20a6a1e68180a0f971570274999",
+      "source_sha256": "2ca648b461e59b4855a7caae24512c8b4e1cf20a6a1e68180a0f971570274999",
+      "bytes": 2016
+    },
+    "neonrest_sandbox/templates/feed.html": {
+      "sha256": "a708f68609fbf86354e8ba809ee7ace96f8409a723dd30e2b9a0dd2213109627",
+      "source_sha256": "a708f68609fbf86354e8ba809ee7ace96f8409a723dd30e2b9a0dd2213109627",
+      "bytes": 1683
+    },
+    "neonrest_sandbox/templates/fix_handle.html": {
+      "sha256": "cbfacd51046d4892af1f3ce6018aab8755633461f825643e9ff0a32f2af81ea7",
+      "source_sha256": "cbfacd51046d4892af1f3ce6018aab8755633461f825643e9ff0a32f2af81ea7",
+      "bytes": 851
+    },
+    "neonrest_sandbox/templates/friends.html": {
+      "sha256": "0c550902857e3b67a7d3a6beb0096e3abb2acc5fb2ab076184dfcebcd0cb7009",
+      "source_sha256": "0c550902857e3b67a7d3a6beb0096e3abb2acc5fb2ab076184dfcebcd0cb7009",
+      "bytes": 4317
+    },
+    "neonrest_sandbox/templates/index.html": {
+      "sha256": "f1c550aa1be6d54d31659543f7ba0dd375a7405c47eaa31e25775908542a7528",
+      "source_sha256": "f1c550aa1be6d54d31659543f7ba0dd375a7405c47eaa31e25775908542a7528",
+      "bytes": 855
+    },
+    "neonrest_sandbox/templates/login.html": {
+      "sha256": "9b4113c603a2b58a69e759c0842f05a0a51c66ec49d116e7219f68034cc8dfd7",
+      "source_sha256": "9b4113c603a2b58a69e759c0842f05a0a51c66ec49d116e7219f68034cc8dfd7",
+      "bytes": 937
+    },
+    "neonrest_sandbox/templates/mail_queue.html": {
+      "sha256": "626391e08e1828d455766d04520206a7d6461cbf26c34de58f64b11a245b23b6",
+      "source_sha256": "626391e08e1828d455766d04520206a7d6461cbf26c34de58f64b11a245b23b6",
+      "bytes": 1945
+    },
+    "neonrest_sandbox/templates/manage_ads.html": {
+      "sha256": "4e6b139909ed5ea22e087eaaf4430d195f090071c4ffb066c246b70605dd4e80",
+      "source_sha256": "4e6b139909ed5ea22e087eaaf4430d195f090071c4ffb066c246b70605dd4e80",
+      "bytes": 4355
+    },
+    "neonrest_sandbox/templates/manage_comments.html": {
+      "sha256": "213af98e291e2e58eb203dc8dfd91862631255c3a7aef877b66f30a964121c29",
+      "source_sha256": "213af98e291e2e58eb203dc8dfd91862631255c3a7aef877b66f30a964121c29",
+      "bytes": 1345
+    },
+    "neonrest_sandbox/templates/manage_history.html": {
+      "sha256": "fbb7b360055378eec330768864c2b01980b9c09f7656455409f8bbd9eb966816",
+      "source_sha256": "fbb7b360055378eec330768864c2b01980b9c09f7656455409f8bbd9eb966816",
+      "bytes": 3548
+    },
+    "neonrest_sandbox/templates/manage_home.html": {
+      "sha256": "c60c2c7f83cb1741994ee52912d3369337cb173dc7854572230dee968b50c4a5",
+      "source_sha256": "c60c2c7f83cb1741994ee52912d3369337cb173dc7854572230dee968b50c4a5",
+      "bytes": 5900
+    },
+    "neonrest_sandbox/templates/manage_posts.html": {
+      "sha256": "898f4e07ab9ad01c7e02b85da56a261d5844e783335b752c1f717e268bafe392",
+      "source_sha256": "898f4e07ab9ad01c7e02b85da56a261d5844e783335b752c1f717e268bafe392",
+      "bytes": 3099
+    },
+    "neonrest_sandbox/templates/manage_roles.html": {
+      "sha256": "a888792ea3949ae8e8759d4c041b34fe29ff8041a0080830f987a0dfd38e458d",
+      "source_sha256": "a888792ea3949ae8e8759d4c041b34fe29ff8041a0080830f987a0dfd38e458d",
+      "bytes": 3097
+    },
+    "neonrest_sandbox/templates/manage_user_detail.html": {
+      "sha256": "b140c8091f2869b809ba59f8b3d3a9ff40abe44b57d1971f4501b87b0a974048",
+      "source_sha256": "b140c8091f2869b809ba59f8b3d3a9ff40abe44b57d1971f4501b87b0a974048",
+      "bytes": 4697
+    },
+    "neonrest_sandbox/templates/manage_users.html": {
+      "sha256": "8389a36d9e29020394063ed3a53f32d046a02ec11fb861377f62c71ad22ef057",
+      "source_sha256": "8389a36d9e29020394063ed3a53f32d046a02ec11fb861377f62c71ad22ef057",
+      "bytes": 3482
+    },
+    "neonrest_sandbox/templates/manage_vibe.html": {
+      "sha256": "77bec90afb6256714c5a531f7c09c3be808760fdda4179e17869f102880f30ee",
+      "source_sha256": "77bec90afb6256714c5a531f7c09c3be808760fdda4179e17869f102880f30ee",
+      "bytes": 1359
+    },
+    "neonrest_sandbox/templates/markdown-guide.html": {
+      "sha256": "b1e60dfc8875a38f17afec67fee18adafd52a1b2905b9552e878fb58bc300624",
+      "source_sha256": "b1e60dfc8875a38f17afec67fee18adafd52a1b2905b9552e878fb58bc300624",
+      "bytes": 1327
+    },
+    "neonrest_sandbox/templates/media_settings.html": {
+      "sha256": "61f270a8e48320ee662f083b2b1346e3bf4ca98baa34d6795132b3aaa97fe77c",
+      "source_sha256": "61f270a8e48320ee662f083b2b1346e3bf4ca98baa34d6795132b3aaa97fe77c",
+      "bytes": 2963
+    },
+    "neonrest_sandbox/templates/midi_player.html": {
+      "sha256": "66c440679925e7f1ae386d3fdf578b40d41a1c75ddbb3c33a8a9fdac7646322f",
+      "source_sha256": "66c440679925e7f1ae386d3fdf578b40d41a1c75ddbb3c33a8a9fdac7646322f",
+      "bytes": 604
+    },
+    "neonrest_sandbox/templates/partials/account_navigation.html": {
+      "sha256": "0334337121b2f9208fb55b7b218a346eed85174a2b7b586b8aee107a6c9e4ef6",
+      "source_sha256": "0334337121b2f9208fb55b7b218a346eed85174a2b7b586b8aee107a6c9e4ef6",
+      "bytes": 1086
+    },
+    "neonrest_sandbox/templates/partials/friend_buttons.html": {
+      "sha256": "468830b8061b3add7a8ece237a068e94cd4f7b1371c269c793f2f991b7512ded",
+      "source_sha256": "468830b8061b3add7a8ece237a068e94cd4f7b1371c269c793f2f991b7512ded",
+      "bytes": 1609
+    },
+    "neonrest_sandbox/templates/partials/management_identity.html": {
+      "sha256": "47455a3c457c13681830ff2a84a3b73db8b02722a1567e69e06126034421e1f6",
+      "source_sha256": "47455a3c457c13681830ff2a84a3b73db8b02722a1567e69e06126034421e1f6",
+      "bytes": 343
+    },
+    "neonrest_sandbox/templates/partials/posts.html": {
+      "sha256": "1ae66f34e97c4cb04d7aa69c0ed63e5cc92850e0a395340320ae7653ae59d66e",
+      "source_sha256": "1ae66f34e97c4cb04d7aa69c0ed63e5cc92850e0a395340320ae7653ae59d66e",
+      "bytes": 11151
+    },
+    "neonrest_sandbox/templates/pending_vibes.html": {
+      "sha256": "c8d7d10968abf867d3c1419fea27f8421d6938af0147588c0992eb1cc8507b90",
+      "source_sha256": "c8d7d10968abf867d3c1419fea27f8421d6938af0147588c0992eb1cc8507b90",
+      "bytes": 909
+    },
+    "neonrest_sandbox/templates/post_edit_history.html": {
+      "sha256": "4560c0568707094aa6865df17424fdb44a638e9dccbcbabd6dd6fe5464e785e0",
+      "source_sha256": "4560c0568707094aa6865df17424fdb44a638e9dccbcbabd6dd6fe5464e785e0",
+      "bytes": 1008
+    },
+    "neonrest_sandbox/templates/post_media.html": {
+      "sha256": "0094ed1c401f8dcf236db13c13db50f9724854a72f583e4ca052c36d25ae52e8",
+      "source_sha256": "0094ed1c401f8dcf236db13c13db50f9724854a72f583e4ca052c36d25ae52e8",
+      "bytes": 1642
+    },
+    "neonrest_sandbox/templates/post_pagination.html": {
+      "sha256": "b8445fdaa897bc42773a554fa2e406cae772811424e64c964149dc26f1680be4",
+      "source_sha256": "b8445fdaa897bc42773a554fa2e406cae772811424e64c964149dc26f1680be4",
+      "bytes": 837
+    },
+    "neonrest_sandbox/templates/privacy.html": {
+      "sha256": "129f2fc33a5df4c52b11f66821eda56bcbe7ee061867280147a84e8d674543ae",
+      "source_sha256": "129f2fc33a5df4c52b11f66821eda56bcbe7ee061867280147a84e8d674543ae",
+      "bytes": 24078
+    },
+    "neonrest_sandbox/templates/signup.html": {
+      "sha256": "e6bf4f84cbfc64927e0519431bd0f6e566cc8984f7a333a32e70e0e050a4a745",
+      "source_sha256": "e6bf4f84cbfc64927e0519431bd0f6e566cc8984f7a333a32e70e0e050a4a745",
+      "bytes": 6796
+    },
+    "neonrest_sandbox/templates/staff_profile.html": {
+      "sha256": "5ba02c51bdb4752fe9dbd6a85d1548d1b36a065a0e352779e0dbde7df7937308",
+      "source_sha256": "5ba02c51bdb4752fe9dbd6a85d1548d1b36a065a0e352779e0dbde7df7937308",
+      "bytes": 664
+    },
+    "neonrest_sandbox/templates/terms.html": {
+      "sha256": "c564d66009d44bd53f981ea2c97f4f1a640a62cc51470655cc94097dbe1d1ebd",
+      "source_sha256": "c564d66009d44bd53f981ea2c97f4f1a640a62cc51470655cc94097dbe1d1ebd",
+      "bytes": 17330
+    },
+    "neonrest_sandbox/templates/theme-preview.html": {
+      "sha256": "bac4b1b81ee18ac036ba3e752149467b7240a31d12f05b75dafd47bc7eaed38c",
+      "source_sha256": "bac4b1b81ee18ac036ba3e752149467b7240a31d12f05b75dafd47bc7eaed38c",
+      "bytes": 717
+    },
+    "neonrest_sandbox/templates/unavailable.html": {
+      "sha256": "6c8c74cedda687e59c5e34da49a3e2c221fe171f37455599fa3539ec11b0c6e1",
+      "source_sha256": "6c8c74cedda687e59c5e34da49a3e2c221fe171f37455599fa3539ec11b0c6e1",
+      "bytes": 1163
+    },
+    "neonrest_sandbox/templates/upload_error.html": {
+      "sha256": "95669201fa3aed0b11667c457f2d4362c62fb035cec968ae5cc11783aef1c7d4",
+      "source_sha256": "95669201fa3aed0b11667c457f2d4362c62fb035cec968ae5cc11783aef1c7d4",
+      "bytes": 422
+    },
+    "neonrest_sandbox/templates/user.html": {
+      "sha256": "04f5f5082d893fbfbb0d388cde06a905e0079d4d77beb9327214071fabe11c32",
+      "source_sha256": "04f5f5082d893fbfbb0d388cde06a905e0079d4d77beb9327214071fabe11c32",
+      "bytes": 4438
+    },
+    "neonrest_sandbox/templates/user_test-0131a042425.html": {
+      "sha256": "ec2d89d2e8edfbbf75e3d81652818912bd3d10ee2556169f69aa455fd9f6de51",
+      "source_sha256": "ec2d89d2e8edfbbf75e3d81652818912bd3d10ee2556169f69aa455fd9f6de51",
+      "bytes": 8711
+    },
+    "neonrest_sandbox/templates/user_test.html": {
+      "sha256": "9e30d16f67e47ee3be3ba77682fd92636b44684dcaba9dee70f144deb1cf58de",
+      "source_sha256": "9e30d16f67e47ee3be3ba77682fd92636b44684dcaba9dee70f144deb1cf58de",
+      "bytes": 22064
+    },
+    "neonrest_sandbox/templates/vibe.html": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "neonrest_sandbox/templates/vibe_page.html": {
+      "sha256": "71e623e876843b8e2fd1bf107958513075e55f7bdcf1e6d86bcb3407ef8d83f6",
+      "source_sha256": "71e623e876843b8e2fd1bf107958513075e55f7bdcf1e6d86bcb3407ef8d83f6",
+      "bytes": 13253
+    },
+    "neonrest_sandbox/templates/vibe_pending.html": {
+      "sha256": "75c31270187ee0eb833794447ea1869f4fb2de508e7d6921fe743983c85d4120",
+      "source_sha256": "75c31270187ee0eb833794447ea1869f4fb2de508e7d6921fe743983c85d4120",
+      "bytes": 881
+    },
+    "neonrest_sandbox/templates/workflow_form.html": {
+      "sha256": "2bf6609e86b742f537bcdc34dabad0b9f77505314700d8517e258700699ef349",
+      "source_sha256": "2bf6609e86b742f537bcdc34dabad0b9f77505314700d8517e258700699ef349",
+      "bytes": 561
+    },
+    "neonrest_sandbox/templates/workflow_list.html": {
+      "sha256": "c06d01412cf28334df08f7e1ca38fc5ff3505bde771727c44c0ccc6ecb620cb5",
+      "source_sha256": "c06d01412cf28334df08f7e1ca38fc5ff3505bde771727c44c0ccc6ecb620cb5",
+      "bytes": 1634
+    },
+    "neonrest_sandbox/templates/workflow_queue.html": {
+      "sha256": "9d7109cc6e035404b9d0677f98ec7ff5863fbaca65e41b1ce1a84926bd59ea9a",
+      "source_sha256": "9d7109cc6e035404b9d0677f98ec7ff5863fbaca65e41b1ce1a84926bd59ea9a",
+      "bytes": 2629
+    },
+    "neonrest_sandbox/templates/workflow_style.html": {
+      "sha256": "be5ad21b4c79dbfe8d965f27ec9d465744990fcba6c2f5c27ced706c369170dd",
+      "source_sha256": "be5ad21b4c79dbfe8d965f27ec9d465744990fcba6c2f5c27ced706c369170dd",
+      "bytes": 757
+    },
+    "neonrest_sandbox/static/bg-cassette-fuzz.png": {
+      "sha256": "dcb3704d35b6354282fb2f5fa0df109fa42f483c9f051889c4fbf2ddcca4ae67",
+      "source_sha256": "dcb3704d35b6354282fb2f5fa0df109fa42f483c9f051889c4fbf2ddcca4ae67",
+      "bytes": 2641787
+    },
+    "neonrest_sandbox/static/bg-freshstart-paper.png": {
+      "sha256": "4ea3d8456027f173147e8ea08889c5e6037faf0248d7f62a11f17992df723097",
+      "source_sha256": "4ea3d8456027f173147e8ea08889c5e6037faf0248d7f62a11f17992df723097",
+      "bytes": 3486805
+    },
+    "neonrest_sandbox/static/css/image_viewer.css": {
+      "sha256": "8fa050f0d9569836721cb4309ee3505a16e6f7f814a65cc2853ac3ab4d3398cd",
+      "source_sha256": "8fa050f0d9569836721cb4309ee3505a16e6f7f814a65cc2853ac3ab4d3398cd",
+      "bytes": 1647
+    },
+    "neonrest_sandbox/static/css/media.css": {
+      "sha256": "9f5154a98f83d775fbe0acb68a0bea696bdda0d0b5ae4df5c9637611a160adc7",
+      "source_sha256": "9f5154a98f83d775fbe0acb68a0bea696bdda0d0b5ae4df5c9637611a160adc7",
+      "bytes": 7867
+    },
+    "neonrest_sandbox/static/css/mobile.css": {
+      "sha256": "b3f10891b0ffa82fe712c128abbb445e0a66bba77dcfcbfdb54a305095793cc7",
+      "source_sha256": "b3f10891b0ffa82fe712c128abbb445e0a66bba77dcfcbfdb54a305095793cc7",
+      "bytes": 3852
+    },
+    "neonrest_sandbox/static/css/new_post.css": {
+      "sha256": "0d4905dd8296765683ebf140e71248d141f48daae8e32778b89df2609417373b",
+      "source_sha256": "0d4905dd8296765683ebf140e71248d141f48daae8e32778b89df2609417373b",
+      "bytes": 2617
+    },
+    "neonrest_sandbox/static/default-avatar.png": {
+      "sha256": "3f320b58ffd04069111896f4668db03801e05758080862c0f100529a111b12f9",
+      "source_sha256": "3f320b58ffd04069111896f4668db03801e05758080862c0f100529a111b12f9",
+      "bytes": 2722034
+    },
+    "neonrest_sandbox/static/favicon.ico": {
+      "sha256": "7cf47e84f36d50f2382bc69025e7c0ecc63a13fdef292263d1edb58290444107",
+      "source_sha256": "7cf47e84f36d50f2382bc69025e7c0ecc63a13fdef292263d1edb58290444107",
+      "bytes": 15406
+    },
+    "neonrest_sandbox/static/fresh-starts-logo-day.png": {
+      "sha256": "5481ec09bdbae5a77613d3af6d83f4e1716c450a14f4ec99720e3536f6328ec4",
+      "source_sha256": "5481ec09bdbae5a77613d3af6d83f4e1716c450a14f4ec99720e3536f6328ec4",
+      "bytes": 450616
+    },
+    "neonrest_sandbox/static/grain.png": {
+      "sha256": "5b403acea20877bff865ac95739f21ce3d1e631489c15f6e4347a610c49b0974",
+      "source_sha256": "5b403acea20877bff865ac95739f21ce3d1e631489c15f6e4347a610c49b0974",
+      "bytes": 2710755
+    },
+    "neonrest_sandbox/static/img/underconstruction.gif": {
+      "sha256": "c970f64ff77967c257318070798c4859ce862aa4bbe308c964d6ee76e8e24537",
+      "source_sha256": "c970f64ff77967c257318070798c4859ce862aa4bbe308c964d6ee76e8e24537",
+      "bytes": 62686
+    },
+    "neonrest_sandbox/static/js/image_upload.js": {
+      "sha256": "474436cc8bb336ccdc32aa783e98dfc792f2a08b249c27b0395dc236d28f8722",
+      "source_sha256": "474436cc8bb336ccdc32aa783e98dfc792f2a08b249c27b0395dc236d28f8722",
+      "bytes": 4834
+    },
+    "neonrest_sandbox/static/js/image_viewer.js": {
+      "sha256": "89a258bcf1ad5d1d7bf0c21bc66864409c5637ea920d14cd6e029854d0b5fb55",
+      "source_sha256": "89a258bcf1ad5d1d7bf0c21bc66864409c5637ea920d14cd6e029854d0b5fb55",
+      "bytes": 2995
+    },
+    "neonrest_sandbox/static/js/media.js": {
+      "sha256": "a03aa180f037b987b7100c850040d087e8cf31c311738c00c4a1bcdb520194fa",
+      "source_sha256": "a03aa180f037b987b7100c850040d087e8cf31c311738c00c4a1bcdb520194fa",
+      "bytes": 9701
+    },
+    "neonrest_sandbox/static/logo.png": {
+      "sha256": "1023779836a041976b5898ee3b57477b6679b5681b3cfca351151ebee4beb0d0",
+      "source_sha256": "1023779836a041976b5898ee3b57477b6679b5681b3cfca351151ebee4beb0d0",
+      "bytes": 1584952
+    },
+    "neonrest_sandbox/static/post_overrides.css": {
+      "sha256": "b5548e7463e65286990b646b15dc3f3f54fa1707990e7b470b500cfc9a26523d",
+      "source_sha256": "b5548e7463e65286990b646b15dc3f3f54fa1707990e7b470b500cfc9a26523d",
+      "bytes": 6353
+    },
+    "neonrest_sandbox/static/profile_default.css": {
+      "sha256": "b6e0e36ff0c3e56837fb7bebfc870fc3cea30c31fd4f68a8f319a2ff21aa62f0",
+      "source_sha256": "b6e0e36ff0c3e56837fb7bebfc870fc3cea30c31fd4f68a8f319a2ff21aa62f0",
+      "bytes": 11332
+    },
+    "neonrest_sandbox/static/sprites/emoji_rings.png": {
+      "sha256": "87ec95b84e289a8e4cab8a292b1a96647172317e37980818070edc3a4f90ffb8",
+      "source_sha256": "87ec95b84e289a8e4cab8a292b1a96647172317e37980818070edc3a4f90ffb8",
+      "bytes": 33781
+    },
+    "neonrest_sandbox/static/style.css": {
+      "sha256": "643458dc711dfdcf03d331620c1529325a18612d54d5eac21b9480ee1506a496",
+      "source_sha256": "643458dc711dfdcf03d331620c1529325a18612d54d5eac21b9480ee1506a496",
+      "bytes": 39227
+    },
+    "neonrest_sandbox/static/vibe_logos/analog-logo-20261005.png": {
+      "sha256": "e988dd970e09e423e4795242233e6c00811706ab04989c94c177eda73693cd41",
+      "source_sha256": "e988dd970e09e423e4795242233e6c00811706ab04989c94c177eda73693cd41",
+      "bytes": 1891749
+    },
+    "neonrest_sandbox/static/vibe_logos/backporch-logo-20261005.png": {
+      "sha256": "4d84558233e47b97edb75f662ed58d9caef3b83b2caeccdc792aaa5b5e5e1fd1",
+      "source_sha256": "4d84558233e47b97edb75f662ed58d9caef3b83b2caeccdc792aaa5b5e5e1fd1",
+      "bytes": 1502730
+    },
+    "neonrest_sandbox/static/vibe_logos/changelog-logo-20261005.png": {
+      "sha256": "b41209f6c90770f159e7389640de3cbe8350149e4064d7d167f0e0f58ee3bb9d",
+      "source_sha256": "b41209f6c90770f159e7389640de3cbe8350149e4064d7d167f0e0f58ee3bb9d",
+      "bytes": 1106330
+    },
+    "neonrest_sandbox/static/vibe_logos/couchcore-logo-20261005.png": {
+      "sha256": "406f755708b1c9b0182229f27a4bed3e1c86f4d3371480e08fbbd20d30a26b72",
+      "source_sha256": "406f755708b1c9b0182229f27a4bed3e1c86f4d3371480e08fbbd20d30a26b72",
+      "bytes": 1734989
+    },
+    "neonrest_sandbox/static/vibe_logos/driftroom-logo-20261005.png": {
+      "sha256": "6478a92b1cc82182ed4c592d4a0562f38136a62e4010e57790e8e78e5b0bfdcf",
+      "source_sha256": "6478a92b1cc82182ed4c592d4a0562f38136a62e4010e57790e8e78e5b0bfdcf",
+      "bytes": 1719632
+    },
+    "neonrest_sandbox/static/vibe_logos/fresh-starts-logo-20261005.png": {
+      "sha256": "a14a4bb2442ab0e92a7809e795572b0401858989910e585b83876fe2363ad8ef",
+      "source_sha256": "a14a4bb2442ab0e92a7809e795572b0401858989910e585b83876fe2363ad8ef",
+      "bytes": 1785088
+    },
+    "neonrest_sandbox/static/vibe_logos/melancholy-logo-20261005.png": {
+      "sha256": "aec7402a780bc3cf5a180fe3b7a58dff8be6489a0aeb2662e51b1c831e262ea6",
+      "source_sha256": "aec7402a780bc3cf5a180fe3b7a58dff8be6489a0aeb2662e51b1c831e262ea6",
+      "bytes": 2106863
+    },
+    "neonrest_sandbox/static/vibe_logos/nostalgia-logo-20261005.png": {
+      "sha256": "ae6ba42695e1f28541208ac08a88219309187b80c2c23b15142489515ac8e9d4",
+      "source_sha256": "ae6ba42695e1f28541208ac08a88219309187b80c2c23b15142489515ac8e9d4",
+      "bytes": 2035254
+    },
+    "neonrest_sandbox/static/vibes/vibe_analog.css": {
+      "sha256": "e81fdbc288ff72e118489a2b1b63f2b2244cc9eca830fb9630e51a5f548526c3",
+      "source_sha256": "e81fdbc288ff72e118489a2b1b63f2b2244cc9eca830fb9630e51a5f548526c3",
+      "bytes": 135
+    },
+    "neonrest_sandbox/static/vibes/vibe_backporch.css": {
+      "sha256": "006934db20c14d2080f8e6f7852b67c53b69cb57ea66fac76abca21e0650a96c",
+      "source_sha256": "006934db20c14d2080f8e6f7852b67c53b69cb57ea66fac76abca21e0650a96c",
+      "bytes": 719
+    },
+    "neonrest_sandbox/static/vibes/vibe_base.css": {
+      "sha256": "e6b09d8df6bc17a683584b60a8c2551ad7232725a97af1f8dced50f7bca4d4e9",
+      "source_sha256": "e6b09d8df6bc17a683584b60a8c2551ad7232725a97af1f8dced50f7bca4d4e9",
+      "bytes": 2302
+    },
+    "neonrest_sandbox/static/vibes/vibe_driftroom.css": {
+      "sha256": "c598f792647823b08109ce0e9b8157d99075446fb64fd019cbb51b0ef45d513b",
+      "source_sha256": "c598f792647823b08109ce0e9b8157d99075446fb64fd019cbb51b0ef45d513b",
+      "bytes": 141
+    },
+    "neonrest_sandbox/static/vibes/vibe_fresh-starts.css": {
+      "sha256": "3927fd66f8f2bc49adbb3b16168311662e943585910c63525cd7a1cf23653465",
+      "source_sha256": "3927fd66f8f2bc49adbb3b16168311662e943585910c63525cd7a1cf23653465",
+      "bytes": 1914
+    },
+    "neonrest_sandbox/tests/test_vibe_lifecycle.py": {
+      "sha256": "e3e80de6e504059dfdcabc56b7856a8e39fc30b03324cbcd77650f735443d17b",
+      "source_sha256": "e3e80de6e504059dfdcabc56b7856a8e39fc30b03324cbcd77650f735443d17b",
+      "bytes": 2785
+    },
+    "neonrest_sandbox/tests/verify_account_lifecycle.py": {
+      "sha256": "0445aeb3029835ac4b2f24a4f5d99c7651718e198b577c2db66c0a707ac47e52",
+      "source_sha256": "0445aeb3029835ac4b2f24a4f5d99c7651718e198b577c2db66c0a707ac47e52",
+      "bytes": 13770
+    },
+    "neonrest_sandbox/tests/verify_age_policy.py": {
+      "sha256": "9ef9424b111cee7782c1778fb43a045dccb1fc4dae7b64d928f8c55eb42d1287",
+      "source_sha256": "9ef9424b111cee7782c1778fb43a045dccb1fc4dae7b64d928f8c55eb42d1287",
+      "bytes": 12386
+    },
+    "neonrest_sandbox/tests/verify_email_resilience.py": {
+      "sha256": "a529efd43de62d76599c7f36e112c0cbde22e29f5b90a4c2ee7a7158844b5586",
+      "source_sha256": "a529efd43de62d76599c7f36e112c0cbde22e29f5b90a4c2ee7a7158844b5586",
+      "bytes": 13774
+    },
+    "neonrest_sandbox/tests/verify_family_consent.py": {
+      "sha256": "0e02cfab8fada5d8e3b6baee2c5564b993d8026a93944ec3f24504dbdc5c723d",
+      "source_sha256": "0e02cfab8fada5d8e3b6baee2c5564b993d8026a93944ec3f24504dbdc5c723d",
+      "bytes": 63293
+    },
+    "neonrest_sandbox/tests/verify_mail_queue.py": {
+      "sha256": "24eceedcd8625327ea6aad99da1f7e2f798e60a7b43502117043f4309d08fef7",
+      "source_sha256": "24eceedcd8625327ea6aad99da1f7e2f798e60a7b43502117043f4309d08fef7",
+      "bytes": 20977
+    },
+    "neonrest_sandbox/tests/verify_management.py": {
+      "sha256": "a25d9adc04d42e02e9ed2a4a1aecf98615bd770fb9b296acb39c810922f46f51",
+      "source_sha256": "a25d9adc04d42e02e9ed2a4a1aecf98615bd770fb9b296acb39c810922f46f51",
+      "bytes": 16661
+    },
+    "neonrest_sandbox/tests/verify_minor_reading.py": {
+      "sha256": "6ad532b817bd74e863f33ee84635ee7911044cc5626e4081200839b3fd8f4d4d",
+      "source_sha256": "6ad532b817bd74e863f33ee84635ee7911044cc5626e4081200839b3fd8f4d4d",
+      "bytes": 16626
+    },
+    "neonrest_sandbox/tests/verify_operations_health.py": {
+      "sha256": "fc6e5869ca85d13e8d77bd5026263f4f773d7c8b3975a65479684bf7dab7d5e0",
+      "source_sha256": "fc6e5869ca85d13e8d77bd5026263f4f773d7c8b3975a65479684bf7dab7d5e0",
+      "bytes": 11351
+    },
+    "neonrest_sandbox/tests/verify_production_migration.py": {
+      "sha256": "f0e871356b6a0765390c376aefed40d234c881e261080f265bc36631855a8dd4",
+      "source_sha256": "f0e871356b6a0765390c376aefed40d234c881e261080f265bc36631855a8dd4",
+      "bytes": 63808
+    },
+    "neonrest_sandbox/tests/verify_public_ids.py": {
+      "sha256": "58c78c336b488fcba04419c4f253bd36557c71b71e2c6fb1f4d29d23d3ade348",
+      "source_sha256": "58c78c336b488fcba04419c4f253bd36557c71b71e2c6fb1f4d29d23d3ade348",
+      "bytes": 21144
+    },
+    "neonrest_sandbox/tests/verify_retention.py": {
+      "sha256": "b07f9256e2f7f00d9969c129d08ce2c25fa42c0acb2ae04d7ec70bc607edf5ab",
+      "source_sha256": "b07f9256e2f7f00d9969c129d08ce2c25fa42c0acb2ae04d7ec70bc607edf5ab",
+      "bytes": 10716
+    },
+    "neonrest_sandbox/docs/T04-operator-checklist.md": {
+      "sha256": "826cd69ed26139fd65a679c39a272fc5fc2261799da352ee0d292c03fca8c383",
+      "source_sha256": "826cd69ed26139fd65a679c39a272fc5fc2261799da352ee0d292c03fca8c383",
+      "bytes": 3030
+    },
+    "neonrest_sandbox/docs/T04R-account-inventory.json": {
+      "sha256": "4e9e293e2226715e02f4216722b29bca971a1ea8853b456587e646cb96884fa7",
+      "source_sha256": "4e9e293e2226715e02f4216722b29bca971a1ea8853b456587e646cb96884fa7",
+      "bytes": 6527
+    },
+    "neonrest/__init__.py": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "neonrest/account_disabling.py": {
+      "sha256": "ba4846c0f229ff099552326fae01cb5665f9db737537e02185c13af0a58d6a9e",
+      "source_sha256": "ba4846c0f229ff099552326fae01cb5665f9db737537e02185c13af0a58d6a9e",
+      "bytes": 2204
+    },
+    "neonrest/age_clock.py": {
+      "sha256": "3e86aa697c2b258ebfb5a00129fb9cd0231e6055cef739d28c04cf9dd4a56298",
+      "source_sha256": "3e86aa697c2b258ebfb5a00129fb9cd0231e6055cef739d28c04cf9dd4a56298",
+      "bytes": 4414
+    },
+    "neonrest/age_policy.py": {
+      "sha256": "607cdbfea32283702ef43c8cfda45d3cbc219a102054141da49c7c3a036d0eaa",
+      "source_sha256": "607cdbfea32283702ef43c8cfda45d3cbc219a102054141da49c7c3a036d0eaa",
+      "bytes": 25188
+    },
+    "neonrest/app.py": {
+      "sha256": "c0704cc611337ed3a968d368efcc8c2d4af304e518b5b0b4b8d10501ea7f138b",
+      "source_sha256": "c0704cc611337ed3a968d368efcc8c2d4af304e518b5b0b4b8d10501ea7f138b",
+      "bytes": 117226
+    },
+    "neonrest/authenticator_qr.py": {
+      "sha256": "9aa2f086d610715811741045972dd31357619001b65c91b4aa4cf6266a4ce030",
+      "source_sha256": "9aa2f086d610715811741045972dd31357619001b65c91b4aa4cf6266a4ce030",
+      "bytes": 1401
+    },
+    "neonrest/community_features.py": {
+      "sha256": "d9ebfb87edc31442f98ff51df8d4a7a357eefcc3d9e8df4569efe40ffe831f0e",
+      "source_sha256": "d9ebfb87edc31442f98ff51df8d4a7a357eefcc3d9e8df4569efe40ffe831f0e",
+      "bytes": 64918
+    },
+    "neonrest/email_change.py": {
+      "sha256": "b10919514c310a9ddad0b07efb429473f7c5e63efc17df344b2a6aaab07df9d9",
+      "source_sha256": "b10919514c310a9ddad0b07efb429473f7c5e63efc17df344b2a6aaab07df9d9",
+      "bytes": 9665
+    },
+    "neonrest/email_delivery.py": {
+      "sha256": "b898adbe3554d43ff4445721190f6b4c290dc767bdc7313ab3e81d0bf0146ce8",
+      "source_sha256": "b898adbe3554d43ff4445721190f6b4c290dc767bdc7313ab3e81d0bf0146ce8",
+      "bytes": 4811
+    },
+    "neonrest/email_verification.py": {
+      "sha256": "25c5f7d5dbbcadbe61e9a371c9bee2ac225877fbcaca6aaefac025fff75b37eb",
+      "source_sha256": "25c5f7d5dbbcadbe61e9a371c9bee2ac225877fbcaca6aaefac025fff75b37eb",
+      "bytes": 5236
+    },
+    "neonrest/family_consent.py": {
+      "sha256": "cb75a0eee0c6621ead9211c51a1a5ae863aa0e64fb0cdddcd9a85d7fb0e49066",
+      "source_sha256": "cb75a0eee0c6621ead9211c51a1a5ae863aa0e64fb0cdddcd9a85d7fb0e49066",
+      "bytes": 4942
+    },
+    "neonrest/family_data.py": {
+      "sha256": "b3bd4b1cbcff40a5996ae4f388fa42e2545c4a1779627f8b9574e86ecba52263",
+      "source_sha256": "b3bd4b1cbcff40a5996ae4f388fa42e2545c4a1779627f8b9574e86ecba52263",
+      "bytes": 8773
+    },
+    "neonrest/mail_queue.py": {
+      "sha256": "f36106907f12cd4418fa65900e09cf3b13c7096c595ab561451bb77233830663",
+      "source_sha256": "f36106907f12cd4418fa65900e09cf3b13c7096c595ab561451bb77233830663",
+      "bytes": 21486
+    },
+    "neonrest/management_audit.py": {
+      "sha256": "2a6c55b52ea7f2aad0a7e7e5eea0b0dfe186f687af54343080be9564f723e3e4",
+      "source_sha256": "2a6c55b52ea7f2aad0a7e7e5eea0b0dfe186f687af54343080be9564f723e3e4",
+      "bytes": 1836
+    },
+    "neonrest/media_features.py": {
+      "sha256": "612b80545d03bb11c85fe41ad4b4abba2e2993779bf2fab484d0c8f113f0e60d",
+      "source_sha256": "612b80545d03bb11c85fe41ad4b4abba2e2993779bf2fab484d0c8f113f0e60d",
+      "bytes": 15693
+    },
+    "neonrest/models.py": {
+      "sha256": "0855cdbb87bc1d23e3a6e0162ca0e4b5a86e5692638894670cb82a4cd1b210d7",
+      "source_sha256": "0855cdbb87bc1d23e3a6e0162ca0e4b5a86e5692638894670cb82a4cd1b210d7",
+      "bytes": 22
+    },
+    "neonrest/operations_health.py": {
+      "sha256": "26587c000b0b598e837628853b40236be2965a8a9aacf3f7f6b7904103bb8ce4",
+      "source_sha256": "26587c000b0b598e837628853b40236be2965a8a9aacf3f7f6b7904103bb8ce4",
+      "bytes": 7547
+    },
+    "neonrest/public_ids.py": {
+      "sha256": "e14bb4f757486b6c38165425c0e8a473d0b697c79adaa50478474efe50277dab",
+      "source_sha256": "e14bb4f757486b6c38165425c0e8a473d0b697c79adaa50478474efe50277dab",
+      "bytes": 11300
+    },
+    "neonrest/retention.py": {
+      "sha256": "0fd295cb1b9229744fdcba946d19445a72d036efbea5c9c8eb8bd889c497d75d",
+      "source_sha256": "0fd295cb1b9229744fdcba946d19445a72d036efbea5c9c8eb8bd889c497d75d",
+      "bytes": 16672
+    },
+    "neonrest/welcome.py": {
+      "sha256": "65a7c1a62bcfbd95519eafaeca4462168103d87a87014dba8e59d1ebc2149243",
+      "source_sha256": "65a7c1a62bcfbd95519eafaeca4462168103d87a87014dba8e59d1ebc2149243",
+      "bytes": 5076
+    },
+    "neonrest/routes/auth.py": {
+      "sha256": "75edaf3c37b011d520c1a831e65e159902935ac0fd7ce6e450bbdeab8f76b51b",
+      "source_sha256": "75edaf3c37b011d520c1a831e65e159902935ac0fd7ce6e450bbdeab8f76b51b",
+      "bytes": 130
+    },
+    "neonrest/routes/friends.py": {
+      "sha256": "775e845c5c4d01601f995fd6b8531d02f19a0060cc27d93215cda9909ebb4d97",
+      "source_sha256": "775e845c5c4d01601f995fd6b8531d02f19a0060cc27d93215cda9909ebb4d97",
+      "bytes": 8820
+    },
+    "neonrest/routes/post.py": {
+      "sha256": "5c50fd7e83b81ad92a2a77d35c114df0f1fee690deb924c2d0c3df58bb91f69a",
+      "source_sha256": "5c50fd7e83b81ad92a2a77d35c114df0f1fee690deb924c2d0c3df58bb91f69a",
+      "bytes": 136
+    },
+    "neonrest/routes/vibes.py": {
+      "sha256": "e4b51da9269ce745d3a41dc5859f23faf53fec612242dbba8fd036ec96f03423",
+      "source_sha256": "e4b51da9269ce745d3a41dc5859f23faf53fec612242dbba8fd036ec96f03423",
+      "bytes": 138
+    },
+    "neonrest/utils/__init__.py": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "neonrest/utils/filters.py": {
+      "sha256": "5626cb49a916fb376423d8e35fff6ec7ff491dfe0ff10ce015ec6c5f5642dcb8",
+      "source_sha256": "5626cb49a916fb376423d8e35fff6ec7ff491dfe0ff10ce015ec6c5f5642dcb8",
+      "bytes": 32
+    },
+    "neonrest/utils/friend_helpers.py": {
+      "sha256": "b299f8af7e2032076e01ca16429e4b47b9ef2c4b77b8f4974d750e88c791b79a",
+      "source_sha256": "b299f8af7e2032076e01ca16429e4b47b9ef2c4b77b8f4974d750e88c791b79a",
+      "bytes": 3327
+    },
+    "neonrest/utils/generate_handle.py": {
+      "sha256": "b19c54470d2e45bd4dbedc5949712e7ac5f01ab32054396ab68d959c8c1bbc9b",
+      "source_sha256": "b19c54470d2e45bd4dbedc5949712e7ac5f01ab32054396ab68d959c8c1bbc9b",
+      "bytes": 452
+    },
+    "neonrest/utils/generate_unique_handle.py": {
+      "sha256": "9f4c368edbf24ed474c9860a69939ff631b9e030b567f750cf905a90fe28e755",
+      "source_sha256": "9f4c368edbf24ed474c9860a69939ff631b9e030b567f750cf905a90fe28e755",
+      "bytes": 381
+    },
+    "neonrest/utils/image_uploads.py": {
+      "sha256": "847c2912e563c9f0b685535e532c066f87928ed13909824303ad83b0f26cef74",
+      "source_sha256": "847c2912e563c9f0b685535e532c066f87928ed13909824303ad83b0f26cef74",
+      "bytes": 217
+    },
+    "neonrest/utils/lastfm.py": {
+      "sha256": "ac75c4ce856ca5993aa04d1b5f2ac0fb231efbcbf2e343f12936f9ba0db027f0",
+      "source_sha256": "c95edb618679f736b3e684db56ba4c30095724e1b9b3a1d9897280ab435b867f",
+      "bytes": 1283
+    },
+    "neonrest/utils/utils.py": {
+      "sha256": "fcbcaa6ef03c8f54db666cbd2df23820928310ceb2aa81c0537f7a0caf1415dc",
+      "source_sha256": "fcbcaa6ef03c8f54db666cbd2df23820928310ceb2aa81c0537f7a0caf1415dc",
+      "bytes": 2998
+    },
+    "neonrest/utils/vibe_lifecycle.py": {
+      "sha256": "a92d61942264a7c6407d56e6bead7d826f6450606f73a78b8c28bf84e456bbd9",
+      "source_sha256": "a92d61942264a7c6407d56e6bead7d826f6450606f73a78b8c28bf84e456bbd9",
+      "bytes": 4852
+    },
+    "neonrest/templates/about-mailersend.html": {
+      "sha256": "c45309b246f2a8641d14c9f117a35da38f33bc48d9b663035509350345055cd1",
+      "source_sha256": "c45309b246f2a8641d14c9f117a35da38f33bc48d9b663035509350345055cd1",
+      "bytes": 1370
+    },
+    "neonrest/templates/about.html": {
+      "sha256": "e77661281981b32a4db85bac4abe1c1df6767b956463ea59a8e60f0694c2803c",
+      "source_sha256": "e77661281981b32a4db85bac4abe1c1df6767b956463ea59a8e60f0694c2803c",
+      "bytes": 1121
+    },
+    "neonrest/templates/account.html": {
+      "sha256": "5147308ee69a62440d23a9051b52af09c55834272e58e3f24733afed7a2609e9",
+      "source_sha256": "5147308ee69a62440d23a9051b52af09c55834272e58e3f24733afed7a2609e9",
+      "bytes": 2896
+    },
+    "neonrest/templates/ad_banner.html": {
+      "sha256": "55782a6ad76a3c1133e2600245f92c62388e388e7ff2e3bbda3a5f40e267df7d",
+      "source_sha256": "55782a6ad76a3c1133e2600245f92c62388e388e7ff2e3bbda3a5f40e267df7d",
+      "bytes": 435
+    },
+    "neonrest/templates/ad_rail.html": {
+      "sha256": "2d6919180ab2341c4d8d169921c6cf22e624bb04e50ce06494a473666cbd4f78",
+      "source_sha256": "2d6919180ab2341c4d8d169921c6cf22e624bb04e50ce06494a473666cbd4f78",
+      "bytes": 475
+    },
+    "neonrest/templates/ad_style.html": {
+      "sha256": "41f802ff19ece418d502aeee2d7422959cae21b9899ea32a1b2d034efb6272e9",
+      "source_sha256": "41f802ff19ece418d502aeee2d7422959cae21b9899ea32a1b2d034efb6272e9",
+      "bytes": 892
+    },
+    "neonrest/templates/base.html": {
+      "sha256": "ce6f46287c2cfbd41cd1e4de501724cd16898edac8b5a22e02385fddfaf8cae9",
+      "source_sha256": "ce6f46287c2cfbd41cd1e4de501724cd16898edac8b5a22e02385fddfaf8cae9",
+      "bytes": 7643
+    },
+    "neonrest/templates/community.html": {
+      "sha256": "4f49285bb552c7dbebcdbdebe6790fbeb9c0b562d7fcb22abdde8aa8b2505514",
+      "source_sha256": "4f49285bb552c7dbebcdbdebe6790fbeb9c0b562d7fcb22abdde8aa8b2505514",
+      "bytes": 22156
+    },
+    "neonrest/templates/create_post.html": {
+      "sha256": "4f50117db895f8adbab4ed412adca341ef30963cc539a27918c720fa6cbd19a8",
+      "source_sha256": "4f50117db895f8adbab4ed412adca341ef30963cc539a27918c720fa6cbd19a8",
+      "bytes": 5354
+    },
+    "neonrest/templates/dev_summary.html": {
+      "sha256": "9e8955a49b240214433510ea9a978a2d1321d4a8172ac40f4fff570cd97d26d5",
+      "source_sha256": "9e8955a49b240214433510ea9a978a2d1321d4a8172ac40f4fff570cd97d26d5",
+      "bytes": 30670
+    },
+    "neonrest/templates/edit_comment.html": {
+      "sha256": "19f95c5ed0aa9d8d65f9ba9928a38bf42e8222d76aac042248941c2116654cd3",
+      "source_sha256": "19f95c5ed0aa9d8d65f9ba9928a38bf42e8222d76aac042248941c2116654cd3",
+      "bytes": 495
+    },
+    "neonrest/templates/edit_post.html": {
+      "sha256": "be7d498e8e42e2b09d47e5e33aa7bea976e0796e1689f0b4bd5f8ceb139e94ba",
+      "source_sha256": "be7d498e8e42e2b09d47e5e33aa7bea976e0796e1689f0b4bd5f8ceb139e94ba",
+      "bytes": 5188
+    },
+    "neonrest/templates/edit_profile_style.html": {
+      "sha256": "3364cfa8c4ea5f13f271a25cf540393a913156e45790df1bcbe04a50efea835c",
+      "source_sha256": "3364cfa8c4ea5f13f271a25cf540393a913156e45790df1bcbe04a50efea835c",
+      "bytes": 13757
+    },
+    "neonrest/templates/edit_theme.html": {
+      "sha256": "86bff3219feab7cd34066f7db5b582d687f3b4b327d640f8b8eaf3df36ba1049",
+      "source_sha256": "86bff3219feab7cd34066f7db5b582d687f3b4b327d640f8b8eaf3df36ba1049",
+      "bytes": 20919
+    },
+    "neonrest/templates/email_change.html": {
+      "sha256": "8680756857b7c04a39b2094119ff25d63fc4c4d270aa387712e2183ceb35c1af",
+      "source_sha256": "8680756857b7c04a39b2094119ff25d63fc4c4d270aa387712e2183ceb35c1af",
+      "bytes": 1644
+    },
+    "neonrest/templates/email_verification.html": {
+      "sha256": "886e988a2aacc86ace53051bf0c2913e4b0e46a4a5f85a578b2cf7aa1e8f7f23",
+      "source_sha256": "886e988a2aacc86ace53051bf0c2913e4b0e46a4a5f85a578b2cf7aa1e8f7f23",
+      "bytes": 2217
+    },
+    "neonrest/templates/explore.html": {
+      "sha256": "859b97b67224721580ab4feeb877568fc0c76b89c7c0e6261117548d0e4aceaf",
+      "source_sha256": "859b97b67224721580ab4feeb877568fc0c76b89c7c0e6261117548d0e4aceaf",
+      "bytes": 1053
+    },
+    "neonrest/templates/family_requests.html": {
+      "sha256": "2ca648b461e59b4855a7caae24512c8b4e1cf20a6a1e68180a0f971570274999",
+      "source_sha256": "2ca648b461e59b4855a7caae24512c8b4e1cf20a6a1e68180a0f971570274999",
+      "bytes": 2016
+    },
+    "neonrest/templates/feed.html": {
+      "sha256": "a708f68609fbf86354e8ba809ee7ace96f8409a723dd30e2b9a0dd2213109627",
+      "source_sha256": "a708f68609fbf86354e8ba809ee7ace96f8409a723dd30e2b9a0dd2213109627",
+      "bytes": 1683
+    },
+    "neonrest/templates/fix_handle.html": {
+      "sha256": "cbfacd51046d4892af1f3ce6018aab8755633461f825643e9ff0a32f2af81ea7",
+      "source_sha256": "cbfacd51046d4892af1f3ce6018aab8755633461f825643e9ff0a32f2af81ea7",
+      "bytes": 851
+    },
+    "neonrest/templates/friends.html": {
+      "sha256": "0c550902857e3b67a7d3a6beb0096e3abb2acc5fb2ab076184dfcebcd0cb7009",
+      "source_sha256": "0c550902857e3b67a7d3a6beb0096e3abb2acc5fb2ab076184dfcebcd0cb7009",
+      "bytes": 4317
+    },
+    "neonrest/templates/index.html": {
+      "sha256": "b800a9db9989cad1c35ab898f9ef3db3e6f3b68b8dcf73c278904a9ece2e548f",
+      "source_sha256": "b800a9db9989cad1c35ab898f9ef3db3e6f3b68b8dcf73c278904a9ece2e548f",
+      "bytes": 823
+    },
+    "neonrest/templates/login.html": {
+      "sha256": "a9f30be3273e50d1f4b5f72306b57d1bd87b90bcd82ae83fefaf8cf43831c732",
+      "source_sha256": "a9f30be3273e50d1f4b5f72306b57d1bd87b90bcd82ae83fefaf8cf43831c732",
+      "bytes": 929
+    },
+    "neonrest/templates/mail_queue.html": {
+      "sha256": "626391e08e1828d455766d04520206a7d6461cbf26c34de58f64b11a245b23b6",
+      "source_sha256": "626391e08e1828d455766d04520206a7d6461cbf26c34de58f64b11a245b23b6",
+      "bytes": 1945
+    },
+    "neonrest/templates/manage_ads.html": {
+      "sha256": "a8470f802e982c2a2a6886d052f4da48ddf19ccc92019b0a5a1dea01107a39ea",
+      "source_sha256": "a8470f802e982c2a2a6886d052f4da48ddf19ccc92019b0a5a1dea01107a39ea",
+      "bytes": 4339
+    },
+    "neonrest/templates/manage_comments.html": {
+      "sha256": "213af98e291e2e58eb203dc8dfd91862631255c3a7aef877b66f30a964121c29",
+      "source_sha256": "213af98e291e2e58eb203dc8dfd91862631255c3a7aef877b66f30a964121c29",
+      "bytes": 1345
+    },
+    "neonrest/templates/manage_history.html": {
+      "sha256": "fbb7b360055378eec330768864c2b01980b9c09f7656455409f8bbd9eb966816",
+      "source_sha256": "fbb7b360055378eec330768864c2b01980b9c09f7656455409f8bbd9eb966816",
+      "bytes": 3548
+    },
+    "neonrest/templates/manage_home.html": {
+      "sha256": "c60c2c7f83cb1741994ee52912d3369337cb173dc7854572230dee968b50c4a5",
+      "source_sha256": "c60c2c7f83cb1741994ee52912d3369337cb173dc7854572230dee968b50c4a5",
+      "bytes": 5900
+    },
+    "neonrest/templates/manage_posts.html": {
+      "sha256": "898f4e07ab9ad01c7e02b85da56a261d5844e783335b752c1f717e268bafe392",
+      "source_sha256": "898f4e07ab9ad01c7e02b85da56a261d5844e783335b752c1f717e268bafe392",
+      "bytes": 3099
+    },
+    "neonrest/templates/manage_roles.html": {
+      "sha256": "a888792ea3949ae8e8759d4c041b34fe29ff8041a0080830f987a0dfd38e458d",
+      "source_sha256": "a888792ea3949ae8e8759d4c041b34fe29ff8041a0080830f987a0dfd38e458d",
+      "bytes": 3097
+    },
+    "neonrest/templates/manage_user_detail.html": {
+      "sha256": "b140c8091f2869b809ba59f8b3d3a9ff40abe44b57d1971f4501b87b0a974048",
+      "source_sha256": "b140c8091f2869b809ba59f8b3d3a9ff40abe44b57d1971f4501b87b0a974048",
+      "bytes": 4697
+    },
+    "neonrest/templates/manage_users.html": {
+      "sha256": "8389a36d9e29020394063ed3a53f32d046a02ec11fb861377f62c71ad22ef057",
+      "source_sha256": "8389a36d9e29020394063ed3a53f32d046a02ec11fb861377f62c71ad22ef057",
+      "bytes": 3482
+    },
+    "neonrest/templates/manage_vibe.html": {
+      "sha256": "77bec90afb6256714c5a531f7c09c3be808760fdda4179e17869f102880f30ee",
+      "source_sha256": "77bec90afb6256714c5a531f7c09c3be808760fdda4179e17869f102880f30ee",
+      "bytes": 1359
+    },
+    "neonrest/templates/markdown-guide.html": {
+      "sha256": "b1e60dfc8875a38f17afec67fee18adafd52a1b2905b9552e878fb58bc300624",
+      "source_sha256": "b1e60dfc8875a38f17afec67fee18adafd52a1b2905b9552e878fb58bc300624",
+      "bytes": 1327
+    },
+    "neonrest/templates/media_settings.html": {
+      "sha256": "61f270a8e48320ee662f083b2b1346e3bf4ca98baa34d6795132b3aaa97fe77c",
+      "source_sha256": "61f270a8e48320ee662f083b2b1346e3bf4ca98baa34d6795132b3aaa97fe77c",
+      "bytes": 2963
+    },
+    "neonrest/templates/midi_player.html": {
+      "sha256": "66c440679925e7f1ae386d3fdf578b40d41a1c75ddbb3c33a8a9fdac7646322f",
+      "source_sha256": "66c440679925e7f1ae386d3fdf578b40d41a1c75ddbb3c33a8a9fdac7646322f",
+      "bytes": 604
+    },
+    "neonrest/templates/partials/account_navigation.html": {
+      "sha256": "0334337121b2f9208fb55b7b218a346eed85174a2b7b586b8aee107a6c9e4ef6",
+      "source_sha256": "0334337121b2f9208fb55b7b218a346eed85174a2b7b586b8aee107a6c9e4ef6",
+      "bytes": 1086
+    },
+    "neonrest/templates/partials/friend_buttons.html": {
+      "sha256": "468830b8061b3add7a8ece237a068e94cd4f7b1371c269c793f2f991b7512ded",
+      "source_sha256": "468830b8061b3add7a8ece237a068e94cd4f7b1371c269c793f2f991b7512ded",
+      "bytes": 1609
+    },
+    "neonrest/templates/partials/management_identity.html": {
+      "sha256": "47455a3c457c13681830ff2a84a3b73db8b02722a1567e69e06126034421e1f6",
+      "source_sha256": "47455a3c457c13681830ff2a84a3b73db8b02722a1567e69e06126034421e1f6",
+      "bytes": 343
+    },
+    "neonrest/templates/partials/posts.html": {
+      "sha256": "88402ef151f4e0f436a9f8d0f5b7e3bd21788cf5e7c41a33640e2f4405d83144",
+      "source_sha256": "88402ef151f4e0f436a9f8d0f5b7e3bd21788cf5e7c41a33640e2f4405d83144",
+      "bytes": 11135
+    },
+    "neonrest/templates/pending_vibes.html": {
+      "sha256": "c8d7d10968abf867d3c1419fea27f8421d6938af0147588c0992eb1cc8507b90",
+      "source_sha256": "c8d7d10968abf867d3c1419fea27f8421d6938af0147588c0992eb1cc8507b90",
+      "bytes": 909
+    },
+    "neonrest/templates/post_edit_history.html": {
+      "sha256": "4560c0568707094aa6865df17424fdb44a638e9dccbcbabd6dd6fe5464e785e0",
+      "source_sha256": "4560c0568707094aa6865df17424fdb44a638e9dccbcbabd6dd6fe5464e785e0",
+      "bytes": 1008
+    },
+    "neonrest/templates/post_media.html": {
+      "sha256": "0094ed1c401f8dcf236db13c13db50f9724854a72f583e4ca052c36d25ae52e8",
+      "source_sha256": "0094ed1c401f8dcf236db13c13db50f9724854a72f583e4ca052c36d25ae52e8",
+      "bytes": 1642
+    },
+    "neonrest/templates/post_pagination.html": {
+      "sha256": "b8445fdaa897bc42773a554fa2e406cae772811424e64c964149dc26f1680be4",
+      "source_sha256": "b8445fdaa897bc42773a554fa2e406cae772811424e64c964149dc26f1680be4",
+      "bytes": 837
+    },
+    "neonrest/templates/privacy.html": {
+      "sha256": "56de74927dac147a5d9ba90bd85e82a240d66fadbc8b82e493e15afa86626fb9",
+      "source_sha256": "56de74927dac147a5d9ba90bd85e82a240d66fadbc8b82e493e15afa86626fb9",
+      "bytes": 21622
+    },
+    "neonrest/templates/signup.html": {
+      "sha256": "35f84bf93f9ce818b2d3b797e4b91a1ff60c6858628db46c53ddceeee5abec1b",
+      "source_sha256": "35f84bf93f9ce818b2d3b797e4b91a1ff60c6858628db46c53ddceeee5abec1b",
+      "bytes": 6772
+    },
+    "neonrest/templates/staff_profile.html": {
+      "sha256": "5ba02c51bdb4752fe9dbd6a85d1548d1b36a065a0e352779e0dbde7df7937308",
+      "source_sha256": "5ba02c51bdb4752fe9dbd6a85d1548d1b36a065a0e352779e0dbde7df7937308",
+      "bytes": 664
+    },
+    "neonrest/templates/terms.html": {
+      "sha256": "c564d66009d44bd53f981ea2c97f4f1a640a62cc51470655cc94097dbe1d1ebd",
+      "source_sha256": "c564d66009d44bd53f981ea2c97f4f1a640a62cc51470655cc94097dbe1d1ebd",
+      "bytes": 17330
+    },
+    "neonrest/templates/theme-preview.html": {
+      "sha256": "bac4b1b81ee18ac036ba3e752149467b7240a31d12f05b75dafd47bc7eaed38c",
+      "source_sha256": "bac4b1b81ee18ac036ba3e752149467b7240a31d12f05b75dafd47bc7eaed38c",
+      "bytes": 717
+    },
+    "neonrest/templates/unavailable.html": {
+      "sha256": "6c8c74cedda687e59c5e34da49a3e2c221fe171f37455599fa3539ec11b0c6e1",
+      "source_sha256": "6c8c74cedda687e59c5e34da49a3e2c221fe171f37455599fa3539ec11b0c6e1",
+      "bytes": 1163
+    },
+    "neonrest/templates/upload_error.html": {
+      "sha256": "95669201fa3aed0b11667c457f2d4362c62fb035cec968ae5cc11783aef1c7d4",
+      "source_sha256": "95669201fa3aed0b11667c457f2d4362c62fb035cec968ae5cc11783aef1c7d4",
+      "bytes": 422
+    },
+    "neonrest/templates/user.html": {
+      "sha256": "5fe055bdec99832b5a749fd9a67d86fc0adfd2f842fa8c4f130aae97b05e07eb",
+      "source_sha256": "5fe055bdec99832b5a749fd9a67d86fc0adfd2f842fa8c4f130aae97b05e07eb",
+      "bytes": 4406
+    },
+    "neonrest/templates/user_test-0131a042425.html": {
+      "sha256": "d6da9f377de077bed23c84ee4b8a655d90064d32563f6aec93b54dced5685114",
+      "source_sha256": "d6da9f377de077bed23c84ee4b8a655d90064d32563f6aec93b54dced5685114",
+      "bytes": 8663
+    },
+    "neonrest/templates/user_test.html": {
+      "sha256": "cfbf32153874ea9a92ebacb86815223d66ab8cee69e254148a54c6aef413694c",
+      "source_sha256": "cfbf32153874ea9a92ebacb86815223d66ab8cee69e254148a54c6aef413694c",
+      "bytes": 22040
+    },
+    "neonrest/templates/vibe.html": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "neonrest/templates/vibe_page.html": {
+      "sha256": "10333986d459651f897b961ad6f31a6ce808d08806e17ad351513b72d3420420",
+      "source_sha256": "10333986d459651f897b961ad6f31a6ce808d08806e17ad351513b72d3420420",
+      "bytes": 13213
+    },
+    "neonrest/templates/vibe_pending.html": {
+      "sha256": "75c31270187ee0eb833794447ea1869f4fb2de508e7d6921fe743983c85d4120",
+      "source_sha256": "75c31270187ee0eb833794447ea1869f4fb2de508e7d6921fe743983c85d4120",
+      "bytes": 881
+    },
+    "neonrest/templates/workflow_form.html": {
+      "sha256": "2bf6609e86b742f537bcdc34dabad0b9f77505314700d8517e258700699ef349",
+      "source_sha256": "2bf6609e86b742f537bcdc34dabad0b9f77505314700d8517e258700699ef349",
+      "bytes": 561
+    },
+    "neonrest/templates/workflow_list.html": {
+      "sha256": "c06d01412cf28334df08f7e1ca38fc5ff3505bde771727c44c0ccc6ecb620cb5",
+      "source_sha256": "c06d01412cf28334df08f7e1ca38fc5ff3505bde771727c44c0ccc6ecb620cb5",
+      "bytes": 1634
+    },
+    "neonrest/templates/workflow_queue.html": {
+      "sha256": "9d7109cc6e035404b9d0677f98ec7ff5863fbaca65e41b1ce1a84926bd59ea9a",
+      "source_sha256": "9d7109cc6e035404b9d0677f98ec7ff5863fbaca65e41b1ce1a84926bd59ea9a",
+      "bytes": 2629
+    },
+    "neonrest/templates/workflow_style.html": {
+      "sha256": "be5ad21b4c79dbfe8d965f27ec9d465744990fcba6c2f5c27ced706c369170dd",
+      "source_sha256": "be5ad21b4c79dbfe8d965f27ec9d465744990fcba6c2f5c27ced706c369170dd",
+      "bytes": 757
+    },
+    "neonrest/static/bg-cassette-fuzz.png": {
+      "sha256": "dcb3704d35b6354282fb2f5fa0df109fa42f483c9f051889c4fbf2ddcca4ae67",
+      "source_sha256": "dcb3704d35b6354282fb2f5fa0df109fa42f483c9f051889c4fbf2ddcca4ae67",
+      "bytes": 2641787
+    },
+    "neonrest/static/bg-freshstart-paper.png": {
+      "sha256": "4ea3d8456027f173147e8ea08889c5e6037faf0248d7f62a11f17992df723097",
+      "source_sha256": "4ea3d8456027f173147e8ea08889c5e6037faf0248d7f62a11f17992df723097",
+      "bytes": 3486805
+    },
+    "neonrest/static/css/image_viewer.css": {
+      "sha256": "8fa050f0d9569836721cb4309ee3505a16e6f7f814a65cc2853ac3ab4d3398cd",
+      "source_sha256": "8fa050f0d9569836721cb4309ee3505a16e6f7f814a65cc2853ac3ab4d3398cd",
+      "bytes": 1647
+    },
+    "neonrest/static/css/media.css": {
+      "sha256": "9f5154a98f83d775fbe0acb68a0bea696bdda0d0b5ae4df5c9637611a160adc7",
+      "source_sha256": "9f5154a98f83d775fbe0acb68a0bea696bdda0d0b5ae4df5c9637611a160adc7",
+      "bytes": 7867
+    },
+    "neonrest/static/css/mobile.css": {
+      "sha256": "b3f10891b0ffa82fe712c128abbb445e0a66bba77dcfcbfdb54a305095793cc7",
+      "source_sha256": "b3f10891b0ffa82fe712c128abbb445e0a66bba77dcfcbfdb54a305095793cc7",
+      "bytes": 3852
+    },
+    "neonrest/static/css/new_post.css": {
+      "sha256": "0d4905dd8296765683ebf140e71248d141f48daae8e32778b89df2609417373b",
+      "source_sha256": "0d4905dd8296765683ebf140e71248d141f48daae8e32778b89df2609417373b",
+      "bytes": 2617
+    },
+    "neonrest/static/default-avatar.png": {
+      "sha256": "3f320b58ffd04069111896f4668db03801e05758080862c0f100529a111b12f9",
+      "source_sha256": "3f320b58ffd04069111896f4668db03801e05758080862c0f100529a111b12f9",
+      "bytes": 2722034
+    },
+    "neonrest/static/favicon.ico": {
+      "sha256": "7cf47e84f36d50f2382bc69025e7c0ecc63a13fdef292263d1edb58290444107",
+      "source_sha256": "7cf47e84f36d50f2382bc69025e7c0ecc63a13fdef292263d1edb58290444107",
+      "bytes": 15406
+    },
+    "neonrest/static/fresh-starts-logo-day.png": {
+      "sha256": "5481ec09bdbae5a77613d3af6d83f4e1716c450a14f4ec99720e3536f6328ec4",
+      "source_sha256": "5481ec09bdbae5a77613d3af6d83f4e1716c450a14f4ec99720e3536f6328ec4",
+      "bytes": 450616
+    },
+    "neonrest/static/grain.png": {
+      "sha256": "5b403acea20877bff865ac95739f21ce3d1e631489c15f6e4347a610c49b0974",
+      "source_sha256": "5b403acea20877bff865ac95739f21ce3d1e631489c15f6e4347a610c49b0974",
+      "bytes": 2710755
+    },
+    "neonrest/static/img/underconstruction.gif": {
+      "sha256": "c970f64ff77967c257318070798c4859ce862aa4bbe308c964d6ee76e8e24537",
+      "source_sha256": "c970f64ff77967c257318070798c4859ce862aa4bbe308c964d6ee76e8e24537",
+      "bytes": 62686
+    },
+    "neonrest/static/js/image_upload.js": {
+      "sha256": "474436cc8bb336ccdc32aa783e98dfc792f2a08b249c27b0395dc236d28f8722",
+      "source_sha256": "474436cc8bb336ccdc32aa783e98dfc792f2a08b249c27b0395dc236d28f8722",
+      "bytes": 4834
+    },
+    "neonrest/static/js/image_viewer.js": {
+      "sha256": "89a258bcf1ad5d1d7bf0c21bc66864409c5637ea920d14cd6e029854d0b5fb55",
+      "source_sha256": "89a258bcf1ad5d1d7bf0c21bc66864409c5637ea920d14cd6e029854d0b5fb55",
+      "bytes": 2995
+    },
+    "neonrest/static/js/media.js": {
+      "sha256": "a03aa180f037b987b7100c850040d087e8cf31c311738c00c4a1bcdb520194fa",
+      "source_sha256": "a03aa180f037b987b7100c850040d087e8cf31c311738c00c4a1bcdb520194fa",
+      "bytes": 9701
+    },
+    "neonrest/static/logo.png": {
+      "sha256": "1023779836a041976b5898ee3b57477b6679b5681b3cfca351151ebee4beb0d0",
+      "source_sha256": "1023779836a041976b5898ee3b57477b6679b5681b3cfca351151ebee4beb0d0",
+      "bytes": 1584952
+    },
+    "neonrest/static/post_overrides.css": {
+      "sha256": "b5548e7463e65286990b646b15dc3f3f54fa1707990e7b470b500cfc9a26523d",
+      "source_sha256": "b5548e7463e65286990b646b15dc3f3f54fa1707990e7b470b500cfc9a26523d",
+      "bytes": 6353
+    },
+    "neonrest/static/profile_default.css": {
+      "sha256": "b6e0e36ff0c3e56837fb7bebfc870fc3cea30c31fd4f68a8f319a2ff21aa62f0",
+      "source_sha256": "b6e0e36ff0c3e56837fb7bebfc870fc3cea30c31fd4f68a8f319a2ff21aa62f0",
+      "bytes": 11332
+    },
+    "neonrest/static/sprites/emoji_rings.png": {
+      "sha256": "87ec95b84e289a8e4cab8a292b1a96647172317e37980818070edc3a4f90ffb8",
+      "source_sha256": "87ec95b84e289a8e4cab8a292b1a96647172317e37980818070edc3a4f90ffb8",
+      "bytes": 33781
+    },
+    "neonrest/static/style.css": {
+      "sha256": "643458dc711dfdcf03d331620c1529325a18612d54d5eac21b9480ee1506a496",
+      "source_sha256": "643458dc711dfdcf03d331620c1529325a18612d54d5eac21b9480ee1506a496",
+      "bytes": 39227
+    },
+    "neonrest/static/vibe_logos/analog-logo-20261005.png": {
+      "sha256": "e988dd970e09e423e4795242233e6c00811706ab04989c94c177eda73693cd41",
+      "source_sha256": "e988dd970e09e423e4795242233e6c00811706ab04989c94c177eda73693cd41",
+      "bytes": 1891749
+    },
+    "neonrest/static/vibe_logos/backporch-logo-20261005.png": {
+      "sha256": "4d84558233e47b97edb75f662ed58d9caef3b83b2caeccdc792aaa5b5e5e1fd1",
+      "source_sha256": "4d84558233e47b97edb75f662ed58d9caef3b83b2caeccdc792aaa5b5e5e1fd1",
+      "bytes": 1502730
+    },
+    "neonrest/static/vibe_logos/changelog-logo-20261005.png": {
+      "sha256": "b41209f6c90770f159e7389640de3cbe8350149e4064d7d167f0e0f58ee3bb9d",
+      "source_sha256": "b41209f6c90770f159e7389640de3cbe8350149e4064d7d167f0e0f58ee3bb9d",
+      "bytes": 1106330
+    },
+    "neonrest/static/vibe_logos/couchcore-logo-20261005.png": {
+      "sha256": "406f755708b1c9b0182229f27a4bed3e1c86f4d3371480e08fbbd20d30a26b72",
+      "source_sha256": "406f755708b1c9b0182229f27a4bed3e1c86f4d3371480e08fbbd20d30a26b72",
+      "bytes": 1734989
+    },
+    "neonrest/static/vibe_logos/driftroom-logo-20261005.png": {
+      "sha256": "6478a92b1cc82182ed4c592d4a0562f38136a62e4010e57790e8e78e5b0bfdcf",
+      "source_sha256": "6478a92b1cc82182ed4c592d4a0562f38136a62e4010e57790e8e78e5b0bfdcf",
+      "bytes": 1719632
+    },
+    "neonrest/static/vibe_logos/fresh-starts-logo-20261005.png": {
+      "sha256": "a14a4bb2442ab0e92a7809e795572b0401858989910e585b83876fe2363ad8ef",
+      "source_sha256": "a14a4bb2442ab0e92a7809e795572b0401858989910e585b83876fe2363ad8ef",
+      "bytes": 1785088
+    },
+    "neonrest/static/vibe_logos/melancholy-logo-20261005.png": {
+      "sha256": "aec7402a780bc3cf5a180fe3b7a58dff8be6489a0aeb2662e51b1c831e262ea6",
+      "source_sha256": "aec7402a780bc3cf5a180fe3b7a58dff8be6489a0aeb2662e51b1c831e262ea6",
+      "bytes": 2106863
+    },
+    "neonrest/static/vibe_logos/nostalgia-logo-20261005.png": {
+      "sha256": "ae6ba42695e1f28541208ac08a88219309187b80c2c23b15142489515ac8e9d4",
+      "source_sha256": "ae6ba42695e1f28541208ac08a88219309187b80c2c23b15142489515ac8e9d4",
+      "bytes": 2035254
+    },
+    "neonrest/static/vibes/vibe_analog.css": {
+      "sha256": "e81fdbc288ff72e118489a2b1b63f2b2244cc9eca830fb9630e51a5f548526c3",
+      "source_sha256": "e81fdbc288ff72e118489a2b1b63f2b2244cc9eca830fb9630e51a5f548526c3",
+      "bytes": 135
+    },
+    "neonrest/static/vibes/vibe_backporch.css": {
+      "sha256": "006934db20c14d2080f8e6f7852b67c53b69cb57ea66fac76abca21e0650a96c",
+      "source_sha256": "006934db20c14d2080f8e6f7852b67c53b69cb57ea66fac76abca21e0650a96c",
+      "bytes": 719
+    },
+    "neonrest/static/vibes/vibe_base.css": {
+      "sha256": "e6b09d8df6bc17a683584b60a8c2551ad7232725a97af1f8dced50f7bca4d4e9",
+      "source_sha256": "e6b09d8df6bc17a683584b60a8c2551ad7232725a97af1f8dced50f7bca4d4e9",
+      "bytes": 2302
+    },
+    "neonrest/static/vibes/vibe_driftroom.css": {
+      "sha256": "c598f792647823b08109ce0e9b8157d99075446fb64fd019cbb51b0ef45d513b",
+      "source_sha256": "c598f792647823b08109ce0e9b8157d99075446fb64fd019cbb51b0ef45d513b",
+      "bytes": 141
+    },
+    "neonrest/static/vibes/vibe_fresh-starts.css": {
+      "sha256": "3927fd66f8f2bc49adbb3b16168311662e943585910c63525cd7a1cf23653465",
+      "source_sha256": "3927fd66f8f2bc49adbb3b16168311662e943585910c63525cd7a1cf23653465",
+      "bytes": 1914
+    }
+  }
+}

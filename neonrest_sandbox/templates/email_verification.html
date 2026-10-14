@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+<style>.recovery-panel .blue-btn{display:inline-block;background:#315d87;color:#fff;border:1px solid #5d87aa;padding:.65rem 1rem;border-radius:7px;text-decoration:none;font:inherit;cursor:pointer}.recovery-panel .blue-btn:hover{background:#4278a5}.recovery-panel input[type=email]{background:#171a22;color:#f2f0f5;border:1px solid #8c8298;border-radius:7px;padding:.75rem;font:inherit}.recovery-panel .blue-btn:focus-visible,.recovery-panel input:focus-visible{outline:2px solid #ffbea9;outline-offset:3px}</style>
+<section class="recovery-panel" style="max-width:600px;margin:3rem auto;padding:2rem;background:#20232c;color:#f2f0f5;border:1px solid #776378;border-radius:14px;line-height:1.6;">
+{% if state == 'success' %}<h2>Email verified</h2><p>You can now sign in to Neonrest.</p>
+{% elif state == 'invalid' %}<h2>Verification link unavailable</h2><p>This link has expired, was already used, or was replaced by a newer link. Request a new verification email below.</p>
+{% elif state == 'reset_invalid' %}<h2>Reset link unavailable</h2><p>This link has expired, was already used, or was replaced by a newer link.</p><p><a class="blue-btn" href="{{ url_for('password_reset_request') }}">Request a new reset link</a></p>
+{% else %}<h2>Verify your email</h2><p>Request a new verification email if your link expired or never arrived. Check your spam folder too.</p>{% endif %}
+{% if state in ['request','invalid'] %}<form method="post" action="{{ url_for('verification_request') }}"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}"><label for="verification-email">Account email</label><input id="verification-email" name="email" type="email" autocomplete="email" maxlength="254" required style="display:block;width:100%;box-sizing:border-box;margin:.5rem 0 1rem;"><button class="blue-btn" type="submit">Request verification email</button></form><p>Links expire in one hour. Please wait a minute between requests. If delivery fails, a previously received link stays usable. A successfully sent replacement cancels older links.</p>{% endif %}
+<p><a class="blue-btn" href="{{ url_for('login') }}">Back to sign in</a></p></section>
+{% endblock %}

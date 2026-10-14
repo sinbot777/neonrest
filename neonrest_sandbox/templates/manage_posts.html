@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block title %}Moderate posts - Neonrest{% endblock %}
+{% block content %}
+<div class="management-page">
+  <a href="{{ url_for('manage_home') }}">← Management</a><h1>Posts</h1>
+  <p class="manage-note">Search all posts by ID, handle, or text; results show up to 50. Hiding removes a post from the feed, profiles, and Vibes; restoring makes it visible again. Every change is recorded.</p>
+  <form class="manage-search" method="get"><input type="search" name="q" value="{{ query }}" maxlength="80" placeholder="Post ID, handle, or text" aria-label="Find a post"><button type="submit">Search</button></form>
+  <div class="manage-list">
+    {% for post in posts %}<article class="manage-item">
+      <h2>Post #{{ post.id }} by <a href="{{ url_for('user_by_handle', handle=post.handle.lstrip('@')) }}">@{{ post.handle.lstrip('@') }}</a></h2>
+      <p class="manage-note">{{ post.created_at }}{% if post.hidden %} · Hidden: {{ post.reason }}{% endif %}</p>
+      <p>{{ post.content[:300] }}{% if post.content|length > 300 %}…{% endif %}</p>
+      {% if post.user_id == 1 or post.author_staff %}<p class="manage-note">Staff post: moderation controls are unavailable here.</p>
+      {% else %}<form method="post" action="{{ url_for('moderate_post', post_id=post.id) }}"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
+        <input type="hidden" name="theme_csrf_token" value="{{ management_token }}">
+        <input type="hidden" name="action" value="{{ 'restore' if post.hidden else 'hide' }}">
+        <label>Reason<input name="reason" maxlength="500" required placeholder="Brief reason"></label>
+        <button type="submit">{{ 'Restore post' if post.hidden else 'Hide post' }}</button>
+      </form>{% endif %}
+    </article>{% else %}<p>No posts found.</p>{% endfor %}
+  </div>
+</div>
+<style>
+.management-page{max-width:1050px;margin:2rem auto;padding:clamp(1.2rem,3vw,2.2rem);background:#171d2b;color:#f5f0e8;border:1px solid #526071;border-radius:22px}
+.management-page a{color:#aee4d8}.management-page a:focus-visible,.management-page button:focus-visible{outline:3px solid #ffd68a;outline-offset:3px}
+.manage-list{display:grid;gap:1rem}.manage-item{padding:1rem;border:1px solid #526071;border-radius:14px;background:#242e3e;overflow-wrap:anywhere}
+.manage-item h2{margin:.1rem 0}.manage-item p{margin:.5rem 0}.manage-item form{display:flex;flex-wrap:wrap;align-items:end;gap:.55rem;margin-top:.8rem}
+.manage-item label{display:grid;gap:.25rem;font-size:.9rem}.manage-item input,.manage-item select,.management-page .manage-search input{box-sizing:border-box;max-width:100%;padding:.5rem;border:1px solid #7990a0;border-radius:7px;background:#111b2a;color:#fff;font:inherit}
+.manage-item input[name=reason]{min-width:min(100%,210px)}.manage-item button,.manage-search button{padding:.5rem .8rem;border:1px solid #aee4d8;border-radius:7px;background:#17433f;color:#fff;cursor:pointer;font:inherit}
+.manage-search{display:flex;flex-wrap:wrap;gap:.5rem;margin:1rem 0}.manage-note{color:#d7dfeb;font-size:.9rem}
+</style>
+{% endblock %}

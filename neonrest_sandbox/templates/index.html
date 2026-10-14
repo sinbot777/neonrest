@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block title %}Welcome to Neonrest{% endblock %}
+{% block content %}
+  <div class="glow">Welcome to Neonrest</div>
+  <div class="subtext">
+    A social network built for closeness — not chaos.<br>
+    Chill spaces, creative drops, and real-life connections.
+  </div>
+
+  <div class="buttons">
+    <a class="button" href="/sandbox/explore">Explore Vibes</a>
+    {% if session.get('user_email') %}
+      <a class="button" href="/sandbox/logout">Log out</a>
+    {% else %}
+      <a class="button" href="/sandbox/login">Sign Up / Log In</a>
+    {% endif %}
+    <a class="button" href="/sandbox/about">About</a>
+  </div>
+  <div class="under-construction">
+  <a href="{{ url_for('dev_summary') }}">
+    <img src="{{ url_for('static', filename='img/underconstruction.gif') }}" alt="Under Construction">
+  </a>
+</div>
+
+{% endblock %}

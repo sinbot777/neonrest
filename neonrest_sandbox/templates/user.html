@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+{% block title %}{{ user.handle }} - Neonrest{% endblock %}
+
+{% block content %}
+  <div class="user-page">
+    <div class="user-header">
+      <div class="glow large">{{ user.handle }}</div>
+{% if viewer_id == user['id'] and can_access_manage() %}<a class="manage-profile-link" href="{{ url_for('manage_home') }}">Management</a>{% endif %}
+<div class="identity-details">
+  <p class="nuid-badge">
+    {% if session.get('user_id') == user['id'] %}
+      Your NUID: #{{ '%03d' | format(user['id']) }}
+    {% else %}
+      NUID: #{{ '%03d' | format(user['id']) }}
+    {% endif %}
+  </p>
+    <p class="join-date">Joined: {{ user['created_at'] | datetimeformat("long") }}</p>
+  {% if user['codename'] %}
+    <p class="codename-badge">“{{ user['codename'] }}”</p>
+  {% endif %}
+</div>
+
+    </div>
+
+    <div class="user-section">
+      <h2>
+        Bio
+        {% if session.get('user_id') == user['id'] %}
+          <a href="#" class="bio-edit" id="edit-bio-link">(edit)</a>
+        {% endif %}
+      </h2>
+
+      {% if session.get('user_id') == user['id'] %}
+        <form id="edit-bio-form" method="POST" action="/sandbox/update_bio" style="display: none;"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
+          <textarea name="bio" rows="4" cols="50">{{ user.bio or '' }}</textarea>
+          <br>
+          <button type="submit">Save</button>
+        </form>
+      {% endif %}
+
+      <p id="bio-text">{{ user.bio or "This user hasn’t written a bio yet." }}</p>
+    </div>
+
+    {% if session.get('user_id') == user['id'] %}
+      <div class="user-section">
+        <button class="post-action" id="toggle-post-form">New Post</button>
+
+        <form id="inline-post-form" method="POST" action="/sandbox/create_post" style="display: none; margin-top: 1rem;"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
+          <textarea name="content" class="post-textarea" rows="4" placeholder="What's on your mind?" required></textarea><br>
+          <input type="text" name="vibes" class="glow-input" maxlength="100" placeholder="Vibes"><br>
+          <input type="text" name="circle" class="glow-input" maxlength="100" placeholder="Circle"><br>
+          <button type="submit" class="post-action update-post">Post</button>
+        </form>
+      </div>
+    {% endif %}
+
+    <div class="user-section">
+  <h2>Recent Posts</h2>
+  {% if posts %}
+    {% for post in posts %}
+      {% set vibe_list = (post['vibes'] or '').split(',') %}
+      <div class="post-preview">
+        <p>
+          {% if session.get('user_id') == post['user_id'] %}
+            <a href="/sandbox/edit_post/{{ post['id'] }}" class="edit-link">(edit)</a>
+          {% endif %}
+        </p>
+        <p>
+          <strong>Vibes:</strong>
+          {% if vibe_list and vibe_list[0] %}
+            {% for vibe in vibe_list %}
+              <a href="/sandbox/vibe/{{ vibe.strip() | urlencode }}">
+                <span class="vibe-pill">{{ vibe.strip() }}</span>
+              </a>
+            {% endfor %}
+          {% else %}
+            <span class="vibe-pill">—</span>
+          {% endif %}
+          | <strong>Circle:</strong> {{ post['circle'] or '—' }}
+        </p>
+        <div class="post-content">{{ post['html_content'] | safe }}</div>
+        <p class="timestamp">Posted on {{ post['created_at'] }}</p>
+        <hr>
+      </div>
+    {% endfor %}
+  {% else %}
+    <p>No posts yet.</p>
+  {% endif %}
+</div>
+
+  </div>
+
+  {% if session.user_id == user.id %}
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const bioLink = document.getElementById('edit-bio-link');
+      const bioForm = document.getElementById('edit-bio-form');
+      const bioText = document.getElementById('bio-text');
+
+      if (bioLink && bioForm && bioText) {
+        bioLink.addEventListener('click', function (e) {
+          e.preventDefault();
+          bioForm.style.display = 'block';
+          bioText.style.display = 'none';
+        });
+      }
+
+      const togglePostBtn = document.getElementById('toggle-post-form');
+      const inlinePostForm = document.getElementById('inline-post-form');
+
+      if (togglePostBtn && inlinePostForm) {
+        togglePostBtn.addEventListener('click', function () {
+          inlinePostForm.style.display = inlinePostForm.style.display === 'none' ? 'block' : 'none';
+        });
+      }
+    });
+  </script>
+  {% endif %}
+{% endblock %}

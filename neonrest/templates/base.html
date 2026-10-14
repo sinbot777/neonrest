@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Neonrest{% endblock %}</title>
+
+<!-- font stack -->
+{% set fallback_font = "Roboto" %}
+{% if font_stack %}
+  {% set font_main = font_stack.split(',')[0].strip(" '\"") %}
+  <link href="https://fonts.googleapis.com/css2?family={{ font_main | replace(' ', '+') }}&display=swap" rel="stylesheet">
+{% else %}
+  <link href="https://fonts.googleapis.com/css2?family={{ fallback_font | replace(' ', '+') }}&display=swap" rel="stylesheet">
+{% endif %}
+
+  <!-- Main CSS -->
+  {% if not skip_static_css %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  {% endif %}
+
+  <!-- Fallback for font stack outside scoped themes -->
+  {% if font_stack %}
+    <style>
+      body {
+        font-family: {{ font_stack | safe }};
+      }
+    </style>
+  {% endif %}
+
+<link rel="stylesheet" href="{{ url_for('static', filename='post_overrides.css') }}">
+{% if vibe_slug and vibe_slug != 'fresh-starts' %}
+<link rel="stylesheet" href="{{ url_for('static', filename='vibes/vibe_base.css') }}">
+{% if vibe_css %}<link rel="stylesheet" href="{{ url_for('static', filename=vibe_css) }}">{% endif %}
+{% endif %}
+
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/media.css') }}">
+<style>
+body > #footer-tagline { box-sizing: border-box; max-width: 100%; }
+  .session-info .notifications-link { display: inline-flex; align-items: center; gap: .2rem; vertical-align: middle; text-decoration: none; min-width: 36px; min-height: 36px; justify-content: center; }
+.notifications-link .mailbox-icon { display: block; flex-shrink: 0; }
+.notifications-link .notification-count { font-size: .75rem; font-weight: 700; border: 1px solid currentColor; border-radius: 999px; padding: .1rem .35rem; line-height: 1.2; }
+.session-info .notifications-link:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; border-radius: 4px; }
+</style>
+</head>
+
+<body id="theme-root"
+      class="{% block body_class %}{% if theme_slug %}vibe-{{ vibe_slug }} vibe-{{ vibe_slug }}--{{ theme_mode or 'base' }} theme-{{ theme_slug }}{% else %}default-theme{% endif %}{% endblock %}"
+      data-mode="{{ theme_mode or 'base' }}">
+
+  {% if request.path != '/' %}
+    {% if session.get('user_email') %}
+      <div class="session-info">
+        <a href="/account" class="account-link">{{ session['user_email'] }}</a> |
+        <a href="{{ url_for('community_notifications') }}" class="account-link notifications-link" aria-label="Notifications{% if community_unread %}, {{ community_unread }} unread{% endif %}" title="Notifications{% if community_unread %} ({{ community_unread }} unread){% endif %}"><svg class="mailbox-icon" viewBox="0 0 28 28" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 20V12a5 5 0 0 1 10 0v8H4Zm5-13h11a5 5 0 0 1 5 5v8H14M8 13h2M17 10V3h6v4h-6M14 20v6M10 26h8" /></svg>{% if community_unread %}<span class="notification-count" aria-hidden="true">{{ community_unread }}</span>{% endif %}</a> | <a href="/logout" class="logout-link">Log out</a>
+      </div>
+    {% else %}
+      <a class="button" href="/login">Log In</a>
+    {% endif %}
+  {% endif %}
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flash-container">
+        {% for category, message in messages %}
+          <div class="flash flash-{{ category }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+<!-- Add this just before <div id="main-content"> -->
+<div id="site-logo">
+  <a href="/">
+    <img src="{{ url_for('static', filename='logo.png') }}" alt="Neonrest Logo" class="site-logo-img">
+  </a>
+</div>
+
+  <div id="main-content">
+    {% block content %}{% endblock %}
+  </div>
+
+
+  <!-- Keep Fresh Starts' existing database CSS path intact. -->
+{% if vibe_slug == 'fresh-starts' and theme_mode in ['day', 'night'] %}
+  <style>
+    #site-logo { position: absolute; top: 1rem; left: 1rem; z-index: 1000; }
+    .site-logo-img { height: clamp(64px, 9vw, 120px); width: auto; }
+    body.vibe-fresh-starts--{{ theme_mode }} {
+      --bg_color: {{ bg_color }};
+      --text_color: {{ text_color }};
+      --glow_color: {{ glow_color }};
+      background-color: {{ bg_color }};
+      color: {{ text_color }};
+      {{ custom_css | safe }}
+    }
+    {% if font_stack %}
+    body.vibe-fresh-starts--{{ theme_mode }},
+    body.vibe-fresh-starts--{{ theme_mode }} * {
+      font-family: {{ font_stack | safe }} !important;
+    }
+    {% endif %}
+  </style>
+{% else %}
+  <!-- The per-Vibe file sets defaults; saved editor values override that mode. -->
+{% if custom_css %}
+  <style>
+    {% if '{' in custom_css %}
+      {{ custom_css | safe }}
+    {% else %}
+      body.vibe-{{ vibe_slug }}--{{ theme_mode }}[data-mode="{{ theme_mode }}"] { {{ custom_css | safe }} }
+    {% endif %}
+  </style>
+{% endif %}
+{% if theme_slug and theme_mode in ['day', 'night'] %}
+  <style>
+    body.vibe-{{ vibe_slug }}--{{ theme_mode }}[data-mode="{{ theme_mode }}"] {
+      {% if bg_color %}--bg_color: {{ bg_color }}; background-color: {{ bg_color }};{% endif %}
+      {% if text_color %}--text_color: {{ text_color }}; color: {{ text_color }};{% endif %}
+      {% if glow_color %}--glow_color: {{ glow_color }};{% endif %}
+      {% if background_layers %}background-image: {{ background_layers | safe }};{% endif %}
+      {% if blend_mode %}background-blend-mode: {{ blend_mode }};{% endif %}
+      {% if font_stack %}font-family: {{ font_stack | safe }};{% endif %}
+      {% if extra_css %}{{ extra_css | safe }}{% endif %}
+    }
+  </style>
+{% endif %}
+{% endif %}
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile.css') }}">
+  <footer id="footer-tagline">✨ Stay human, stay weird ✨</footer>
+
+  <!-- Tagline Rotator -->
+  <script>
+    const taglines = [
+      "✨ Stay human, stay weird ✨",
+      "🎵 Mixtapes not metrics",
+      "🛋️ Come vibe with us",
+      "📼 Rewind your feed",
+      "💬 Honest posts, real people",
+      "💀 I want to get off Mr. Bones's Wild Ride!",
+      "🗺 ️Splicing Reticulations 🦙.",
+      "This machine kills fascists"
+    ];
+    const footer = document.getElementById("footer-tagline");
+    if (footer) {
+      let index = 0;
+      setInterval(() => {
+        index = (index + 1) % taglines.length;
+        footer.textContent = taglines[index];
+      }, 4000);
+    }
+  </script>
+
+  <!-- Flash Auto-Hide -->
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      const flashBox = document.querySelector('.flash-container');
+      if (flashBox) {
+        setTimeout(() => {
+          flashBox.style.transition = "opacity 1s ease-out";
+          flashBox.style.opacity = 0;
+          setTimeout(() => flashBox.remove(), 1000);
+        }, 3000);
+      }
+    });
+  </script>
+<div class="footer-version">Version 0.7.4e</div>
+<style>
+  .footer-version {
+    text-align: center;
+    font-size: 0.8rem;
+    color: #888;
+    padding: 1rem;
+  }
+</style>
+
+<script>window.NEON_MEDIA_PREFS = {{ media_preferences() | tojson }};</script>
+<script defer src="{{ url_for('static', filename='js/media.js') }}?v=20261008-pause"></script>
+<script type="module" src="{{ url_for('static', filename='js/image_upload.js') }}"></script>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/image_viewer.css') }}">
+<script defer src="{{ url_for('static', filename='js/image_viewer.js') }}"></script>
+</body>
+</html>

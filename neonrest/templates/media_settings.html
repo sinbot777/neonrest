@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<main class="user-page media-settings-page">
+  {% include 'partials/account_navigation.html' %}
+  <h1>Media playback</h1>
+  <p>Set how music and animated GIFs behave throughout Neonrest. Every post still has its own controls.</p>
+  <form method="post" enctype="multipart/form-data" action="{{ url_for('media_settings') }}"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <section class="user-section">
+      <h2>Sound</h2>
+      <label for="midi_autoplay">MIDI autoplay</label>
+      <select id="midi_autoplay" name="midi_autoplay" class="glow-input">
+        <option value="0" {% if not prefs.midi_autoplay %}selected{% endif %}>Off — play when I click</option>
+        <option value="1" {% if prefs.midi_autoplay %}selected{% endif %}>On — play when a MIDI post comes into view</option>
+      </select>
+      <p><small>Your browser may require one click to enable sound. Only one MIDI plays at a time.</small></p>
+    </section>
+    <section class="user-section">
+      <h2>Animated GIFs</h2>
+      <label for="gif_mode">Playback</label>
+      <select id="gif_mode" name="gif_mode" class="glow-input">
+        {% for value,label in [('system','Follow device preference'),('once','Play once'),('loop','Loop'),('off','Don’t play automatically')] %}
+          <option value="{{ value }}" {% if prefs.gif_mode == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <p><small>Individual GIFs have Play, Pause, Replay and Loop controls.</small></p>
+    </section>
+    <section class="user-section">
+      <h2>Music on my profile</h2>
+      {% if prefs.profile_midi %}<p>Current track: <strong>{{ prefs.profile_midi_title }}</strong></p>{% endif %}
+      <label for="profile_midi">Upload a MIDI file</label>
+      <input id="profile_midi" type="file" name="profile_midi" accept=".mid,.midi,audio/midi,audio/x-midi">
+      <label for="profile_midi_title">Track title (optional)</label>
+      <input id="profile_midi_title" name="profile_midi_title" maxlength="100" class="glow-input" placeholder="Uses filename if blank">
+      {% if prefs.profile_midi %}<label><input type="checkbox" name="remove_profile_midi" value="1"> Remove profile track</label>{% endif %}
+      <p><small>Standard MIDI files up to 256 KB. Visitors control playback with their own settings.</small></p>
+    </section>
+    <button type="submit">Save media settings</button>
+  </form>
+  <p><a class="button" href="{{ url_for('account') }}">Back to account</a></p>
+</main>
+<style>
+.media-settings-page, .media-settings-page .user-section, .media-settings-page .glow-input, .media-settings-page input[type="file"] { box-sizing: border-box; max-width: 100%; min-width: 0; }
+.media-settings-page .glow-input { width: 100%; }
+.media-settings-page form { width: 100%; min-width: 0; }
+</style>
+{% endblock %}

@@ -1,0 +1,25 @@
+.new-post-page { width: min(100% - 2rem, 900px); margin: 2rem auto 4rem; box-sizing: border-box; }
+.new-post-page *, .new-post-page *::before, .new-post-page *::after { box-sizing: border-box; }
+.new-post-header { margin-bottom: 1.25rem; }
+.new-post-header p { margin: .35rem 0 0; }
+.new-post-form { display: grid; gap: 1rem; }
+.post-form-panel { padding: clamp(1rem, 3vw, 1.5rem); border: 1px solid currentColor; border-radius: 14px; background: rgba(30, 32, 39, .42); }
+.post-form-panel h2 { font-size: 1.3rem; margin: 0 0 1rem; }
+.post-form-panel h3 { font-size: 1rem; margin: 0 0 1rem; }
+.post-form-intro { margin: -.45rem 0 1.1rem; opacity: .8; }
+.post-form-optional { font-size: .72em; font-weight: normal; opacity: .7; }
+.post-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.post-form-group { min-width: 0; padding: 1rem; border: 1px solid color-mix(in srgb, currentColor 35%, transparent); border-radius: 10px; }
+.post-form-field { display: flex; flex-direction: column; gap: .4rem; min-width: 0; margin-bottom: 1rem; }
+.post-form-field:last-child { margin-bottom: 0; }
+.post-form-field label { font-weight: 700; }
+.post-form-field small { line-height: 1.4; opacity: .8; }
+.new-post-form input:not([type=file]), .new-post-form textarea, .new-post-form select, .new-post-form input[type=file] { width: 100%; max-width: 100%; min-height: 2.75rem; padding: .65rem .75rem; color: inherit; font: inherit; background: rgba(15, 17, 24, .52); border: 1px solid color-mix(in srgb, currentColor 55%, transparent); border-radius: 8px; }
+.new-post-form textarea { min-height: 10rem; resize: vertical; }
+.new-post-form input[type=file] { padding: .45rem; cursor: pointer; }
+.new-post-form input::file-selector-button { margin-right: .75rem; padding: .4rem .7rem; color: inherit; font: inherit; cursor: pointer; background: rgba(255,255,255,.1); border: 1px solid currentColor; border-radius: 6px; }
+.new-post-form input:focus-visible, .new-post-form textarea:focus-visible, .new-post-form select:focus-visible, .post-form-actions button:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.new-post-form input::placeholder, .new-post-form textarea::placeholder { color: inherit; opacity: .55; }
+.post-form-actions { display: flex; justify-content: flex-end; }
+.post-form-actions button { min-width: 8rem; padding: .7rem 1.25rem; border-radius: 8px; cursor: pointer; font: inherit; font-weight: 700; }
+@media (max-width: 680px) { .new-post-page { margin-top: 1rem; } .post-form-grid { grid-template-columns: 1fr; } .post-form-actions button { width: 100%; } }

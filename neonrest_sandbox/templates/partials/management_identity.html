@@ -1,0 +1,3 @@
+{% macro account(handle, uid) -%}
+{% if handle and uid %}<a href="{{ url_for('manage_user_detail', target_id=uid) }}">@{{ handle.lstrip('@') }}</a> <small>NUID #{{ '%03d' | format(uid) }}</small>{% elif uid %}<span>Removed account · NUID #{{ '%03d' | format(uid) }}</span>{% else %}<span>Unavailable account</span>{% endif %}
+{%- endmacro %}

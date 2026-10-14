@@ -1,23 +1,14 @@
-# Python
 __pycache__/
-*.pyc
-
-# Flask / Local settings
-instance/
-.env
-*.log
-
-# Databases (if moved inside)
-*.sqlite3
+*.py[cod]
+.env*
 *.db
-
-# OS junk
-.DS_Store
-
-# Backups
-*.bak
-
-# Editor settings (optional)
-.vscode/
-.idea/
-db/neonrest.db
+*.sqlite*
+*.pem
+*.key
+private/
+instance/
+backups/
+releases/
+**/uploads/
+**/.neonrest*
+*.log

@@ -1,0 +1,14 @@
+{% if viewer_id and viewer_id != user['id'] %}
+  {% set status = friend_status_map.get(user['id']) %}
+  {% set incoming = user['id'] in pending_received_from %}
+  {% if status == 'accepted' %}
+    <form method="post" action="{{ url_for('friends.remove_friend', user_id=user['id']) }}"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}"><input type="hidden" name="friend_csrf_token" value="{{ friend_csrf_token() }}"><button class="friend-btn" type="submit">Remove Friend</button></form>
+  {% elif incoming %}
+    <form method="post" action="{{ url_for('friends.accept_friend', user_id=user['id']) }}"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}"><input type="hidden" name="friend_csrf_token" value="{{ friend_csrf_token() }}"><button class="friend-btn" type="submit">Accept</button></form>
+    <form method="post" action="{{ url_for('friends.decline_friend', user_id=user['id']) }}"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}"><input type="hidden" name="friend_csrf_token" value="{{ friend_csrf_token() }}"><button class="friend-btn" type="submit">Decline</button></form>
+  {% elif status == 'pending' %}
+    <span class="friend-btn disabled">Request Sent</span>
+  {% else %}
+    <form method="post" action="{{ url_for('friends.send_request', user_id=user['id']) }}"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}"><input type="hidden" name="friend_csrf_token" value="{{ friend_csrf_token() }}"><button class="friend-btn" type="submit">Add Friend</button></form>
+  {% endif %}
+{% endif %}

@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+{% block title %}{{ vibe_name }} - Neonrest
+{% endblock %}
+{% block body_class %}theme-{{ theme_slug }} vibe-{{ vibe_slug }} vibe-{{ vibe_slug }}--{{ theme_mode }}
+{% endblock %}
+
+{% block content %}
+<div class="page-wrapper vibe-page-wrapper">
+  <nav class="vibe-mode-switch" aria-label="Theme mode">
+    <span>View this Vibe:</span>
+    <a href="{{ url_for('vibe_page', vibe_name=vibe_name, mode='day') }}" {% if theme_mode == 'day' %}aria-current="page"{% endif %}>Day</a>
+    <a href="{{ url_for('vibe_page', vibe_name=vibe_name, mode='night') }}" {% if theme_mode == 'night' %}aria-current="page"{% endif %}>Night</a>
+  </nav>
+  <style>
+    .vibe-masthead { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 1rem 1.5rem; padding-bottom: 1.15rem; margin-bottom: 1.15rem; border-bottom: 1px solid var(--vibe-border, currentColor); }
+    .vibe-masthead .vibe-logo { min-width: 0; max-width: 100%; margin-bottom: 0; }
+    .vibe-masthead .vibe-post-action { margin: 0; justify-content: flex-end; }
+    .vibe-feed .user-handle, .vibe-rail .user-handle { color: inherit; text-decoration: none; }
+    .vibe-feed .user-handle:hover, .vibe-rail .user-handle:hover { text-decoration: underline; }
+    .vibe-masthead .vibe-intro { grid-column: 1 / -1; min-width: 0; padding-top: 1rem; border-top: 1px solid var(--vibe-border, currentColor); }
+    .vibe-masthead .vibe-intro p { margin: 0; }
+    @media (max-width: 640px) {
+      .vibe-masthead { grid-template-columns: minmax(0, 1fr); text-align: center; }
+      .vibe-masthead .vibe-logo { margin-left: auto !important; margin-right: auto !important; }
+      .vibe-masthead .vibe-post-action { justify-content: center; }
+    }
+  </style>
+  <div class="vibe-layout">
+    <aside class="vibe-rail vibe-personal" aria-label="Your space">
+      {% if viewer %}
+      <div class="rail-eyebrow">Your corner</div>
+      <div class="rail-person">
+        <img src="{{ viewer_avatar }}" alt="" class="rail-avatar">
+        <div><a class="user-handle" href="{{ url_for('user_by_handle', handle=viewer['handle'].lstrip('@')) }}"><strong>@{{ viewer['handle'].lstrip('@') }}</strong></a><small>{{ viewer['mood'] or 'Here for the vibes' }}</small></div>
+      </div>
+      <p class="rail-stat"><strong>{{ viewer_posts }}</strong> {{ 'post' if viewer_posts == 1 else 'posts' }} here</p>
+      <nav class="rail-links" aria-label="Your links">
+        <a href="/sandbox/@{{ viewer['handle'].lstrip('@') | urlencode }}">My profile <span aria-hidden="true">↗</span></a>
+        <a href="/sandbox/feed">Feed <span aria-hidden="true">↗</span></a>
+      </nav>
+      {% else %}
+      <div class="rail-eyebrow">Your corner</div>
+      <h2>Make yourself at home.</h2>
+      <p>Sign in to see your profile and posts in this Vibe.</p>
+      <a class="rail-action" href="/sandbox/login">Log in</a>
+      {% endif %}
+    </aside>
+    <main class="user-page vibe-feed">
+    <div class="user-header vibe-masthead">
+    {% if vibe.logo_url %}
+      <img
+        src="{% if vibe.logo_url.startswith('http') %}{{ vibe.logo_url }}{% else %}{{ url_for('static', filename=vibe.logo_url) }}{% endif %}"
+        alt="{{ vibe.name }} logo"
+        class="vibe-logo"
+        style="
+          {% if vibe.logo_width %}width: {{ vibe.logo_width }};{% endif %}
+          {% if vibe.logo_height %}height: {{ vibe.logo_height }};{% else %}height: auto;{% endif %}
+          max-width: 100%;
+          object-fit: contain;
+          box-sizing: border-box;
+          {% if vibe.logo_padding %}padding: {{ vibe.logo_padding }};{% endif %}
+          display: block;
+          margin-left: {% if vibe.logo_align == 'left' %}0{% elif vibe.logo_align == 'right' %}auto{% else %}auto{% endif %};
+          margin-right: {% if vibe.logo_align == 'left' %}auto{% elif vibe.logo_align == 'right' %}0{% else %}auto{% endif %};
+        ">
+    {% else %}
+      <div class="glow large">#{{ vibe.name }}</div>
+    {% endif %}
+
+      <div class="vibe-post-action"><a href="{{ url_for('create_post', vibe=vibe_name) }}" class="vibe-post-button">Post to this Vibe</a>{% if can_manage_vibe %}<a href="{{ url_for('manage_vibe', slug=vibe_slug) }}" class="vibe-manage-button">Manage Vibe</a>{% endif %}</div>
+    <div class="vibe-intro"><p>{{ vibe['welcome_message'] or ('Welcome to the ' ~ vibe_name ~ ' vibe space.') }}</p></div>
+    </div>
+
+    <div class="user-section">
+      {% if posts %}
+        {% for post in posts %}
+          <div class="user-section vibe-{{ vibe_slug }}" id="vibe-post-{{ post["id"] }}">
+            {% set author_profile = url_for('user_by_handle', handle=post['handle'].lstrip('@')) %}
+            {% set avatar = post['avatar_path'] or url_for('static', filename='default-avatar.png') %}
+            {% if avatar.startswith('/static/') %}{% set avatar = url_for('static', filename=avatar[8:]) %}{% endif %}
+            <div class="vibe-post-author">
+              <a href="{{ author_profile }}" aria-label="View @{{ post['handle'].lstrip('@') }}'s profile"><img src="{{ avatar }}" alt="" class="vibe-post-avatar" loading="lazy"></a>
+              <div class="vibe-post-byline"><h3><a class="user-handle" href="{{ author_profile }}"><strong>@{{ post['handle'].lstrip('@') }}</strong></a></h3>
+                <a class="post-permalink" href="{{ url_for('post_detail', post_id=post['id']) }}" aria-label="Open this post"><time class="vibe-post-date" datetime="{{ post['created_at'] | replace(' ', 'T') }}">Posted {{ post['created_at'] | replace('T', ' ') }}</time></a></div>
+            </div>
+            <p><strong>Vibes:</strong>
+              {% set vibe_list = (post['vibes'] or '').split(',') %}
+              {% for vibe in vibe_list %}
+                <a class="vibe-label" href="/sandbox/vibe/{{ vibe.strip() | urlencode }}">{{ vibe.strip() }}</a>
+              {% endfor %}
+              | <strong>Circle:</strong> {{ post['circle'] or '—' }}
+            </p>
+            {% if session.get('user_id') %}<details class="content-menu"><summary aria-label="Post options">⋮</summary><div class="content-menu-panel">{% if session.get('user_id') != post['user_id'] %}<a href="{{ url_for('report_content', kind='post', target_id=post['id']) }}">Report post</a>{% endif %}<a href="{{ url_for('post_edit_history', post_id=post['id']) }}">Edit history</a></div></details>{% endif %}
+            <p>{{ post['content'] }}</p>
+            {% include "post_media.html" %}
+            {% if post['last_edited'] %}
+              <p class="post-timestamp">Last edited: {{ post['last_edited'] }}</p>
+            {% endif %}
+            <hr>
+          </div>
+        {% endfor %}
+      {% else %}
+        <p>No posts in this vibe yet.</p>
+      {% endif %}
+    </div>
+    {% include 'post_pagination.html' %}
+    </main>
+    <aside class="vibe-rail vibe-discovery" aria-label="Vibe discoveries">
+      <div class="rail-eyebrow">From this Vibe</div>
+      <h2>Image gallery</h2>
+      {% if gallery_items %}
+      <div class="vibe-gallery">
+        {% for item in gallery_items %}
+        <a href="#vibe-post-{{ item.id }}" aria-label="View image in @{{ item.handle.lstrip('@') }}'s post">
+          <img src="{{ item.url }}" alt="{{ item.alt or 'Image from a ' ~ vibe_name ~ ' post' }}" loading="lazy">
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="gallery-empty">Images shared in {{ vibe_name }} posts will appear here.</p>
+      {% endif %}
+      {% if contributors %}
+      <div class="rail-divider"></div>
+      <h2>People here</h2>
+      <div class="rail-members">
+        {% for handle in contributors %}
+        <a href="/sandbox/@{{ handle.lstrip('@') | urlencode }}">@{{ handle.lstrip('@') }}</a>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% if rail_ads %}<div class="rail-divider"></div>{% include 'ad_rail.html' %}{% endif %}
+    </aside>
+  </div>
+  {% include 'ad_banner.html' %}
+</div>
+{% if custom_css %}
+  <style>{{ custom_css | safe }}</style>
+{% endif %}
+<style>
+  body:has(.vibe-page-wrapper) #main-content:has(> .vibe-page-wrapper) { width: calc(100% - 2rem); max-width: 1360px; margin-left: auto; margin-right: auto; }
+  body #main-content .vibe-page-wrapper { width: min(1320px, calc(100vw - 3rem)); max-width: none; margin-inline: auto; box-sizing: border-box; }
+  @media (min-width: 721px) { .vibe-page-wrapper .vibe-mode-switch { width: calc(100% - 180px); margin-left: 180px; box-sizing: border-box; } }
+  body.vibe-fresh-starts .vibe-layout { margin-top: 8rem; }
+  .vibe-layout { display: grid; grid-template-columns: minmax(190px, 230px) minmax(0, 680px) minmax(190px, 250px); gap: clamp(1rem, 2vw, 1.5rem); align-items: start; justify-content: center; margin-top: 1rem; }
+  .vibe-layout > * { min-width: 0; box-sizing: border-box; }
+  .vibe-layout .vibe-feed { width: 100%; max-width: none; margin: 0 0 3rem; }
+  .vibe-layout .vibe-rail { padding: 1.25rem; border: 1px solid color-mix(in srgb, currentColor 28%, transparent); border-radius: 18px; background: color-mix(in srgb, var(--bg_color, #888) 20%, #fffaf0 80%); backdrop-filter: blur(8px); color: var(--vibe-rail-text, #40342c); overflow-wrap: anywhere; }
+  body[data-mode="night"] .vibe-rail { color: var(--vibe-rail-text-night, #f3ebdf); background: color-mix(in srgb, var(--bg_color, #222) 35%, #16131c 65%); }
+  .vibe-rail .rail-eyebrow { font-size: .72rem; letter-spacing: .13em; text-transform: uppercase; opacity: .75; margin-bottom: .75rem; font-weight: 700; }
+  .vibe-rail h2 { font: inherit; font-size: 1.05rem; font-weight: 700; margin: 0 0 .8rem; }
+  .vibe-rail p { font-size: .9rem; line-height: 1.5; margin: .7rem 0 1rem; }
+  .rail-person { display: flex; gap: .7rem; align-items: center; }
+  .rail-person strong { display: block; }
+  .rail-person small { display: block; opacity: .75; margin-top: .2rem; }
+  .rail-avatar { width: 48px; height: 48px; object-fit: cover; border-radius: 50%; border: 1px solid currentColor; }
+  .rail-stat { border-block: 1px solid color-mix(in srgb, currentColor 22%, transparent); padding: .8rem 0; }
+  .rail-stat strong { font-size: 1.25rem; }
+  .rail-links { display: grid; gap: .65rem; }
+  .rail-links a { display: flex; justify-content: space-between; }
+  .vibe-rail a { color: inherit; }
+  .rail-action { display: inline-block; border: 1px solid currentColor; border-radius: 999px; padding: .55rem 1rem; }
+  .vibe-gallery { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .45rem; }
+  .vibe-gallery a { display: block; aspect-ratio: 1; border-radius: 9px; overflow: hidden; background: color-mix(in srgb, currentColor 12%, transparent); }
+  .vibe-gallery img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .2s; }
+  .vibe-gallery a:hover img { transform: scale(1.05); }
+  .gallery-empty { border: 1px dashed color-mix(in srgb, currentColor 40%, transparent); border-radius: 12px; padding: 1rem; opacity: .8; }
+  .rail-divider { border-top: 1px solid color-mix(in srgb, currentColor 22%, transparent); margin: 1.2rem 0; }
+  .rail-members { display: grid; gap: .55rem; font-size: .9rem; }
+  @media (max-width: 1050px) {
+    .vibe-layout { grid-template-columns: minmax(180px, 220px) minmax(0, 680px); }
+    .vibe-discovery { grid-column: 1 / -1; }
+    .vibe-gallery { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  }
+  @media (max-width: 720px) {
+    body:has(.vibe-page-wrapper) #main-content:has(> .vibe-page-wrapper) { width: calc(100% - 2rem); max-width: 1360px; margin-left: auto; margin-right: auto; }
+  body #main-content .vibe-page-wrapper { width: min(100% - 1.5rem, 680px); }
+    .vibe-layout { display: flex; flex-direction: column; }
+    .vibe-layout .vibe-feed { order: 1; margin-bottom: 0; }
+    .vibe-layout .vibe-personal { order: 2; }
+    .vibe-layout .vibe-discovery { order: 3; }
+    .vibe-layout .vibe-rail { width: 100%; }
+  }
+</style>
+
+<style>.vibe-post-action{margin:1rem 0;display:flex;flex-wrap:wrap;gap:.65rem;align-items:center}.vibe-post-action .vibe-manage-button{display:inline-block;padding:.6rem .9rem;border:1px solid currentColor;border-radius:999px;background:transparent;font-weight:700;text-decoration:none}.vibe-post-button{display:inline-block;padding:.7rem 1.1rem;border-radius:999px;background:var(--vibe-accent,#7257a7);color:#fff;font-weight:700;text-decoration:none}.vibe-post-button:hover{filter:brightness(1.1)}</style>
+<script>document.querySelectorAll('.vibe-post-button').forEach(b=>{let s=getComputedStyle(b),p=c=>c.match(/\d+/g).slice(0,3).map(Number),L=a=>a.map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4}).reduce((t,v,i)=>t+v*[.2126,.7152,.0722][i],0),x=L(p(s.backgroundColor)),y=L(p(s.color)),r=(Math.max(x,y)+.05)/(Math.min(x,y)+.05);if(r<4.5)b.style.setProperty('color',1.05/(x+.05)>=(x+.05)/(L([24,27,29])+.05)?'#fff':'#181b1d','important')});</script>
+<style>.vibe-post-author{display:flex;align-items:center;gap:.7rem;margin-bottom:.65rem}.vibe-post-author h3{margin:0}.vibe-post-byline{min-width:0}.vibe-post-date{display:block;font-size:.8rem;line-height:1.4;opacity:.8;margin-top:.15rem}.vibe-post-avatar{display:block;width:42px;height:42px;border-radius:50%;object-fit:cover;border:1px solid currentColor;background:rgba(0,0,0,.25)}</style>
+{% endblock %}

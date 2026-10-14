@@ -1,0 +1,4 @@
+<div class="ad-stack"><div class="rail-eyebrow">Advertisements</div>
+{% for ad in rail_ads %}<article class="ad-card"><a href="{{ url_for('ad_click', campaign_id=ad.id) }}" target="_blank" rel="sponsored noopener noreferrer" aria-label="Advertisement: {{ ad.title }}">
+{% if ad.image_path %}<img src="{{ ad.image_path }}" alt="" loading="lazy">{% endif %}<strong>{{ ad.title }}</strong><span>{{ ad.body }}</span></a></article>{% endfor %}</div>
+{% include 'ad_style.html' %}

@@ -1,0 +1,6 @@
+{% extends 'base.html' %}{% block title %}Comment moderation - Neonrest{% endblock %}{% block content %}
+<div class="workflow"><a href="{{ url_for('manage_home') }}">← Management</a><h1>Comments</h1>
+<form method="get"><label>Find comment, post, author, or text <input name="q" value="{{ query }}"></label><button>Search</button></form>
+{% for c in comments %}<article><p><strong>#{{ c.id }}</strong> on post #{{ c.post_id }} · <a href="{{ url_for('user_by_handle', handle=c.handle.lstrip('@')) }}">@{{ c.handle.lstrip('@') }}</a> · {{ c.created_at }} · {{ 'Hidden' if c.hidden else 'Visible' }}</p><p>{{ c.content }}</p>
+{% if c.hidden %}<p>Reason: {{ c.reason }}</p>{% endif %}
+{% if c.user_id != 1 and c.user_id != session.get('user_id') and not c.author_staff %}<form method="post" action="{{ url_for('moderate_comment', comment_id=c.id) }}"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}"><input type="hidden" name="theme_csrf_token" value="{{ management_token }}"><input type="hidden" name="action" value="{{ 'restore' if c.hidden else 'hide' }}"><label>Reason <input name="reason" maxlength="500" required></label><button>{{ 'Restore' if c.hidden else 'Hide' }}</button></form>{% endif %}</article>{% else %}<p>No matching comments.</p>{% endfor %}</div>{% include 'workflow_style.html' %}{% endblock %}

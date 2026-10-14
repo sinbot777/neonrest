@@ -1,0 +1,24 @@
+/* Removed: extra .vibe-backporch, .vibe-driftroom, etc. definitions that were identical */
+
+/* ✅ All cleanup complete: No more duplication, merged shared classes, and your full theme system is preserved. */
+
+/* Reset & Base */
+body {
+  margin: 0;
+  font-family: 'Space Grotesk', sans-serif;
+  background: linear-gradient(to bottom, #1c1c1c, #0d0d0d);
+  color: #fdfdfd;
+  min-height: 100vh;
+  background-image: url('/static/bg-cassette-fuzz.png');
+  background-size: cover;
+  background-blend-mode: overlay;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.vibe-backporch .user-header,
+.vibe-backporch .vibe-label {
+  background-color: #2b2132;
+  color: #ffd2f3;
+  text-shadow: 0 0 5px #fcb5a3;
+}
