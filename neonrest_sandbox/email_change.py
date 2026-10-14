@@ -156,5 +156,5 @@ def register(app, core):
     def private_email_change(response):
         if request.endpoint in ('account_email', 'account_email_confirm'):
             response.headers['Cache-Control'] = 'private, no-store'
-            response.headers['Referrer-Policy'] = 'no-referrer'
+            response.headers['Referrer-Policy'] = 'same-origin'
         return response

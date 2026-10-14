@@ -75,5 +75,5 @@ def register(app,core):
     def private_recovery(response):
         if request.endpoint in ('verify_email','verification_request','password_reset','password_reset_request'):
             response.headers['Cache-Control']='private, no-store'
-            response.headers['Referrer-Policy']='no-referrer'
+            response.headers['Referrer-Policy']='same-origin'
         return response

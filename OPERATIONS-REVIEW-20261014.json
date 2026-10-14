@@ -1,0 +1,44 @@
+{
+  "date": "2026-10-14",
+  "source": "Actual PythonAnywhere deployed source and read-only Production database preview",
+  "automated_current_source_checks": 1728,
+  "form_checks_both_environments": 124,
+  "production_feedback_checks": 5,
+  "rights_review": {
+    "self_export": "CSRF and recent confirmation; password hash excluded",
+    "account_actions": "Recent confirmation, exact handle, hidden inactive state; 30-day deletion cancellation",
+    "guardian_export": "Approved unexpired request, matching parent, current guardian link, recent confirmation; private no-store response",
+    "preservation_hold_review": "Open: no explicit legal_hold/preservation_hold check found in retention planner; no erasure enabled"
+  },
+  "retention_preview": {
+    "eligible_accounts": 4,
+    "expired_record_categories": [
+      {
+        "table": "rate_buckets",
+        "count": 1
+      },
+      {
+        "table": "post_vibes",
+        "count": 1
+      },
+      {
+        "table": "friend_requests",
+        "count": 1
+      }
+    ],
+    "moderation_reviews_due": 0,
+    "automatic_erasure_enabled": false
+  },
+  "storage": {
+    "home_megabytes_approx": 961,
+    "releases_megabytes_approx": 346,
+    "older_copy_megabytes_approx": [
+      101,
+      103,
+      102
+    ],
+    "deletions_performed": false
+  },
+  "credential_rotation_and_access_log_reconciliation": "Not yet verified; clean snapshot scan does not prove exposed credentials were revoked",
+  "release_signed_off": false
+}

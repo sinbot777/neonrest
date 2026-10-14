@@ -625,12 +625,15 @@ def register(app, core):
             next_path='/account/security'
         if request.method=='POST':
             csrf()
-            if len(request.form.get('password',''))<=128 and check_password_hash(user['password_hash'],request.form.get('password','')) and (not second_factor(user['id']) or verify_second_factor(get_db(),user['id'],request.form.get('code',''))):
+            if len(request.form.get('password',''))>128 or not check_password_hash(user['password_hash'],request.form.get('password','')):
+                flash('Your password does not match.','error')
+            elif second_factor(user['id']) and not verify_second_factor(get_db(),user['id'],request.form.get('code','')):
+                flash('Your authenticator or recovery code was not accepted. Try a new authenticator code or an unused recovery code.','error')
+            else:
                 session['fresh_at']=int(time.time())
                 if second_factor(user['id']):
                     session['factor_at']=int(time.time())
                 return redirect(request.script_root+next_path)
-            flash('Confirmation failed. Check your password and verification code.','error')
         return render('reauth','Confirm your sign-in',needs_factor=second_factor(user['id']))
 
     @app.route('/account/security',methods=['GET','POST'])

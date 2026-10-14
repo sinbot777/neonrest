@@ -7,20 +7,34 @@
   "production_queue_enabled": true,
   "backup_restore_verified": true,
   "real_accounts_and_factors_preserved": true,
-  "real_acceptance_emails_sent": false,
+  "real_acceptance_emails_sent": true,
   "production_automatic_erasure_enabled": false,
   "full_release_signed_off": false,
   "source_sha256": {
-    "neonrest": {
-      "templates/community.html": "d3d139206257db7c8451d54c81871be2670ad1a8b397383a4e65d5eeef47acb4",
-      "templates/dev_summary.html": "5eb1b091d3543a1ad28d0a686d8bc9e7b6359ffbb04a59f2a5f492ba2228cb08",
-      "tests/verify_authenticator_replacement.py": "39a3695b3e1ea91c87e869b05879949d03f1fb3ffac7232055fd6d1a1ee28c32"
-    },
-    "neonrest_sandbox": {
-      "templates/community.html": "d3d139206257db7c8451d54c81871be2670ad1a8b397383a4e65d5eeef47acb4",
-      "templates/dev_summary.html": "47a4af7c2b991178e523e38e8b04a6666fe5aaee7bc1733e44f1dd90b77101d5",
-      "tests/verify_authenticator_replacement.py": "39a3695b3e1ea91c87e869b05879949d03f1fb3ffac7232055fd6d1a1ee28c32"
-    }
+    "neonrest/community_features.py": "67be3254c0814629dce7bbcb57ed2283b4e3b51cdf7162416d9260d2d9ce615f",
+    "neonrest/email_change.py": "1abce3aead0b127fcf0040d17065123f2abe4d3fcd5f09ee3c1203e6dbec5d67",
+    "neonrest/email_verification.py": "228f8b28e6523860eaf5ada4114b8dee96c10a29dd6e4e9ef9e75a7f98c181d0",
+    "neonrest/templates/dev_summary.html": "ba49e9928348877409a08ccb2a20ea11f573fa31c745f03311048aceaf6507ca",
+    "neonrest/tests/verify_recovery_form_origins.py": "507c7d148b8a7f613346cba2c73b11d0a3ef15f7d182b6b5d42083d02ca14521",
+    "neonrest_sandbox/community_features.py": "89c2ebb76c5a73cdf67fc84395322e642523d1c87d2b3c6f9761780fd2803371",
+    "neonrest_sandbox/email_change.py": "c79ec629a1949058c344535fb39428222c613f76674cd3bb5961e18c60ec94af",
+    "neonrest_sandbox/email_verification.py": "6af0bcd237cae402adce1ff8a33f3ceff3540045249a4fb7a2829da13bb42679",
+    "neonrest_sandbox/templates/dev_summary.html": "08328a6c25b319d7a06d8c2a82dd10966ef6a36ff1d0f33c9b53bb3077bea788",
+    "neonrest_sandbox/tests/verify_recovery_form_origins.py": "507c7d148b8a7f613346cba2c73b11d0a3ef15f7d182b6b5d42083d02ca14521",
+    "neonrest/tests/verify_reauth_feedback.py": "733fc0ba390a7fb0f7e961219656e8f9cb91a92cb0f4f3a0fd82e56078ab7845"
   },
-  "supervisor_sha256": "e62f4015ef779f58535c45a32b7d9af58fb727c2d4299e57ffb264bc628ecccf"
+  "supervisor_sha256": "e62f4015ef779f58535c45a32b7d9af58fb727c2d4299e57ffb264bc628ecccf",
+  "real_email_messages_received": 5,
+  "email_authentication": {
+    "SPF": "pass",
+    "DKIM": "pass",
+    "DMARC": "pass",
+    "evidence": "Original five-message operator receipt review; no fresh delivery run"
+  },
+  "diagnostic_fixture_cleanup_verified": true,
+  "diagnostic_cleanup_checks": 11,
+  "production_login_owner_confirmed": true,
+  "vibe_management_owner_acceptance": false,
+  "production_reauth_specific_messages": true,
+  "current_source_isolated_checks": 1728
 }
