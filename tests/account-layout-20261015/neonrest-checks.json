@@ -1,0 +1,69 @@
+{
+  "environment": "neonrest",
+  "routes": [
+    {
+      "path": "/account",
+      "status": 200,
+      "navigation_count": 1,
+      "active_link_count": 1
+    },
+    {
+      "path": "/account/security",
+      "status": 200,
+      "navigation_count": 1,
+      "active_link_count": 1
+    },
+    {
+      "path": "/account/privacy",
+      "status": 200,
+      "navigation_count": 1,
+      "active_link_count": 1
+    },
+    {
+      "path": "/notifications",
+      "status": 200,
+      "navigation_count": 1,
+      "active_link_count": 1
+    },
+    {
+      "path": "/account/data",
+      "status": 200,
+      "navigation_count": 1,
+      "active_link_count": 1
+    },
+    {
+      "path": "/media-settings",
+      "status": 200,
+      "navigation_count": 1,
+      "active_link_count": 1
+    },
+    {
+      "path": "/manage",
+      "status": 200,
+      "navigation_count": 1,
+      "active_link_count": 1
+    },
+    {
+      "path": "/account/age",
+      "status": 200,
+      "navigation_count": 1,
+      "active_link_count": 1
+    },
+    {
+      "path": "/account/family",
+      "status": 200,
+      "navigation_count": 1,
+      "active_link_count": 1
+    },
+    {
+      "path": "/manage/family",
+      "status": 200,
+      "navigation_count": 1,
+      "active_link_count": 1
+    }
+  ],
+  "ordinary_user_views": 4,
+  "staff_navigation_hidden": true,
+  "isolated_database": true,
+  "smtp_disabled": true
+}

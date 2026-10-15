@@ -77,7 +77,10 @@ body > #footer-tagline { box-sizing: border-box; max-width: 100%; }
 </div>
 
   <div id="main-content">
-    {% block content %}{% endblock %}
+    {% set account_shell_enabled = session.get('user_id') and (request.path.startswith('/account') or request.path == '/notifications' or request.path == '/media-settings' or request.path == '/manage' or request.path.startswith('/manage/')) %}
+{% if account_shell_enabled %}<div class="account-workspace">{% include 'partials/account_workspace_navigation.html' %}<div class="account-workspace-content">{% endif %}
+{% block content %}{% endblock %}
+{% if account_shell_enabled %}</div></div>{% endif %}
   </div>
 
 
@@ -180,5 +183,6 @@ body > #footer-tagline { box-sizing: border-box; max-width: 100%; }
 <script type="module" src="{{ url_for('static', filename='js/image_upload.js') }}"></script>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/image_viewer.css') }}">
 <script defer src="{{ url_for('static', filename='js/image_viewer.js') }}"></script>
+{% if account_shell_enabled %}<link rel="stylesheet" href="{{ url_for('static',filename='css/account-shell.css',v='20261015-account1') }}">{% endif %}
 </body>
 </html>
