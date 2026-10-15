@@ -114,3 +114,34 @@ body .vibe-page-wrapper .vibe-feed a.vibe-label { transition: none; }
 
 /* Keep older theme caps from shrinking the configured logo frame. */
 body .vibe-page-wrapper .vibe-feed .vibe-masthead img.vibe-logo { max-height: 130px; }
+
+/* Menus are shared controls, independent of the surrounding Vibe accent. */
+body .vibe-page-wrapper .vibe-feed .content-menu { position: relative; width: fit-content; }
+body .vibe-page-wrapper .vibe-feed .content-menu > summary {
+  color: var(--vibe-ui-ink); background: var(--vibe-ui-panel);
+  border: 1px solid currentColor; border-radius: 6px;
+  padding: .25rem .55rem; cursor: pointer; text-shadow: none;
+}
+body .vibe-page-wrapper .vibe-feed .content-menu .content-menu-panel {
+  position: absolute; inset-inline-start: 0; inset-inline-end: auto;
+  z-index: 30; min-width: 10rem; max-width: min(18rem, calc(100vw - 3rem));
+  box-sizing: border-box; margin-top: .35rem; padding: .35rem;
+  background: #242537; color: #fff8e7;
+  border: 1px solid #9c91ac; border-radius: 9px;
+  box-shadow: 0 6px 18px #0005; text-shadow: none;
+}
+body .vibe-page-wrapper .vibe-feed .content-menu .content-menu-panel a,
+body .vibe-page-wrapper .vibe-feed .content-menu .content-menu-panel a:visited,
+body .vibe-page-wrapper .vibe-feed .content-menu .content-menu-panel button {
+  display: block; width: 100%; box-sizing: border-box;
+  padding: .6rem .75rem; margin: 0; border: 0; border-radius: 5px;
+  color: #fff8e7; background: #242537;
+  font: inherit; text-align: start; text-decoration: none;
+  text-shadow: none; box-shadow: none; opacity: 1; transition: none; cursor: pointer;
+}
+body .vibe-page-wrapper .vibe-feed .content-menu .content-menu-panel form { display: block; padding: 0; margin: 0; }
+body .vibe-page-wrapper .vibe-feed .content-menu .content-menu-panel a:hover,
+body .vibe-page-wrapper .vibe-feed .content-menu .content-menu-panel button:hover { background: #3b3d55; color: #fff8e7; }
+body .vibe-page-wrapper .vibe-feed .content-menu .content-menu-panel :is(a, button):focus-visible {
+  outline: 2px solid #fff8e7; outline-offset: -3px;
+}
