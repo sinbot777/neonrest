@@ -42,6 +42,11 @@ body > #footer-tagline { box-sizing: border-box; max-width: 100%; }
 .notifications-link .mailbox-icon { display: block; flex-shrink: 0; }
 .notifications-link .notification-count { font-size: .75rem; font-weight: 700; border: 1px solid currentColor; border-radius: 999px; padding: .1rem .35rem; line-height: 1.2; }
 .session-info .notifications-link:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; border-radius: 4px; }
+
+body > .session-info { display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:.35rem .85rem; max-width:calc(100% - 2rem); box-sizing:border-box; }
+body > .session-info > a { display:inline-flex; align-items:center; min-height:36px; text-underline-offset:3px; }
+body > .session-info > a:first-child { min-width:0; overflow-wrap:anywhere; }
+body > .session-info > a:focus-visible { outline:2px solid currentColor; outline-offset:3px; border-radius:4px; }
 </style>
 </head>
 
@@ -52,8 +57,10 @@ body > #footer-tagline { box-sizing: border-box; max-width: 100%; }
   {% if request.path != '/' %}
     {% if session.get('user_email') %}
       <div class="session-info">
-        <a href="/account" class="account-link">{{ session['user_email'] }}</a> |
-        <a href="{{ url_for('community_notifications') }}" class="account-link notifications-link" aria-label="Notifications{% if community_unread %}, {{ community_unread }} unread{% endif %}" title="Notifications{% if community_unread %} ({{ community_unread }} unread){% endif %}"><svg class="mailbox-icon" viewBox="0 0 28 28" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 20V12a5 5 0 0 1 10 0v8H4Zm5-13h11a5 5 0 0 1 5 5v8H14M8 13h2M17 10V3h6v4h-6M14 20v6M10 26h8" /></svg>{% if community_unread %}<span class="notification-count" aria-hidden="true">{{ community_unread }}</span>{% endif %}</a> | <a href="/logout" class="logout-link">Log out</a>
+        <a href="/account" class="account-link">{{ session['user_email'] }}</a>
+<a href="{{ url_for('feed') }}" class="account-link">Feed</a>
+<a href="{{ url_for('user_by_handle',handle=session.user_handle.lstrip('@')) }}" class="account-link">Your profile</a>
+        <a href="{{ url_for('community_notifications') }}" class="account-link notifications-link" aria-label="Notifications{% if community_unread %}, {{ community_unread }} unread{% endif %}" title="Notifications{% if community_unread %} ({{ community_unread }} unread){% endif %}"><svg class="mailbox-icon" viewBox="0 0 28 28" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 20V12a5 5 0 0 1 10 0v8H4Zm5-13h11a5 5 0 0 1 5 5v8H14M8 13h2M17 10V3h6v4h-6M14 20v6M10 26h8" /></svg>{% if community_unread %}<span class="notification-count" aria-hidden="true">{{ community_unread }}</span>{% endif %}</a> <a href="/logout" class="logout-link">Log out</a>
       </div>
     {% else %}
       <a class="button" href="/login">Log In</a>
