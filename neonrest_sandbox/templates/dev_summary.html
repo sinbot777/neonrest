@@ -1,14 +1,22 @@
 {% extends "base.html" %}
 {% block content %}
-<h2 style="margin-left:168px;">🚧 Neonrest Dev Log</h2>
+<main class="dev-log" data-dev-revision="2026-10-14-privacy-release">
+<h2>🚧 Neonrest Dev Log</h2>
 <p><em>Follow along as we build this cozy, vibe-first corner of the web.</em></p>
-<p>Newer entries describe Sandbox work. Dates use Pacific time; production deployment is tracked separately.</p>
+<p>Dates use Pacific time. This log includes historical checkpoints; the current status below supersedes earlier activation and acceptance notes.</p>
+<section class="dev-current" aria-labelledby="dev-current-heading"><h3 id="dev-current-heading">Current release status · October 14, 2026</h3><p><strong>Target: v0.8.0 final. Sandbox privacy workflows have passed their walkthrough; the release is not yet signed off.</strong> The latest privacy changes are deployed in Sandbox. Production code was not changed by this batch. Owner acceptance of Production Vibe-management two-factor confirmation is complete.</p><p><strong>Permanent erasure remains disabled in Sandbox and Production.</strong> Deletion requests remain hidden and queued, with preservation holds and unresolved issues blocking erasure.</p><p>Before the privacy Production handoff: establish secure document submission for requesters without linked accounts, adopt document and backup retention procedures, and complete the environment-specific rollout checks. Review preserved moderation evidence and backup restoration before enabling erasure.</p></section>
 <h3>📅 October 14, 2026</h3>
 <ul>
-<li><strong>📨 Recovery and email forms repaired:</strong> real-browser testing found the same Forbidden submission problem on verification, password-reset and email-change pages. Their private responses now retain the same-site request origin, with no-store caching and all existing CSRF, null/foreign-origin and authorization checks preserved. Verified 124 isolated form/link checks across both environments; actual approved-recipient inbox acceptance is in progress.</li>
+<li><strong>Privacy requests and preservation completed in Sandbox:</strong> staff can record assisted requests, assign reviewers, track response dates and appeals, and manage documented preservation holds. Reviewing a hold keeps it active; releasing one does not erase or reactivate an account.</li>
+<li><strong>Guardian exports reviewed before release:</strong> staff review authority and redact the exact export. Approval freezes the reviewed snapshot for 24 hours; other accounts, stale authentication, changed authority and expired approvals cannot use the grant. Credentials, private messages, raw identity documents and internal staff notes are excluded.</li>
+<li><strong>Staff guidance and clearer screens:</strong> both privacy management and family request review link to plain-language instructions and an AI drafting prompt. Forms, navigation and mobile spacing use consistent styling. Appeal outcomes show the explanation, reviewer, decision date and original deadline; complaint instructions are not duplicated when already supplied.</li>
+<li><strong>Acceptance and practice cleanup:</strong> 25 privacy regression tests, 17 full-application checks and 10 requester-view/download checks passed using disposable data with no outgoing mail. The owner completed the staff walkthrough. Practice requests were closed, download access revoked and the fictional deletion cancelled; practice history was retained.</li>
+<li><strong>Production Vibe-management confirmation accepted:</strong> the owner successfully completed the two-factor check. This closes that specific acceptance item, not the full release checklist.</li>
+<li><strong>Storage breathing room restored:</strong> downloaded older backup copies were checked before approved server cleanup. Current applications, databases and recent rollback coverage were retained.</li>
+<li><strong>📨 Recovery and email forms repaired:</strong> real-browser testing found the same Forbidden submission problem on verification, password-reset and email-change pages. Their private responses now retain the same-site request origin, with no-store caching and all existing CSRF, null/foreign-origin and authorization checks preserved. Verified 124 isolated form/link checks across both environments; at this checkpoint, inbox acceptance was still being checked; final mail acceptance is tracked separately in the release checklist.</li>
 <li><strong>🔐 Replace a lost authenticator:</strong> Account safety now offers a replacement button for enabled accounts. Existing password and recent factor/recovery-code authorization remains required. The old factor stays active until the new QR is confirmed; replacement creates new recovery codes and signs out other sessions. Verified 61 disposable-account checks in each environment. No real account factor was changed by deployment.</li>
 <li><strong>🔐 Authenticator setup repaired:</strong> Account safety now retains the same-site request origin when submitting setup and other security forms. Reproduced the previous Forbidden response with a valid disposable code, then verified both environments with 80 QR/origin checks and 142 account-lifecycle checks. CSRF, null/foreign-origin rejection, recent authorization, recovery and replay protection remain active. No real account factor or credential was changed.</li>
-<li><strong>📦 Source baseline preserved:</strong> Captured the current Sandbox and Production source separately on a dedicated GitHub snapshot branch. Private runtime data and authentication values are excluded; export-only Last.fm key redactions are documented. Final Production mail and owner two-factor acceptance remain open.</li>
+<li><strong>📦 Source baseline preserved:</strong> Captured the current Sandbox and Production source separately on a dedicated GitHub snapshot branch. Private runtime data and authentication values are excluded; export-only Last.fm key redactions are documented. At this checkpoint, Production mail and owner two-factor acceptance were still open; the current status above records subsequent owner two-factor acceptance.</li>
 </ul>
 <h3>📅 October 13, 2026</h3>
 <ul>
@@ -225,7 +233,11 @@
 <li>📌 Production release reconciliation, advertising activation, storage capacity review and apex-domain redirect verification.</li>
 <li>📌 Current searches are staff-only tools; ordinary accounts cannot access them. General member and post search is not implemented and must use the same permission rules when added.</li>
 <li>📌 KWS/PRIVO are not active age-verification integrations. Robust identity verification and DOB correction verification remain unfinished.</li>
-<li>📌 Inbound delivery to ToS@neonrest.com is confirmed. Sandbox retention/deletion is active under the approved policy; legacy archives and protected moderation evidence require separate review.</li>
+<li>📌 Inbound delivery to ToS@neonrest.com is confirmed. Permanent erasure is currently disabled in both environments while preservation, document retention and backup procedures are finalized; legacy archives and protected moderation evidence require separate review.</li>
 <li>📌 Advertising is planned for the production release. The current policy describes contextual advertising and aggregate reporting; live campaign/provider rollout remains pending.</li>
 </ul>
-{% endblock %}
+</main><style>
+.dev-log{box-sizing:border-box;width:min(calc(100% - 2rem),82ch);margin:2rem auto;padding:clamp(1rem,3vw,2rem);line-height:1.65;text-align:left;overflow-wrap:anywhere}
+.dev-log h2,.dev-log h3{margin-left:0;line-height:1.3}.dev-log h3{margin-top:2rem}.dev-log ul{padding-left:1.4em}.dev-log li+li{margin-top:.7rem}.dev-log .dev-current{padding:1rem 1.2rem;margin:1.5rem 0;border:1px solid currentColor;border-radius:12px}.dev-log .dev-current h3{margin-top:0}
+@media(max-width:540px){.dev-log{width:calc(100% - 1rem);margin:1rem auto;padding:.8rem}.dev-log .dev-current{padding:.85rem}}
+</style>{% endblock %}
