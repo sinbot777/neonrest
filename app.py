@@ -1486,19 +1486,17 @@ def vibe_page(vibe_name):
         ORDER BY posts.created_at DESC, posts.id DESC LIMIT 20 OFFSET ?
     ''', (vibe['id'],(page-1)*20)).fetchall()
 
-    # Images are currently linked in post text; there is no attachment column yet.
-    import re
-    gallery_items = []
+    from neonrest.vibe_gallery import build_vibe_gallery
+    init_media_tables(db)
+    gallery_items = build_vibe_gallery(
+        db, posts,
+        lambda filename: url_for('media_file', filename=filename),
+        lambda filename: url_for('static', filename=filename),
+    )
     contributors = []
     for post in posts:
         if post['handle'] not in contributors and len(contributors) < 6:
             contributors.append(post['handle'])
-        for alt, image_url in re.findall(r'!\[([^\]]*)\]\((https?://[^\s)]+|/(?:sandbox/)?static/[^\s)]+)\)', post['content'] or ''):
-            if len(gallery_items) >= 8:
-                break
-            if image_url.startswith('/static/'):
-                image_url = url_for('static', filename=image_url[len('/static/'):])
-            gallery_items.append({'id': post['id'], 'handle': post['handle'], 'alt': alt, 'url': image_url})
     viewer_posts = db.execute('''SELECT COUNT(*) FROM posts p JOIN post_vibes pv ON pv.post_id=p.id
         WHERE pv.vibe_id=? AND p.user_id=? AND NOT EXISTS (SELECT 1 FROM moderated_posts mp WHERE mp.post_id=p.id) AND community_post_visible(p.id)=1''',
         (vibe['id'], user['id'])).fetchone()[0] if user else 0

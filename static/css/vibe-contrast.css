@@ -145,3 +145,13 @@ body .vibe-page-wrapper .vibe-feed .content-menu .content-menu-panel button:hove
 body .vibe-page-wrapper .vibe-feed .content-menu .content-menu-panel :is(a, button):focus-visible {
   outline: 2px solid #fff8e7; outline-offset: -3px;
 }
+
+/* Keep each Vibe post's options beside its author, at the upper right. */
+body .vibe-page-wrapper .vibe-feed .vibe-post-author { display: flex; align-items: flex-start; gap: .75rem; }
+body .vibe-page-wrapper .vibe-feed .vibe-post-byline { min-width: 0; overflow-wrap: anywhere; }
+body .vibe-page-wrapper .vibe-feed .vibe-post-author > .content-menu {
+  margin-inline-start: auto; flex-shrink: 0; align-self: flex-start;
+}
+body .vibe-page-wrapper .vibe-feed .vibe-post-author > .content-menu .content-menu-panel {
+  inset-inline-start: auto; inset-inline-end: 0;
+}
