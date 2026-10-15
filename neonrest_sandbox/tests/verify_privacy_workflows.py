@@ -51,6 +51,7 @@ class PrivacyTests(unittest.TestCase):
   self.core=types.SimpleNamespace(get_db=lambda:self.db,require_staff_permission=perm,has_staff_permission=lambda db,uid,p:uid in (1,4),theme_csrf_token=lambda:'synthetic-token',identifiers=types.SimpleNamespace(export_ids=lambda db,data:None))
   self.app.extensions['community_auth_helpers']={'csrf':csrf,'fresh':lambda:session.get('fresh',False),'limited':lambda *a:None}
   self.app.add_url_rule('/confirm','community_reauth',lambda:'Confirm')
+  self.app.add_url_rule('/manage','manage_home',lambda:'Management')
   family_data.register(self.app,self.core)
   self.client=self.app.test_client();self.login(1)
   cur=self.db.execute("INSERT INTO family_data_requests(parent_id,child_id,kind,response_due,assigned_to) VALUES (2,3,'data-review',?,1)",(int(time.time())+45*privacy.DAY,));self.rid=cur.lastrowid;self.db.commit()
@@ -149,6 +150,18 @@ class PrivacyTests(unittest.TestCase):
   data['decision_reason']='More authority evidence required';self.assertEqual(self.post('/manage/family/requests',data).status_code,302)
   self.login(2);self.assertEqual(self.post('/account/family/requests/'+str(self.rid)+'/appeal',dict(reason='Please reconsider')).status_code,302);self.assertTrue(privacy.blockers(self.db,3))
   self.login(1);self.assertEqual(self.post('/manage/privacy',dict(action='decide-appeal',request_id=self.rid,decision='denied',response_text='Authority not established',delivery_reference='Already delivered',complaint_notice_delivered='1',independence_reason='Sole available reviewer')).status_code,302);self.assertIn('Oregon Attorney General',self.row()['appeal_response'])
+ def test_appeal_denial_preserves_existing_complaint_notice(self):
+  url='https://www.doj.state.or.us/consumer-protection/id-theft-data-breaches/privacy/'
+  for original in ['Authority not established','Review complete. Submit a privacy complaint to the Oregon Attorney General: '+url,'Review complete. Submit a privacy complaint to the Oregon Attorney General: '+url.rstrip('/')]:
+   with self.subTest(response=original):
+    self.db.execute('UPDATE family_data_requests SET appealed_at=?,appeal_due=?,appeal_reviewed_at=NULL,reviewed_by=4 WHERE id=?',(int(time.time()),int(time.time())+100,self.rid));self.db.commit()
+    response=self.post('/manage/privacy',dict(action='decide-appeal',request_id=self.rid,decision='denied',response_text=original,delivery_reference='Synthetic delivered notice',complaint_notice_delivered='1'))
+    self.assertEqual(response.status_code,302);stored=self.row()['appeal_response'];self.assertEqual(stored.count(url.rstrip('/')),1)
+    if url.rstrip('/') in original:self.assertEqual(stored,original)
+ def test_appeal_denial_still_requires_delivery_attestation(self):
+  self.db.execute('UPDATE family_data_requests SET appealed_at=?,reviewed_by=4 WHERE id=?',(int(time.time()),self.rid));self.db.commit()
+  response=self.post('/manage/privacy',dict(action='decide-appeal',request_id=self.rid,decision='denied',response_text='Oregon Attorney General: https://www.doj.state.or.us/consumer-protection/id-theft-data-breaches/privacy/',delivery_reference='Synthetic notice'))
+  self.assertEqual(response.status_code,400);self.assertIsNone(self.row()['appeal_reviewed_at'])
  def test_document_schedule_respects_preservation(self):
   self.db.execute("INSERT INTO family_consent_documents(id,parent_id,child_id,storage_key,created_at) VALUES (1,2,3,'doc.pdf','2000-01-01')");self.db.commit()
   self.assertEqual(self.post('/manage/privacy',dict(action='schedule-document-purge',document_id=1,purge_days=30,reason='Verified, retained minimal result')).status_code,302)

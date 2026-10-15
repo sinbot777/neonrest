@@ -302,7 +302,7 @@ def register(app,core):
                     decision=request.form.get('decision');response=text('response_text');delivery=text('delivery_reference',500)
                     if decision not in ('approved','denied'):abort(400)
                     independent=text('independence_reason',500) if actor==row['reviewed_by'] else 'Different reviewer'
-                    if decision=='denied':response+='\nYou may submit a privacy complaint to the Oregon Attorney General: https://www.doj.state.or.us/consumer-protection/id-theft-data-breaches/privacy/'
+                    if decision=='denied' and 'https://www.doj.state.or.us/consumer-protection/id-theft-data-breaches/privacy' not in response:response+='\nYou may submit a privacy complaint to the Oregon Attorney General: https://www.doj.state.or.us/consumer-protection/id-theft-data-breaches/privacy/'
                     if decision=='denied' and request.form.get('complaint_notice_delivered')!='1':abort(400,description='Include Oregon Attorney General complaint instructions in the delivered appeal denial.')
                     db.execute('UPDATE family_data_requests SET appeal_decision=?,appeal_response=?,appeal_reviewer=?,appeal_reviewed_at=? WHERE id=?',(decision,response,actor,now,rid));event(db,rid,actor,'appeal-decided',decision+'; '+independent+'; response already delivered: '+delivery)
                 else:abort(400)
@@ -331,5 +331,5 @@ def register(app,core):
             response.headers['Cache-Control']='private, no-store'
             response.headers['Referrer-Policy']='same-origin'
             response.headers['X-Content-Type-Options']='nosniff'
-            response.headers['X-Neonrest-Privacy-Revision']='2026-10-14.5'
+            response.headers['X-Neonrest-Privacy-Revision']='2026-10-14.6'
         return response
