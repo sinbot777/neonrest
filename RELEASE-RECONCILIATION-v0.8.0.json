@@ -1,0 +1,21 @@
+{
+  "parent": "800f576e4d681ea0095bf56a75f0f152992c65d4",
+  "tracked_deployed_files_checked": 301,
+  "differences": [
+    "neonrest/tests/verify_authenticator_replacement.py"
+  ],
+  "repository_only_files": [
+    "neonrest/tests/verify_privacy_environment.py",
+    "neonrest/tests/verify_privacy_full_app.py",
+    "neonrest/tests/verify_privacy_submissions.py",
+    "neonrest/tests/verify_privacy_workflows.py",
+    "neonrest/tests/verify_reauth_feedback.py",
+    "neonrest_sandbox/tests/verify_privacy_full_app.py"
+  ],
+  "sanitized_runtime_exceptions": [
+    "neonrest/utils/lastfm.py",
+    "neonrest_sandbox/utils/lastfm.py"
+  ],
+  "v080_tag_exists": false,
+  "mail_supervisor_fresh": true
+}

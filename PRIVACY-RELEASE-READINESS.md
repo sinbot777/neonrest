@@ -1,3 +1,7 @@
+# Current reconciliation — October 15, 2026 (Pacific)
+
+Owner Production acceptance of Privacy requests, Private verification documents and Family request review is complete. The final account/navigation and post-link styling is deployed and accepted. RELEASE-CHECKLIST-v0.8.0.md supersedes historical pending notes below. The owner recovery/replacement walkthrough and retired MailerSend credential revocation remain unconfirmed. Draft release notes are prepared; no final version/tag is issued. Permanent erasure remains disabled.
+
 ## Production privacy rollout completed - October 14, 2026 (Pacific)
 
 The reviewed privacy workflow is installed in actual Production, plus permission-controlled Management navigation. Thirteen runtime files match the recorded installed manifest. A fresh private database checkpoint passed integrity checks; all pre-existing table rows remained unchanged during additive migration. Thirteen live route/header/cookie checks and three isolated Management rendering checks passed. Root and Sandbox secure HttpOnly cookies remain distinct. Anonymous staff endpoints deny access. Original WSGI configuration is restored; Sandbox stayed available during the Production-only maintenance window and both mail workers have fresh heartbeats. No live test accounts, invitations or document uploads were created by deployment.
