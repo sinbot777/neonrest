@@ -321,5 +321,5 @@ def register(app,core):
             response.headers['Cache-Control']='private, no-store'
             response.headers['Referrer-Policy']='same-origin'
             response.headers['X-Content-Type-Options']='nosniff'
-            response.headers['X-Neonrest-Privacy-Revision']='2026-10-14.2'
+            response.headers['X-Neonrest-Privacy-Revision']='2026-10-14.3'
         return response
