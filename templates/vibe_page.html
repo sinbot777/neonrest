@@ -82,14 +82,6 @@
               <a href="{{ author_profile }}" aria-label="View @{{ post['handle'].lstrip('@') }}'s profile"><img src="{{ avatar }}" alt="" class="vibe-post-avatar" loading="lazy"></a>
               <div class="vibe-post-byline"><h3><a class="user-handle" href="{{ author_profile }}"><strong>@{{ post['handle'].lstrip('@') }}</strong></a></h3>
                 <a class="post-permalink" href="{{ url_for('post_detail', post_id=post['id']) }}" aria-label="Open this post"><time class="vibe-post-date" datetime="{{ post['created_at'] | replace(' ', 'T') }}">Posted {{ post['created_at'] | replace('T', ' ') }}</time></a></div>
-            </div>
-            <p><strong>Vibes:</strong>
-              {% set vibe_list = (post['vibes'] or '').split(',') %}
-              {% for vibe in vibe_list %}
-                <a class="vibe-label" href="/vibe/{{ vibe.strip() | urlencode }}">{{ vibe.strip() }}</a>
-              {% endfor %}
-              | <strong>Circle:</strong> {{ post['circle'] or '—' }}
-            </p>
 {% if session.get('user_id') %}
 <details class="content-menu">
   <summary aria-label="Post options">⋮</summary>
@@ -107,6 +99,15 @@
   </div>
 </details>
 {% endif %}
+            </div>
+            <p><strong>Vibes:</strong>
+              {% set vibe_list = (post['vibes'] or '').split(',') %}
+              {% for vibe in vibe_list %}
+                <a class="vibe-label" href="/vibe/{{ vibe.strip() | urlencode }}">{{ vibe.strip() }}</a>
+              {% endfor %}
+              | <strong>Circle:</strong> {{ post['circle'] or '—' }}
+            </p>
+
             <p>{{ post['content'] }}</p>
             {% include "post_media.html" %}
             {% if post['last_edited'] %}
