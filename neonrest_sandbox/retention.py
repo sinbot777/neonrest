@@ -2,6 +2,7 @@
 import argparse,json,sqlite3,time
 from pathlib import Path
 from urllib.parse import urlsplit, unquote
+from neonrest_sandbox.privacy_workflows import blockers,erasure_blockers
 
 def avatar_filename(value):
     """Compare the URL path, excluding cache queries and fragments."""
@@ -49,12 +50,15 @@ def plan(db,now=None):
     accounts=sorted(set(accounts+pending))
     # Operational owners are never removed automatically.
     accounts=[uid for uid in accounts if not ('account_disables' in ts and db.execute('SELECT 1 FROM account_disables WHERE user_id=? AND disabled=1',(uid,)).fetchone()) and not ('reserved_accounts' in ts and db.execute('SELECT 1 FROM reserved_accounts WHERE user_id=?',(uid,)).fetchone()) and uid!=1 and not ('staff_roles' in ts and db.execute('SELECT 1 FROM staff_roles WHERE user_id=?',(uid,)).fetchone())]
+    held={uid:erasure_blockers(db,uid) for uid in accounts}
+    held={uid:why for uid,why in held.items() if why}
+    accounts=[uid for uid in accounts if uid not in held]
     for table in ('post_media','post_edit_history','post_privacy','post_vibes'):
         add(table,'post_id NOT IN (SELECT id FROM posts)',())
     add('friend_requests',"status='pending' AND julianday(created_at)<julianday(?,'unixepoch')",(now-30*DAY,))
     reviews=0
     if 'closed_at' in ts.get('moderation_cases',set()):reviews=db.execute("SELECT count(*) FROM moderation_cases WHERE status='closed' AND julianday(closed_at)<=julianday(?,'unixepoch')",(now-365*DAY,)).fetchone()[0]
-    return {'now':now,'accounts':accounts,'expired_records':rows,'moderation_reviews_due':reviews}
+    return {'now':now,'accounts':accounts,'expired_records':rows,'moderation_reviews_due':reviews,'held_accounts':held}
 
 def queue(db,path,root):
     root=Path(root).resolve(); path=Path(path)
@@ -65,6 +69,8 @@ def queue(db,path,root):
         db.execute('INSERT OR IGNORE INTO retention_file_queue(path) VALUES (?)',(str(resolved),))
 
 def erase_account(db,uid,roots):
+    why=erasure_blockers(db,uid)
+    if why:raise ValueError('Account is preserved: '+'; '.join(why))
     ts=tables(db); row=db.execute('SELECT * FROM users WHERE id=?',(uid,)).fetchone()
     if not row:return
     cols=[r[1] for r in db.execute('PRAGMA table_info(users)')]; user=dict(zip(cols,row))
@@ -103,6 +109,8 @@ def erase_account(db,uid,roots):
     # Shared themes and restricted moderation evidence remain; erase creator linkage where nullable.
     if 'themes' in ts:db.execute('UPDATE themes SET created_by=NULL WHERE created_by=?',(uid,))
     if 'family_data_requests' in ts:db.execute("UPDATE family_data_requests SET status='closed',reviewed_at=CURRENT_TIMESTAMP WHERE child_id=? AND status='scheduled'",(uid,))
+    if 'approved_payload' in ts.get('family_data_requests',set()):
+        db.execute('UPDATE family_data_requests SET approved_payload=NULL,payload_sha256=NULL,authority_version=NULL,expires_at=NULL WHERE parent_id=? OR child_id=?',(uid,uid))
     remove('parent_deletion_requests','child_id',[uid])
     db.execute('DELETE FROM users WHERE id=?',(uid,))
 
@@ -116,6 +124,10 @@ def file_work(db,roots,now):
     if 'family_consent_documents' in tables(db):
         for did,key in db.execute("SELECT d.id,d.storage_key FROM family_consent_documents d WHERE julianday(d.created_at)<julianday(?,'unixepoch') AND NOT EXISTS(SELECT 1 FROM family_links f WHERE f.parent_id=d.parent_id AND f.child_id=d.child_id AND f.status='approved')",(now-30*DAY,)):
             documents.append((did,key))
+    if 'purge_after' in tables(db).get('family_consent_documents',set()):
+        documents.extend((r[0],r[1]) for r in db.execute('SELECT id,storage_key FROM family_consent_documents WHERE purge_after IS NOT NULL AND purge_after<=?',(now,)))
+    documents=list(dict.fromkeys(documents))
+    documents=[(did,key) for did,key in documents if not any(blockers(db,uid) for row in db.execute('SELECT parent_id,child_id FROM family_consent_documents WHERE id=?',(did,)) for uid in row)]
     return backups,documents
 
 def orphan_files(db,roots,now):
@@ -147,7 +159,10 @@ def referenced(db,path,roots):
 
 def run(db,roots,apply=False,now=None):
     work=plan(db,now);backups,documents=file_work(db,roots,work['now']);orphans=orphan_files(db,roots,work['now'])
+    protected=any(blockers(db,r[0]) for r in db.execute('SELECT id FROM users'))
+    if protected:backups=[];orphans=[]
     summary={'accounts':len(work['accounts']),'account_ids':work['accounts'],'records':{r['table']:r['count'] for r in work['expired_records']},'orphan_files':len(orphans),'managed_backups':len(backups),'unused_consent_documents':len(documents),'moderation_reviews_due':work['moderation_reviews_due'],'mode':'apply' if apply else 'preview'}
+    summary['held_accounts']=work['held_accounts'];summary['ancillary_cleanup_paused']=protected
     if 'mail_jobs' in tables(db):
         expired_mail=db.execute('SELECT count(*) FROM mail_jobs WHERE payload IS NOT NULL AND expires_at<=?',(work['now'],)).fetchone()[0]
         if expired_mail:summary['records']['mail_payloads']=expired_mail
@@ -162,16 +177,21 @@ def run(db,roots,apply=False,now=None):
             db.execute("UPDATE mail_jobs SET state='expired',payload=NULL,lease=NULL,lease_until=NULL WHERE payload IS NOT NULL AND expires_at<=?",(work['now'],))
         eligible=set(plan(db,work['now'])['accounts'])
         backups,documents=file_work(db,roots,work['now']);orphans=orphan_files(db,roots,work['now'])
+        protected=any(blockers(db,r[0]) for r in db.execute('SELECT id FROM users'))
+        if protected:backups=[];orphans=[]
         summary.update(managed_backups=len(backups),unused_consent_documents=len(documents),orphan_files=len(orphans))
         summary['account_ids']=[uid for uid in work['accounts'] if uid in eligible]
         summary['accounts']=len(summary['account_ids'])
         for uid in summary['account_ids']:erase_account(db,uid,roots)
-        for r in work['expired_records']:db.execute('DELETE FROM "'+r['table']+'" WHERE '+r['where'],r['args'])
+        for r in ([] if protected else work['expired_records']):db.execute('DELETE FROM "'+r['table']+'" WHERE '+r['where'],r['args'])
         for name,root in orphans:queue(db,name,root)
         for path in backups:queue(db,path,roots['backups'])
         for did,key in documents:
             queue(db,Path(roots['consent'])/key,roots['consent']);db.execute('DELETE FROM family_consent_documents WHERE id=?',(did,))
         db.execute('INSERT INTO retention_runs(summary) VALUES (?)',(json.dumps(summary),))
+    # File queue entries may predate a hold. Do not unlink queued evidence while any hold is active.
+    if protected:
+        db.commit();summary['file_errors']=0;summary['ancillary_cleanup_paused']=True;return summary
     allowed=[Path(v).resolve() for v in roots.values()]
     errors=0
     for (name,) in db.execute('SELECT path FROM retention_file_queue').fetchall():
@@ -210,3 +230,4 @@ def main():
         if args.apply and not app.config.get('RETENTION_ENABLED',False):parser.error('Live retention is not activated. Preview remains available.')
         print(json.dumps(run(core.get_db(),roots,args.apply),sort_keys=True))
 if __name__=='__main__':main()
+

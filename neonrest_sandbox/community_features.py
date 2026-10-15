@@ -426,7 +426,7 @@ def register(app, core):
                 db.execute('UPDATE active_sessions SET seen_at=? WHERE token_hash=?',(int(time.time()),digest(sid)))
                 db.commit()
         state=db.execute('SELECT inactive FROM account_safety WHERE user_id=?',(uid,)).fetchone() if uid else None
-        if state and state['inactive'] and request.endpoint not in ('community_data','community_export','community_reactivate','logout','community_reauth'):
+        if state and state['inactive'] and request.endpoint not in ('community_data','community_export','community_reactivate','logout','community_reauth','family_data_requests','privacy_request_appeal'):
             return redirect(url_for('community_data'))
         if request.method=='POST':
             if request.endpoint in ('login','community_login_factor','community_reauth','password_reset_request','password_reset'):

@@ -1655,7 +1655,7 @@ def enforce_moderation_status():
         row = get_db().execute('SELECT banned, posting_restricted, interaction_restricted FROM user_moderation WHERE user_id = ?', (user_id,)).fetchone()
         if row:
             if row['banned']:
-                if request.endpoint not in ('my_appeals', 'appeal_form', 'logout', 'static', 'community_security', 'account_email', 'account_email_confirm', 'community_reauth', 'community_notifications', 'community_data', 'community_export', 'community_privacy', 'community_relationship'):
+                if request.endpoint not in ('my_appeals', 'appeal_form', 'logout', 'static', 'community_security', 'account_email', 'account_email_confirm', 'community_reauth', 'community_notifications', 'community_data', 'community_export', 'community_privacy', 'community_relationship','family_data_requests','privacy_request_appeal'):
                     abort(403)
             if request.method == 'POST':
                 if row['posting_restricted'] and request.endpoint in ('create_post', 'create_comment', 'edit_post', 'edit_comment', 'post.create_post'):
@@ -2564,7 +2564,7 @@ register_verification(app, sys.modules[__name__])
 from neonrest_sandbox.retention import initialize as initialize_retention
 with app.app_context():
     initialize_retention(get_db())
-app.config['RETENTION_ENABLED'] = True
+app.config['RETENTION_ENABLED'] = False
 from neonrest_sandbox.retention import register_reserved_guard
 register_reserved_guard(app,sys.modules[__name__])
 from neonrest_sandbox.account_disabling import register as register_account_disabling
