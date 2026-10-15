@@ -1,3 +1,15 @@
+## Current Sandbox status: private documents and retention (2026-10-14.7)
+
+This update supersedes earlier statements below that unlinked document submission or a document/backup schedule is still unimplemented. Staff can now issue one-file, 24-hour private invitations without a requester account. Documents are encrypted outside public files, with staff-only fresh-authenticated downloads and separate identity/authority decisions. Uploads never grant export or guardian access.
+
+Operating targets are 30 days for reviewed documents after final request/appeal resolution, 90 days for request records after final resolution, and 30 days for managed rolling backups. Preservation blockers and later related hold releases prevent or extend disposal. Document removal is staff-confirmed; managed backup rotation is an operator task. The combined retention job and permanent account erasure remain disabled. These periods are operating choices, not statutory minimums. Legacy consent evidence, provider copies and old downloaded archives need their own review.
+
+See PRIVACY-DOCUMENT-RETENTION.md and the in-app Privacy and Family guides for the full process, minimal collection, key recovery, weekly review and offline restore. Restore preflight invalidates restored invitations, grants, sessions and email tokens on an explicitly selected offline copy; human reconciliation of later preservation/deletion decisions and private files remains required.
+
+Verification: 43 privacy tests, 23 actual-application intake/notice/signup checks, 17 baseline application privacy checks, and 41 retention compatibility checks passed using disposable data with SMTP disabled. Production source is unchanged. This closes implementation of these two Sandbox prerequisites, not Production rollout or final v0.8.0 acceptance.
+
+---
+
 # Privacy workflows: Sandbox implementation
 
 Sandbox source and additive schema installed 2026-10-15 UTC. Web-worker reload verified: unauthenticated privacy management returns 403 with revision 2026-10-14.6. Production source is unchanged. Permanent retention is disabled in both configurations.

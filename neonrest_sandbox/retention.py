@@ -42,7 +42,16 @@ def plan(db,now=None):
     if 'touched_at' in ts.get('rate_buckets',set()):add('rate_buckets','touched_at>0 AND touched_at<?',(now-DAY,))
     for table,days in [('account_lifecycle_events',90),('abuse_events',90),('operations_events',30),('notifications',90),('authorization_post_drafts',1),('retention_runs',90)]:
         add(table,"julianday(created_at)<julianday(?,'unixepoch')",(now-days*DAY,))
-    add('family_data_requests',"status IN ('closed','declined','access-approved') AND julianday(COALESCE(reviewed_at,created_at))<julianday(?,'unixepoch')",(now-90*DAY,))
+    if {'responded_at','appeal_reviewed_at'} <= ts.get('family_data_requests',set()):
+        final_age="MAX(COALESCE(CAST(strftime('%s',reviewed_at) AS INTEGER),0),COALESCE(CAST(strftime('%s',created_at) AS INTEGER),0),COALESCE(responded_at,0),COALESCE(appeal_reviewed_at,0))<?"
+        where="status IN ('closed','declined','access-approved') AND "+final_age+" AND (appealed_at IS NULL OR appeal_reviewed_at IS NOT NULL)"
+        if 'privacy_submission_documents' in ts:where+=" AND NOT EXISTS(SELECT 1 FROM privacy_submission_documents d WHERE d.request_id=family_data_requests.id AND d.purged_at IS NULL)"
+        add('family_data_requests',where,(now-90*DAY,))
+    else:
+        add('family_data_requests',"status IN ('closed','declined','access-approved') AND julianday(COALESCE(reviewed_at,created_at))<julianday(?,'unixepoch')",(now-90*DAY,))
+    add('privacy_request_events','created_at<? AND (request_id IS NULL OR NOT EXISTS(SELECT 1 FROM family_data_requests r WHERE r.id=privacy_request_events.request_id))',(now-90*DAY,))
+    add('privacy_upload_invites','expires_at<?',(now-7*DAY,))
+    add('privacy_submission_documents','purged_at IS NOT NULL AND NOT EXISTS(SELECT 1 FROM family_data_requests r WHERE r.id=privacy_submission_documents.request_id)',())
     accounts=[]
     if 'account_safety' in ts:
         accounts=[r[0] for r in db.execute("SELECT user_id FROM account_safety WHERE deletion_requested_at IS NOT NULL AND julianday(deletion_requested_at)<=julianday(?,'unixepoch')",(now-30*DAY,))]

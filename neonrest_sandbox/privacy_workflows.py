@@ -123,6 +123,8 @@ def blockers(db, uid):
 def erasure_blockers(db, uid):
     """Deleting one account must not cascade-delete another held person's data."""
     result=blockers(db,uid); ts=table_columns(db); related=set()
+    if 'privacy_submission_documents' in ts and db.execute('SELECT 1 FROM privacy_submission_documents d JOIN family_data_requests r ON r.id=d.request_id WHERE d.purged_at IS NULL AND (r.parent_id=? OR r.child_id=?)',(uid,uid)).fetchone():
+        result.append('Private verification documents require reviewed disposal')
     pids=[]
     if 'posts' in ts:
         for row in db.execute('SELECT id,user_id,target_user_id FROM posts WHERE user_id=? OR target_user_id=?',(uid,uid)):
@@ -214,6 +216,8 @@ def register(app,core):
     from flask import abort,flash,redirect,render_template,request,session,url_for
     with app.app_context(): initialize(core.get_db())
     app.jinja_env.filters['privacy_date']=lambda value:datetime.fromtimestamp(value,timezone.utc).strftime('%Y-%m-%d %H:%M UTC') if value else 'Not scheduled'
+    from neonrest_sandbox.privacy_submissions import register as register_submissions
+    register_submissions(app,core)
     def helpers(): return app.extensions['community_auth_helpers']
     def staff():
         actor=core.require_staff_permission('manage_roles')
@@ -327,9 +331,9 @@ def register(app,core):
 
     @app.after_request
     def privacy_headers(response):
-        if request.endpoint in ('privacy_management_help','family_data_review_help','privacy_management','privacy_request_appeal','family_data_review','family_data_requests','family_data_download'):
+        if request.endpoint in ('privacy_submissions','privacy_submission_upload','privacy_submission_download','privacy_management_help','family_data_review_help','privacy_management','privacy_request_appeal','family_data_review','family_data_requests','family_data_download'):
             response.headers['Cache-Control']='private, no-store'
             response.headers['Referrer-Policy']='same-origin'
             response.headers['X-Content-Type-Options']='nosniff'
-            response.headers['X-Neonrest-Privacy-Revision']='2026-10-14.6'
+            response.headers['X-Neonrest-Privacy-Revision']='2026-10-14.7'
         return response
