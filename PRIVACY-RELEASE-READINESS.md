@@ -1,3 +1,7 @@
+## Owner acceptance and retention inventory follow-up — October 14, 2026
+
+The private document walkthrough is complete, including successful request closure and the expected 30-day eligibility date. Actual removal was not performed. See PRIVACY-RETENTION-READINESS.md for verified backup metadata, the untrusted older snapshot and preserved case/disposition inventory. Production rollout preparation can proceed with erasure disabled; preserved-case decisions and legacy/provider copy review remain prerequisites to any later erasure activation.
+
 ## Current Sandbox status: private documents and retention (2026-10-14.7)
 
 This update supersedes earlier statements below that unlinked document submission or a document/backup schedule is still unimplemented. Staff can now issue one-file, 24-hour private invitations without a requester account. Documents are encrypted outside public files, with staff-only fresh-authenticated downloads and separate identity/authority decisions. Uploads never grant export or guardian access.
