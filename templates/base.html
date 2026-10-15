@@ -191,5 +191,6 @@ body > .session-info > a:focus-visible { outline:2px solid currentColor; outline
 <link rel="stylesheet" href="{{ url_for('static', filename='css/image_viewer.css') }}">
 <script defer src="{{ url_for('static', filename='js/image_viewer.js') }}"></script>
 {% if account_shell_enabled %}<link rel="stylesheet" href="{{ url_for('static',filename='css/account-shell.css',v='20261015-account1') }}">{% endif %}
+{% if vibe_slug %}<link rel="stylesheet" href="{{ url_for('static',filename='css/vibe-contrast.css',v='20261015-contrast1') }}">{% endif %}
 </body>
 </html>

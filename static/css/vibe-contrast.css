@@ -1,0 +1,113 @@
+/* Pair shared UI surfaces with their own foreground, independent of page artwork. */
+body:has(.vibe-page-wrapper) {
+  --vibe-ui-panel: var(--vibe-panel, #fff4d6);
+  --vibe-ui-ink: var(--vibe-ink, #2a2d4a);
+  --vibe-ui-header-bg: var(--vibe-ui-panel);
+  --vibe-ui-header-ink: var(--vibe-ui-ink);
+}
+body[data-mode="night"]:has(.vibe-page-wrapper) {
+  --vibe-ui-panel: var(--vibe-panel, #242537);
+  --vibe-ui-ink: var(--vibe-ink, #f5f1fc);
+}
+/* Preserve the legacy Vibes' distinctive dark mastheads, with matching ink. */
+body.vibe-driftroom:has(.vibe-page-wrapper) { --vibe-ui-header-bg: #132237; --vibe-ui-header-ink: #a8e4ff; }
+body.vibe-analog:has(.vibe-page-wrapper) { --vibe-ui-header-bg: #1c1c1c; --vibe-ui-header-ink: #90ffb5; }
+body.vibe-backporch:has(.vibe-page-wrapper) { --vibe-ui-header-bg: #2b2132; --vibe-ui-header-ink: #ffd2f3; }
+
+body:has(.vibe-page-wrapper) > .session-info {
+  width: fit-content;
+  margin: .5rem auto;
+  padding: .35rem .85rem;
+  border: 1px solid #766b84;
+  border-radius: 12px;
+  background: #1b202b;
+  color: #fff8e7;
+  text-shadow: none;
+}
+body:has(.vibe-page-wrapper) > .session-info a,
+body:has(.vibe-page-wrapper) > .session-info a:visited { color: #fff8e7; text-shadow: none; }
+body:has(.vibe-page-wrapper) > .session-info a:hover { color: #ffd2c7; }
+body .vibe-page-wrapper .vibe-feed { background: var(--vibe-ui-panel); color: var(--vibe-ui-ink); }
+body .vibe-page-wrapper .vibe-feed .vibe-masthead {
+  background: var(--vibe-ui-header-bg);
+  color: var(--vibe-ui-header-ink);
+  text-shadow: none;
+  padding: 1rem;
+  border-radius: 12px;
+}
+body .vibe-page-wrapper .vibe-masthead .vibe-intro,
+body .vibe-page-wrapper .vibe-masthead .vibe-intro p,
+body .vibe-page-wrapper .vibe-masthead .glow,
+body .vibe-page-wrapper .vibe-feed .vibe-masthead .vibe-manage-button,
+body .vibe-page-wrapper .vibe-feed .vibe-masthead .vibe-manage-button:visited {
+  color: var(--vibe-ui-header-ink);
+  text-shadow: none;
+}
+body .vibe-page-wrapper .vibe-feed .vibe-masthead .vibe-manage-button { border-color: currentColor; background: transparent; }
+body .vibe-page-wrapper .vibe-post-button { text-shadow: none; }
+/* Sidebars have a different background from the feed; use their paired ink. */
+body .vibe-page-wrapper .vibe-layout .vibe-rail a,
+body .vibe-page-wrapper .vibe-layout .vibe-rail a:visited { color: inherit; text-shadow: none; text-underline-offset: .18em; }
+body .vibe-page-wrapper .vibe-rail .gallery-empty,
+body .vibe-page-wrapper .vibe-rail .rail-eyebrow,
+body .vibe-page-wrapper .vibe-rail .rail-person small { opacity: 1; }
+body .vibe-page-wrapper .vibe-feed .post-permalink,
+body .vibe-page-wrapper .vibe-feed .vibe-post-date { color: var(--vibe-ui-ink); opacity: 1; text-shadow: none; }
+body .vibe-page-wrapper a:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+/* Accent colors may be decorative; navigation labels still need body-text contrast. */
+body .vibe-page-wrapper .vibe-feed a.vibe-label,
+body .vibe-page-wrapper .vibe-feed a.vibe-label:visited,
+body:has(.vibe-page-wrapper) .page-wrapper .vibe-mode-switch a,
+body:has(.vibe-page-wrapper) .page-wrapper .vibe-mode-switch a:visited {
+  color: var(--vibe-ui-ink);
+  text-shadow: none;
+  opacity: 1;
+}
+body:has(.vibe-page-wrapper) .footer-version {
+  color: #fff8e7;
+  background: #1b202b;
+  width: fit-content;
+  margin: .5rem auto;
+  padding: .25rem .65rem;
+  border-radius: 8px;
+  opacity: 1;
+}
+body .vibe-page-wrapper .vibe-feed a.vibe-label,
+body .vibe-page-wrapper .vibe-feed a.vibe-label:visited {
+  background: var(--vibe-ui-panel);
+  color: var(--vibe-ui-ink);
+  border: 1px solid currentColor;
+  box-shadow: none;
+}
+body:has(.vibe-page-wrapper) > a.button,
+body:has(.vibe-page-wrapper) > a.button:visited,
+body:has(.vibe-page-wrapper) #footer-tagline {
+  color: #fff8e7;
+  background: #1b202b;
+  text-shadow: none;
+  opacity: 1;
+}
+body:has(.vibe-page-wrapper) #footer-tagline {
+  width: fit-content;
+  margin: 1rem auto .5rem;
+  padding: .4rem .85rem;
+  border-radius: 8px;
+}
+body:has(.vibe-page-wrapper) .page-wrapper .vibe-mode-switch {
+  background: var(--vibe-ui-panel);
+  color: var(--vibe-ui-ink);
+  width: fit-content;
+  padding: .5rem .85rem;
+  border-radius: 12px;
+  text-shadow: none;
+}
+body:has(.vibe-page-wrapper) .page-wrapper .vibe-mode-switch a {
+  background: var(--vibe-ui-panel);
+  color: var(--vibe-ui-ink);
+}
+body:has(.vibe-page-wrapper) .page-wrapper .vibe-mode-switch a[aria-current="page"] {
+  outline: 1px solid currentColor;
+  outline-offset: 2px;
+}
+/* Avoid interpolating through unreadable colors while theme styles load. */
+body .vibe-page-wrapper .vibe-feed a.vibe-label { transition: none; }
