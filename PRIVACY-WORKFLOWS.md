@@ -1,6 +1,6 @@
 # Privacy workflows: Sandbox implementation
 
-Sandbox source and additive schema installed 2026-10-15 UTC. Web-worker reload verification remains pending. Production source is unchanged. Permanent retention is disabled in both configurations.
+Sandbox source and additive schema installed 2026-10-15 UTC. Web-worker reload verified: unauthenticated privacy management returns 403 with revision 2026-10-14.1. Production source is unchanged. Permanent retention is disabled in both configurations.
 
 ## Staff workflow
 Open /sandbox/manage/privacy after recent authentication as staff with manage_roles permission. Record requests received by email without requiring the requester to create an account. Preserve the original receipt time; assign a reviewer and track the 45-day response date. Record an extension only after its notice has actually been delivered. Recording a response does not send email. Record responses, appeals and independent review.
@@ -13,4 +13,4 @@ Deletion requests still hide accounts. Unresolved moderation involvement and man
 ## Verification and remaining work
 23 isolated privacy tests, 17 full-app integration checks and 41 existing retention compatibility checks passed. Existing QR (40), authenticator replacement (61) and recovery-form-origin (62) checks also passed against the candidate. Fixtures use disposable databases and mocked mail; real factors were not changed.
 
-Owner confirmed Production Vibe-management 2FA acceptance. Broader owner acceptance remains open. Before Production rollout: verify Sandbox UI and web revision, review policies and operational evidence retention/backup practices, agree document-retention schedules, and rehearse the staff process. No automatic outbound responses or automatic deadline notifications are implemented. These controls support the policy; they do not constitute a legal compliance certification.
+Owner confirmed Production Vibe-management 2FA acceptance. Broader owner acceptance remains open. Before Production rollout: owner-review the Sandbox UI, review policies and operational evidence retention/backup practices, agree document-retention schedules, and rehearse the staff process. No automatic outbound responses or automatic deadline notifications are implemented. These controls support the policy; they do not constitute a legal compliance certification.

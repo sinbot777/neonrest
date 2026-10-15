@@ -1,7 +1,8 @@
 """Full application smoke check; all writes target a disposable database."""
 from pathlib import Path
 import contextlib,io,json,os,sys,time,secrets,sqlite3
-r=Path('/home/sinbot/releases/PRIVACY-20261014');source=r/'neonrest_sandbox'
+r=Path(os.environ['NEONREST_PRIVACY_TEST_WORKDIR']).resolve();source=r/'neonrest_sandbox'
+assert r.name.startswith('PRIVACY-') and (r/'fixture.db').is_file() and (source/'app.py').is_file(), 'Use an isolated PRIVACY- test directory containing a source copy and fixture.db'
 for key,value in {'DATABASE':str(r/'full-smoke.db'),'SECRET_FILE':str(r/'smoke-state/secret'),'INSTANCE':str(r/'smoke-state/instance'),'MAIL_QUEUE_DIR':str(r/'smoke-state/mail'),'MAIL_QUEUE':'0'}.items():os.environ['NEONREST_SANDBOX_'+key]=value
 (r/'smoke-state').mkdir(mode=0o700,exist_ok=True)
 src=sqlite3.connect('file:'+str(r/'fixture.db')+'?mode=ro',uri=True);dst=sqlite3.connect(r/'full-smoke.db');src.backup(dst);src.close();dst.close()
