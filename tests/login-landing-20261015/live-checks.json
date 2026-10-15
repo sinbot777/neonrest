@@ -1,0 +1,8 @@
+{
+  "anonymous_login_forms_200_both_environments": true,
+  "dev_log_revision": "2026-10-15-login-landing",
+  "installed_source_hashes_match": true,
+  "mail_supervisor_fresh": true,
+  "authenticated_redirect_verified_in_isolated_copies": true,
+  "isolated_checks": 40
+}

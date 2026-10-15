@@ -1,0 +1,28 @@
+{
+  "environment": "neonrest",
+  "checks": [
+    "Anonymous login form remains available",
+    "Password-only success lands on own profile",
+    "Password-only profile destination opens without a login loop",
+    "Signed-in GET login redirects to own profile",
+    "Mounted Sandbox profile destination retains prefix",
+    "Wrong password stays on login form",
+    "Enabled factor still requires verification",
+    "Pending factor does not create signed-in session",
+    "Pending factor cannot trigger signed-in redirect",
+    "Invalid factor does not complete sign-in",
+    "Invalid factor grants no authenticated session",
+    "Valid second factor lands on own profile",
+    "Second-factor profile destination opens without a login loop",
+    "Completed factor session cannot remain on login form",
+    "Expired session returns login form",
+    "Expired session identity is cleared",
+    "Revoked session returns login form",
+    "Revoked session identity is cleared",
+    "Inactive account retains account-data landing",
+    "Existing restricted-account gate remains enforced"
+  ],
+  "count": 20,
+  "isolated_database": true,
+  "smtp_disabled": true
+}

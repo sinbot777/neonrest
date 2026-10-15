@@ -580,6 +580,9 @@ def register(app, core):
         return render_template('community.html',page=page,heading=heading,token=token(),kinds=KINDS,fields=FIELDS,**values)
 
     def login():
+        if request.method=='GET' and session.get('user_id'):
+            db=get_db(); user=current_user()
+            return redirect(url_for('community_data') if (db.execute('SELECT inactive FROM account_safety WHERE user_id=?',(user['id'],)).fetchone() or {'inactive':0})['inactive'] else url_for('my_appeals') if db.execute('SELECT 1 FROM user_moderation WHERE user_id=? AND banned=1',(user['id'],)).fetchone() else url_for('user_by_handle', handle=user['handle'].lstrip('@')))
         if request.method=='POST':
             csrf(); db=get_db()
             user=db.execute('SELECT * FROM users WHERE email=? COLLATE NOCASE',(request.form.get('email','').strip(),)).fetchone()

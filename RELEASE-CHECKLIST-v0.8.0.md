@@ -24,8 +24,8 @@ Updated October 15, 2026 (Pacific). This supersedes the October 14 checkpoint an
 
 ## Two owner items required before final sign-off
 
-- [ ] Confirm that the MailerSend API tokens and SMTP users implicated in the credential incident have been revoked. Moving delivery to Purelymail does not itself revoke credentials at MailerSend. Limited earlier access-log review is recorded; provider-side incident review/revocation remains unconfirmed. Record the action/date and provider-log coverage without any credential values. Do not claim that no misuse occurred when logs are unavailable.
-- [ ] Complete the actual Production owner browser acceptance for authenticator replacement and recovery-code use/reuse rejection. Keep credentials and recovery codes out of chat and release records. Record only the outcome and date; automated fixture coverage is already complete.
+- [ ] Confirm that the MailerSend API tokens and SMTP users implicated in the credential incident have been revoked. Owner reports an empty API-token list and a paused SMTP user on October 15; permanent SMTP credential deletion/revocation is still unconfirmed. Moving delivery to Purelymail does not itself revoke credentials at MailerSend. Limited earlier access-log review is recorded; provider-side incident review/revocation remains unconfirmed. Record the action/date and provider-log coverage without any credential values. Do not claim that no misuse occurred when logs are unavailable.
+- [ ] Complete the actual Production owner browser acceptance for authenticator replacement and recovery-code use/reuse rejection. Owner confirmed replacement enabled at 01:05 Pacific and successful login with the new authenticator at 01:08 on October 15; recovery-code use/reuse rejection remains unconfirmed. Keep credentials and recovery codes out of chat and release records. Record only the outcome and date; automated fixture coverage is already complete.
 
 ## Finalization once both owner items close
 
