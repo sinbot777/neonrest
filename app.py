@@ -344,11 +344,29 @@ def init_profile_styles(db):
         PRIMARY KEY (user_id, mode))""")
 
 
+def strip_css_comments(css):
+    """Remove CSS comments in a single forward pass; reject unfinished comments."""
+    chunks = []
+    cursor = 0
+    while True:
+        start = css.find('/*', cursor)
+        if start < 0:
+            chunks.append(css[cursor:])
+            return ''.join(chunks)
+        chunks.append(css[cursor:start])
+        end = css.find('*/', start + 2)
+        if end < 0:
+            return None
+        cursor = end + 2
+
+
 def valid_profile_css(css):
     # This style is rendered on a public page; prohibit markup escapes and remote resources.
     if len(css) > 30000 or any(char in css for char in '<\\'):
         return False
-    stripped = re.sub(r'/\*.*?\*/', '', css, flags=re.S)
+    stripped = strip_css_comments(css)
+    if stripped is None:
+        return False
     if '@' in re.sub(r'@media\b', '', stripped, flags=re.I):
         return False
     if ('/*' in stripped or '*/' in stripped or '://' in stripped or 'data:' in stripped.lower()
@@ -1109,14 +1127,14 @@ def edit_comment(comment_id):
     # -- Authentication check --
     if 'user_id' not in session:
         flash('Please log in to edit comments.', 'error')
-        return redirect(request.referrer or '/')
+        return redirect(url_for('feed'))
 
     # -- Resolve the public comment ID to the internal key --
     try:
         row_id = decode_prefixed_id(comment_id)
     except Exception:
         flash('Invalid comment ID.', 'error')
-        return redirect(request.referrer or '/')
+        return redirect(url_for('feed'))
 
     # -- Lazy import to avoid circular dependency --
     db = get_db()
@@ -1130,12 +1148,12 @@ def edit_comment(comment_id):
         abort(404)
     if not comment:
         flash('Comment not found.', 'error')
-        return redirect(request.referrer or '/')
+        return redirect(url_for('feed'))
 
     # -- Authorization check --
     if comment['user_id'] != session.get('user_id'):
         flash('You do not have permission to edit this comment.', 'error')
-        return redirect(request.referrer or '/')
+        return redirect(url_for('feed'))
 
     if request.method == 'POST':
         new_content = request.form.get('content', '').strip()
@@ -1150,7 +1168,7 @@ def edit_comment(comment_id):
         )
         db.commit()
         flash('Comment updated.', 'success')
-        return redirect(request.referrer or '/')
+        return redirect(url_for('feed'))
 
     # -- Render edit form --
     return render_template('edit_comment.html', comment=comment)
@@ -1173,7 +1191,7 @@ def delete_comment(comment_id):
     db.execute('DELETE FROM comments WHERE id = ?', (real_id,))
     db.commit()
     flash("Comment deleted.", "success")
-    return redirect(request.referrer or '/feed')
+    return redirect(url_for('feed'))
 
 @app.route('/markdown-guide')
 def markdown_guide():
@@ -2017,18 +2035,25 @@ def moderate_post(post_id):
 
 @app.route('/themes/edit')
 def edit_theme_index():
-    """Open the first Vibe whose theme settings this user can edit."""
+    """Open an authorized Vibe using server-built navigation URLs."""
     db = get_db()
     user_id = session.get('user_id')
+    selected = request.args.get('vibe')
+    mode = request.args.get('mode', 'day')
+    if mode not in ('day', 'night'):
+        abort(404)
     for vibe in db.execute('''
         SELECT * FROM vibes WHERE id NOT IN (SELECT vibe_id FROM pending_vibes)
         ORDER BY name
     ''').fetchall():
         if can_edit_vibe_settings(user_id, vibe):
             slug = vibe_slug(vibe['name'])
-            return redirect(url_for('edit_theme', slug=slug, mode='day'))
+            if selected is None or selected == slug:
+                return redirect(url_for('edit_theme', slug=slug, mode=mode))
+    if selected is not None:
+        abort(404)
     flash("You don’t have permission to edit Vibe settings.", "error")
-    return redirect('/feed')
+    return redirect(url_for('feed'))
 
 
 @app.route('/themes/edit/<slug>/<mode>', methods=['GET', 'POST'])

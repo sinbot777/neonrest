@@ -2,7 +2,7 @@
 import re,secrets,sqlite3
 from flask import current_app,g,request,url_for,redirect,abort
 ALPHABET='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
-TOKEN=re.compile(r'(?=[0-9A-Za-z]{16}\Z)(?=.*[A-Za-z])[0-9A-Za-z]+\Z',re.ASCII)
+TOKEN=re.compile(r'(?=[0-9A-Za-z]{0,15}[A-Za-z])[0-9A-Za-z]{16}\Z',re.ASCII)
 KINDS={'post':'posts','comment':'comments'}
 POST_ENDPOINTS={'post_detail','post_edit_history','edit_post','delete_post','react_to_post'}
 COMMENT_ENDPOINTS={'edit_comment','delete_comment'}

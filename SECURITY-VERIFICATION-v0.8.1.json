@@ -1,0 +1,81 @@
+{
+  "release": "v0.8.1",
+  "base": "2d0c23c2a4e52e3baa0957d32fceb2563cbc37a9",
+  "security_checks": {
+    "Production": 244,
+    "Sandbox": 244
+  },
+  "compatibility_suites": [
+    {
+      "suite": "neonrest_sandbox-verify_authenticator_replacement",
+      "passed": true,
+      "summary": [
+        "AUTHENTICATOR REPLACEMENT PASS neonrest_sandbox 61 checks; independent scan/code verification; disposable data only"
+      ]
+    },
+    {
+      "suite": "neonrest_sandbox-verify_recovery_form_origins",
+      "passed": true,
+      "summary": [
+        "RECOVERY FORM ORIGIN PASS neonrest_sandbox 62 checks; five mail intents and confirmations use disposable data and mocked SMTP only"
+      ]
+    },
+    {
+      "suite": "neonrest-verify_authenticator_replacement",
+      "passed": true,
+      "summary": [
+        "AUTHENTICATOR REPLACEMENT PASS neonrest 63 checks; independent scan/code verification; disposable data only"
+      ]
+    },
+    {
+      "suite": "neonrest-verify_recovery_form_origins",
+      "passed": true,
+      "summary": [
+        "RECOVERY FORM ORIGIN PASS neonrest 62 checks; five mail intents and confirmations use disposable data and mocked SMTP only"
+      ]
+    },
+    {
+      "suite": "neonrest-verify_reauth_feedback",
+      "passed": true,
+      "summary": [
+        "PASS: five confirmation branches, CSRF ordering, password short-circuit, and freshness behavior"
+      ]
+    },
+    {
+      "suite": "verify_privacy_workflows",
+      "passed": true,
+      "summary": []
+    },
+    {
+      "suite": "verify_privacy_submissions",
+      "passed": true,
+      "summary": []
+    },
+    {
+      "suite": "verify_privacy_environment",
+      "passed": true,
+      "summary": []
+    },
+    {
+      "suite": "verify_privacy_full_app",
+      "passed": true,
+      "summary": [
+        "FULL APPLICATION PRIVACY SMOKE PASS 17 checks; disposable DB only; no SMTP"
+      ]
+    }
+  ],
+  "dependency_check": "No broken requirements found",
+  "versions": {
+    "Flask": "3.1.3",
+    "Flask-Mail": "0.10.0",
+    "Pillow": "12.3.0",
+    "qrcode": "8.0",
+    "cryptography": "50.0.2",
+    "requests": "2.33.1",
+    "email-validator": "2.2.0",
+    "markdown2": "2.5.3"
+  },
+  "permanent_erasure_enabled": false,
+  "github_alert_rescan": "Pending PR/main analysis; no alerts manually dismissed",
+  "scope": "Production-only main source; matching fixes separately staged for live Sandbox"
+}
