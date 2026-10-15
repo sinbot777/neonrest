@@ -1,3 +1,7 @@
+## Production candidate rehearsal completed
+
+An isolated candidate built from the actual Production source passed 43 privacy regressions, 17 baseline full-application checks and 24 intake/notice/signup/restore checks. Original copied records were preserved. Source is saved separately on privacy-production-candidate-2026-10-15 at 74d1d4b7bcea0b40346168a21a88b4d46d3c244d. It has not been deployed. Review environment settings, current rollback coverage and affected permission/security regressions before deployment; do post-deployment owner acceptance separately. Account erasure remains disabled. The older snapshot mismatch and preserved-case/legacy-copy review remain recorded in PRIVACY-RETENTION-READINESS.md.
+
 ## Owner acceptance and retention inventory follow-up — October 14, 2026
 
 The private document walkthrough is complete, including successful request closure and the expected 30-day eligibility date. Actual removal was not performed. See PRIVACY-RETENTION-READINESS.md for verified backup metadata, the untrusted older snapshot and preserved case/disposition inventory. Production rollout preparation can proceed with erasure disabled; preserved-case decisions and legacy/provider copy review remain prerequisites to any later erasure activation.
