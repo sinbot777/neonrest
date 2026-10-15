@@ -1,3 +1,9 @@
+## Deployment review and guarded rollback completed
+
+The copied retention defaults were corrected to Production-only consent and backup roots and covered by two environment tests. Corrected candidate passed 43 privacy tests, 17 baseline application checks, 24 intake/notice/restore checks, 40 QR checks, 63 authenticator replacement checks and 62 recovery-form checks. The replacement test's obsolete error-text assertion was updated and failed-code side-effect checks strengthened; authentication implementation stayed unchanged.
+
+The 26-check rollback drill preserved post-migration data/holds, invalidated copied grants and paused older privacy tools/signup through a tested maintenance guard. A fresh private database checkpoint passed integrity verification; media was inventoried, not copied. See PRIVACY-DEPLOYMENT-REVIEW.md for scope, limitations, exact procedures and the Production child-app wrapper. Live Production and erasure activation remain unchanged; this branch is not a deployment.
+
 # Privacy Production candidate - not deployed
 
 This branch prepares reviewed privacy requests, preservation and private verification submission against the actual deployed Production source. Only source, templates, safe fixture tests and this record are exported. Runtime databases, source backup copies, document files, keys and invitation receipts are excluded. The existing Sandbox source stays on its separate branch.

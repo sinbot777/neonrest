@@ -1,4 +1,4 @@
-"""Sandbox retention. Preview is the default; live erasure requires explicit activation."""
+"""Production retention. Preview is the default; live erasure requires explicit activation."""
 import argparse,json,sqlite3,time
 from pathlib import Path
 from urllib.parse import urlsplit, unquote
@@ -217,7 +217,7 @@ def run(db,roots,apply=False,now=None):
     return summary
 
 def storage_roots(app):
-    return {'avatars':str(Path(app.static_folder)/'uploads'/'avatars'),'media':str(Path(app.instance_path)/'media'),'consent':app.config.get('FAMILY_CONSENT_FOLDER','/home/sinbot/private/neonrest/family_consent'),'backups':str(Path(app.config['DATABASE']).parent/'sandbox_backups')}
+    return {'avatars':str(Path(app.static_folder)/'uploads'/'avatars'),'media':str(Path(app.instance_path)/'media'),'consent':app.config.get('FAMILY_CONSENT_FOLDER','/home/sinbot/private/neonrest_production/family_consent'),'backups':str(Path(app.config['DATABASE']).parent/'production_backups')}
 
 def register_reserved_guard(app,core):
     from flask import session,redirect,url_for
@@ -235,7 +235,7 @@ def main():
     import neonrest.app as core
     app=core.app
     with app.app_context():
-        roots={'avatars':str(Path(app.static_folder)/'uploads'/'avatars'),'media':str(Path(app.instance_path)/'media'),'consent':app.config.get('FAMILY_CONSENT_FOLDER','/home/sinbot/private/neonrest/family_consent'),'backups':str(Path(app.config['DATABASE']).parent/'sandbox_backups')}
+        roots={'avatars':str(Path(app.static_folder)/'uploads'/'avatars'),'media':str(Path(app.instance_path)/'media'),'consent':app.config.get('FAMILY_CONSENT_FOLDER','/home/sinbot/private/neonrest_production/family_consent'),'backups':str(Path(app.config['DATABASE']).parent/'production_backups')}
         if args.apply and not app.config.get('RETENTION_ENABLED',False):parser.error('Live retention is not activated. Preview remains available.')
         print(json.dumps(run(core.get_db(),roots,args.apply),sort_keys=True))
 if __name__=='__main__':main()
