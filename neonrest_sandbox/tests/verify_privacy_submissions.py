@@ -45,6 +45,7 @@ class SubmissionTests(unittest.TestCase):
         self.db.execute("UPDATE family_data_requests SET status='closed',reviewed_at=?,responded_at=? WHERE id=?",(date,old,self.rid));self.db.commit()
 
     def test_staff_invitation_is_hashed_one_file_and_no_email(self):
+        self.login(1);self.assertEqual(self.client.get('/manage/privacy/submissions').headers['Referrer-Policy'],'same-origin')
         raw=self.invite();row=self.db.execute('SELECT * FROM privacy_upload_invites').fetchone()
         self.assertEqual(row['token_hash'],hashlib.sha256(raw.encode()).hexdigest());self.assertNotIn(raw,str([tuple(x) for x in self.db.execute('SELECT * FROM privacy_request_events')]))
         self.login(2);response=self.upload(raw);self.assertEqual(response.status_code,200);self.assertIn(b'document was received',response.data)
@@ -61,7 +62,7 @@ class SubmissionTests(unittest.TestCase):
         response=self.client.get('/privacy/submit');self.assertEqual(response.status_code,200)
         self.assertIn(b'history.replaceState',response.data);self.assertIn(b'location.hash',response.data)
         self.assertNotIn(b'<script src=',response.data);self.assertNotIn(b'fonts.googleapis',response.data)
-        self.assertIn("default-src 'none'",response.headers['Content-Security-Policy']);self.assertEqual(response.headers['Referrer-Policy'],'no-referrer');self.assertIn('no-store',response.headers['Cache-Control'])
+        self.assertIn("default-src 'none'",response.headers['Content-Security-Policy']);self.assertEqual(response.headers['Referrer-Policy'],'same-origin');self.assertIn('no-store',response.headers['Cache-Control'])
 
     def test_expired_revoked_and_closed_invites_fail(self):
         raw=self.invite();self.db.execute('UPDATE privacy_upload_invites SET expires_at=1');self.db.commit();self.assertEqual(self.upload(raw).status_code,404)
@@ -92,7 +93,7 @@ class SubmissionTests(unittest.TestCase):
         raw=self.invite();self.assertEqual(self.upload(raw).status_code,200);doc=self.document();path='/manage/privacy/submissions/'+str(doc['id'])
         self.login(2);self.assertEqual(self.client.get(path).status_code,403)
         self.login(1,False);self.assertEqual(self.client.get(path).status_code,403)
-        self.login(1);response=self.client.get(path);self.assertEqual(response.status_code,200);self.assertIn('attachment',response.headers['Content-Disposition']);self.assertIn('no-store',response.headers['Cache-Control']);response.close()
+        self.login(1);response=self.client.get(path);self.assertEqual(response.status_code,200);self.assertEqual(response.headers['Referrer-Policy'],'no-referrer');self.assertIn('attachment',response.headers['Content-Disposition']);self.assertIn('no-store',response.headers['Cache-Control']);response.close()
         file=intake.document_path(self.app,doc['storage_key']);self.assertEqual(file.stat().st_mode&0o777,0o600);file.write_bytes(b'Tampered synthetic content');self.assertEqual(self.client.get(path).status_code,409)
 
     def test_documents_are_encrypted_and_missing_key_fails_closed(self):

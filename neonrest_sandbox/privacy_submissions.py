@@ -280,7 +280,7 @@ def register(app, core):
     @app.after_request
     def submission_headers(response):
         if request.endpoint in ('privacy_submissions', 'privacy_submission_upload', 'privacy_submission_download'):
-            response.headers.update({'Cache-Control': 'private, no-store', 'Referrer-Policy': 'no-referrer',
+            response.headers.update({'Cache-Control': 'private, no-store', 'Referrer-Policy': ('same-origin' if request.endpoint in ('privacy_submissions', 'privacy_submission_upload') else 'no-referrer'),
                                      'X-Content-Type-Options': 'nosniff', 'X-Robots-Tag': 'noindex, nofollow',
                                      'X-Frame-Options': 'DENY'})
         return response
