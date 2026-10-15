@@ -295,3 +295,8 @@
   margin-bottom: 0.5rem;
   font-size: 0.85em;
 }
+
+/* Readable links inside rendered posts, including Markdown and automatic URLs. */
+.post-content a:link, .post-content a:visited { color:var(--link-color,#fcb5a3); text-decoration:underline; text-underline-offset:.16em; text-decoration-thickness:.08em; overflow-wrap:anywhere; }
+.post-content a:hover { color:var(--link-hover-color,#ffd2c7); text-decoration-thickness:.12em; }
+.post-content a:focus-visible { outline:2px solid currentColor; outline-offset:3px; border-radius:2px; }
