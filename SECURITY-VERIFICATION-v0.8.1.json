@@ -76,6 +76,63 @@
     "markdown2": "2.5.3"
   },
   "permanent_erasure_enabled": false,
-  "github_alert_rescan": "Pending PR/main analysis; no alerts manually dismissed",
-  "scope": "Production-only main source; matching fixes separately staged for live Sandbox"
+  "github_alert_rescan": {
+    "dependabot_open": 0,
+    "code_scanning_open_main": 0,
+    "observed_after_commit": "b248cd459423da706ec0e4c9cef29e130ab188e1",
+    "manually_dismissed": 0
+  },
+  "scope": "Production-only main source; matching fixes separately staged for live Sandbox",
+  "live_verification": {
+    "release": "v0.8.1",
+    "checks_passed": 34,
+    "checks": [
+      "neonrest deployed source app.py",
+      "neonrest deployed source public_ids.py",
+      "neonrest deployed source routes/friends.py",
+      "neonrest deployed source templates/edit_theme.html",
+      "neonrest deployed source templates/base.html",
+      "neonrest deployed source templates/dev_summary.html",
+      "neonrest deployed source requirements.txt",
+      "neonrest erasure disabled",
+      "neonrest /login HTTP 200 v0.8.1",
+      "neonrest /privacy HTTP 200 v0.8.1",
+      "neonrest /dev HTTP 200 v0.8.1",
+      "neonrest synchronized narrow dev log",
+      "neonrest private account page remains gated",
+      "neonrest fresh mail worker DB heartbeat",
+      "neonrest_sandbox deployed source app.py",
+      "neonrest_sandbox deployed source public_ids.py",
+      "neonrest_sandbox deployed source routes/friends.py",
+      "neonrest_sandbox deployed source templates/edit_theme.html",
+      "neonrest_sandbox deployed source templates/base.html",
+      "neonrest_sandbox deployed source templates/dev_summary.html",
+      "neonrest_sandbox deployed source requirements.txt",
+      "neonrest_sandbox erasure disabled",
+      "neonrest_sandbox /login HTTP 200 v0.8.1",
+      "neonrest_sandbox /privacy HTTP 200 v0.8.1",
+      "neonrest_sandbox /dev HTTP 200 v0.8.1",
+      "neonrest_sandbox synchronized narrow dev log",
+      "neonrest_sandbox private account page remains gated",
+      "neonrest_sandbox fresh mail worker DB heartbeat",
+      "Dev logs identical",
+      "sandbox worker uses patched runtime",
+      "production worker uses patched runtime",
+      "Fresh supervisor heartbeat",
+      "production worker healthy after managed restart",
+      "sandbox worker healthy after managed restart"
+    ],
+    "permanent_erasure_enabled": false,
+    "versions": {
+      "Flask": "3.1.3",
+      "Flask-Mail": "0.10.0",
+      "Pillow": "12.3.0",
+      "qrcode": "8.0",
+      "cryptography": "50.0.2",
+      "requests": "2.33.1",
+      "email-validator": "2.2.0",
+      "markdown2": "2.5.3"
+    }
+  },
+  "rollback_fernet_compatibility": "Synthetic old-to-new and new-to-old encryption/decryption passed"
 }
