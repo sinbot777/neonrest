@@ -487,7 +487,7 @@ def signup():
                     VALUES (?, ?, ?, 0, ?, ?, ?, ?, ?)
                 ''', (email, handle, hashed, avatar_filename, created_at, g.signup_dob, actual_name, g.signup_timezone))
                 db.execute("UPDATE users SET legal_terms_version=?, legal_privacy_version=?, legal_accepted_at=strftime('%Y-%m-%dT%H:%M:%SZ','now') WHERE id=?",
-                           ('2026-10-13-production', '2026-10-13-production', created.lastrowid))
+                           ('2026-10-13-production', '2026-10-14-production', created.lastrowid))
                 db.execute('INSERT INTO age_clocks(user_id,zone,confirmed) VALUES (?,?,1)',(created.lastrowid,g.signup_timezone))
                 # Every new member starts with @brendoom as a friend and in Top 9.
                 first_friend = db.execute(

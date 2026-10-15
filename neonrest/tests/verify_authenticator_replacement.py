@@ -107,7 +107,10 @@ denied=client.post('/account/security',data={'action':'begin','theme_csrf_token'
 check(denied.status_code==302 and '/reauth' in denied.location,'Replacement requires recent password and factor authorization')
 with client.session_transaction() as s:check('pending_totp' not in s,'Stale authorization cannot create a replacement key')
 denied=client.post('/account/reauth',data={'password':password,'code':'wrong-code','theme_csrf_token':csrf},headers={'Origin':browser_origin})
-check(denied.status_code==200 and b'Confirmation failed' in denied.data,'Password alone cannot authorize factor replacement')
+check(denied.status_code==200 and b'Your authenticator or recovery code was not accepted.' in denied.data,'Password alone cannot authorize factor replacement')
+with client.session_transaction() as s:
+ check(s.get('fresh_at')==now-1801 and s.get('factor_at')==now-1801,'Rejected factor does not renew password or factor authorization')
+ check('pending_totp' not in s,'Rejected factor cannot create a pending replacement')
 confirmed=client.post('/account/reauth',data={'password':password,'code':old_recovery[0],'theme_csrf_token':csrf},headers={'Origin':browser_origin})
 check(confirmed.status_code==302 and '/account/security' in confirmed.location,'An unused recovery code authorizes replacement with the correct password')
 with core.app.app_context():check(not cf.verify_second_factor(core.get_db(),uid,old_recovery[0]),'Used authorization recovery code cannot be reused')

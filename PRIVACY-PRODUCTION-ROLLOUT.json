@@ -1,0 +1,31 @@
+{
+  "production_deployed": true,
+  "reviewed_candidate_commit": "f54f70fc01def4ac9ee8878eb7e7d6ec1963b54a",
+  "runtime_files": 13,
+  "runtime_sha256": {
+    "privacy_workflows.py": "2aaea31a7340620aa340bd9b98f9e6fadb4665f9b433e797938cd996b6e65fac",
+    "privacy_submissions.py": "f6b50e409d2ec95b5fa87b6190ef5233437170e7317d3046b6f55cd236c75e2d",
+    "family_data.py": "670c1cdb130f0139177aba2819c3385ab935d856aee83a3c81e59ddc4153b452",
+    "retention.py": "c7d3b34b311ca127b5f0ebf94598c78a6c16d6812a9c865011fe8412e533809d",
+    "templates/privacy_management.html": "9105b9eda53e4a891ef25e67f88f1b9d0d1f83ea5aafbe69e24316b060b638e7",
+    "templates/privacy_guide.html": "04901ebbba091b5cbbe4d7d1760df94634a36a693827ca5fb549a45dfeda29db",
+    "templates/privacy_upload.html": "d443bfefb4d6ba08a3fab3ce59b28374697385907afc21c14050e63efcb1a609",
+    "templates/privacy_submissions.html": "d2222a348a2e692989fbc1960d2926c832893f946bc2b6e8bdaf1cd8656a0d6a",
+    "templates/family_requests.html": "598226baf062a0211bd19a51833d332e9d03d4b3a4034ad2ec7fecd2d55272bf",
+    "templates/partials/privacy_styles.html": "ebe20d49898e45819cabc64f5f8e32dbf7e93c0f74678fe28182a3936d55d8bc",
+    "templates/privacy.html": "c85294dc2a7fe1e6772c5c7ab7d02a1206b6291b78f4910b703c3688e311eb34",
+    "app.py": "14da5542f427a1eb71f4e70e12e91e388ab95fad6d202f792bd4b720b5c9dd36",
+    "templates/manage_home.html": "7fe277a71b4058c31a775fb87ba2cb595b0b4673c01f7d495705106317eec020"
+  },
+  "additive_migration_existing_rows_unchanged": true,
+  "private_database_checkpoint_verified": true,
+  "live_http_checks_passed": 13,
+  "management_navigation_checks_passed": 3,
+  "original_wsgi_restored": true,
+  "sandbox_available_during_maintenance": true,
+  "both_worker_heartbeats_verified": true,
+  "no_live_test_accounts_or_uploads_created": true,
+  "permanent_erasure_enabled": false,
+  "owner_privacy_acceptance_complete": false,
+  "full_release_signed_off": false
+}
