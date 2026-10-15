@@ -227,6 +227,16 @@ def register(app,core):
         row=db.execute('SELECT * FROM family_data_requests WHERE id=?',(rid,)).fetchone()
         if not row:abort(404)
         return row
+    @app.get('/manage/privacy/help')
+    def privacy_management_help():
+        staff()
+        return render_template('privacy_guide.html',family=False)
+
+    @app.get('/manage/family/requests/help')
+    def family_data_review_help():
+        staff()
+        return render_template('privacy_guide.html',family=True)
+
     @app.route('/manage/privacy',methods=['GET','POST'])
     def privacy_management():
         actor=staff(); db=core.get_db()
@@ -317,9 +327,9 @@ def register(app,core):
 
     @app.after_request
     def privacy_headers(response):
-        if request.endpoint in ('privacy_management','privacy_request_appeal','family_data_review','family_data_requests','family_data_download'):
+        if request.endpoint in ('privacy_management_help','family_data_review_help','privacy_management','privacy_request_appeal','family_data_review','family_data_requests','family_data_download'):
             response.headers['Cache-Control']='private, no-store'
             response.headers['Referrer-Policy']='same-origin'
             response.headers['X-Content-Type-Options']='nosniff'
-            response.headers['X-Neonrest-Privacy-Revision']='2026-10-14.3'
+            response.headers['X-Neonrest-Privacy-Revision']='2026-10-14.4'
         return response

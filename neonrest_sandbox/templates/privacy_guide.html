@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Family request review' if family else 'Privacy requests and preservation' }} guide - Neonrest{% endblock %}
+{% block content %}
+<main class="community-page privacy-page">
+<h1>{{ 'Family request review' if family else 'Privacy requests and preservation' }}: staff guide</h1>
+<nav class="privacy-actions" aria-label="Guide navigation">
+<a href="{{ url_for('family_data_review') if family else url_for('privacy_management') }}">Back to {{ 'family request review' if family else 'privacy requests' }}</a>
+<a href="{{ url_for('privacy_management_help') if family else url_for('family_data_review_help') }}">{{ 'Privacy and preservation guide' if family else 'Family review guide' }}</a>
+</nav>
+<p>Use this guide while filling out the screen. A request, a disclosure decision and a preservation hold are separate records. Updating one does not automatically complete the others.</p>
+<section><h2>Before you start</h2>
+<ul><li>Confirm which environment and account you are working on. Text marked PRACTICE ONLY belongs only in a fictional Sandbox exercise.</li>
+<li>Keep identity documents in the approved private verification process. Put a short reference to the evidence in these forms, not the document itself.</li>
+<li>A reference such as <code>PRIVACY-2026-001 / review 2</code> identifies a real review record that staff can find. It is not evidence of identity or authority by itself.</li>
+<li>These screens do not send email. Deliver required notices or responses through the established contact process, then record delivery where requested.</li>
+<li>Confirm your sign-in again if prompted. Never put passwords, authenticator codes, recovery codes or secret keys in notes.</li></ul></section>
+{% if family %}
+<section><h2>1. Read the request and check authority</h2>
+<p>Read the account names, request type, notes and current status. Establish who is requesting the information, their current authority, and what disclosure or action is appropriate for this particular request. A linked account alone does not establish that everything may be disclosed.</p>
+<p>Depending on the circumstances, identity documents may establish identity; relevant birth or adoption records may establish a relationship; guardianship papers or custody orders may establish current authority or restrictions. These are examples, not a list everyone must submit. Ask for only what is needed and allow unrelated details to be redacted. Escalate disputed authority or safety concerns.</p>
+<dl><dt><strong>Verification or decision reference</strong></dt><dd>Identify the private verification or decision record and its review version.</dd>
+<dt><strong>Explanation for requester</strong></dt><dd>Explain the decision or what information is still needed in plain language. Do not include internal staff notes or another person's private information.</dd>
+<dt><strong>I verified authority for this particular request</strong></dt><dd>Check only after completing that review. It does not replace the evidence or disclosure review.</dd></dl>
+<p>If authority is unclear, choose <strong>More verification needed</strong>, explain what is needed, and record the review. Use <strong>Decline</strong> for a refusal with an explanation, or <strong>Close request</strong> when appropriate. Closing a request does not delete an account.</p></section>
+<section><h2>2. Review the exact export</h2>
+<p>For an access request, expand <strong>Review the exact export</strong>. The draft contains selected profile fields and the account's own posts, replies and media metadata. Media entries are not the files themselves. Credentials, private messages, identity documents and internal moderation notes are excluded.</p>
+<ol><li>Read every section, including private posts and references to other people. A generated draft still needs human review.</li>
+<li>Remove fields or records that should not be disclosed. You may redact text. Do not add unrelated information or change record IDs.</li>
+<li>Keep valid JSON: property names and text use double quotes; adjacent entries need commas; the final entry in an object or list has no trailing comma. Empty lists such as <code>[]</code> are valid. If saving fails, keep your draft and correct the reported problem.</li>
+<li>In <strong>Lawful disclosure basis</strong>, record the actual reviewed reason this particular information may be shared. Do not invent a legal basis or treat parenthood alone as a universal entitlement.</li>
+<li>Check <strong>I reviewed this exact payload and any redactions</strong> only after completing the review.</li></ol>
+<p>Select <strong>Approve reviewed export for 24 hours</strong> and record the review. Approval saves that exact snapshot. Later posts are not silently added. Download also requires the matching guardian account, a current qualifying link and recent authentication; expiry or authority changes can require a new review. An email-only request without a qualifying linked account cannot use this download approval path. Arrange a separately reviewed secure response instead.</p>
+<p>The staff editor may show a newly generated candidate when reopened. It is not proof of what was previously approved. Saving another approval creates a new reviewed snapshot; do not approve again just to inspect the old one.</p></section>
+<section><h2>3. Handle a deletion request</h2>
+<p>After authority review, <strong>Schedule reviewed deletion</strong> hides the account and starts the account-deletion process. It does not immediately erase data. An existing deletion request must be reviewed separately rather than scheduled again.</p>
+<p>Use Privacy requests and preservation to check outstanding issues and holds. <strong>Cancel reviewed deletion</strong> handles a deletion scheduled through this guardian workflow; it is not a general-purpose reactivation button. Releasing a hold does not cancel deletion or reactivate the account.</p></section>
+<section><h2>4. Finish the response and handle an appeal</h2>
+<p>Ensure the requester receives the explanation through the appropriate channel. The form records a decision but sends no notice. Use the privacy queue to record delivery details. If a decision is challenged, use that queue's appeal controls. An appeal decision alone does not issue a revised export or change a deletion schedule; complete any resulting action separately.</p></section>
+{% else %}
+<section><h2>1. Record receipt and assign a reviewer</h2>
+<dl><dt><strong>Account user ID</strong></dt><dd>The numeric ID of the account concerned. Confirm the account before submitting.</dd>
+<dt><strong>Requester's user ID, if linked</strong></dt><dd>The requester’s account ID, or 0 if they have no linked account. This field does not grant access.</dd>
+<dt><strong>Safe reply email</strong></dt><dd>The address supplied for this request; check it carefully. Entering it does not send a message.</dd>
+<dt><strong>Original receipt date and time (UTC)</strong></dt><dd>Use when the request first arrived, not when you entered it. Leaving it blank uses the current time. The screen uses UTC, which may differ from your local date.</dd>
+<dt><strong>Type and summary</strong></dt><dd>Choose the request type and summarize what the person asks for without copying identity documents.</dd></dl>
+<p>The queue assigns a response date 45 days from receipt. <strong>Assign a reviewer</strong> accepts a numeric staff user ID with the required permission. Assignment does not verify authority or approve disclosure.</p></section>
+<section><h2>2. Track notices and responses</h2>
+<dl><dt><strong>Record an extension notice</strong></dt><dd>If an extension is appropriate, deliver the explanation first, then record its reason and a delivery reference before the original deadline. One extension adds 45 days. The option disappears after use, a response or the deadline.</dd>
+<dt><strong>Record a response already delivered</strong></dt><dd>Enter the actual response text and a reference identifying when and how it was delivered. This records completion of the response; it does not approve an export, close all related work or send email.</dd></dl>
+<p>A delivery reference could identify an email record and date or a secure-message receipt. Do not claim delivery that has not happened. A decision entered in Family request review can already appear as a response; that alone does not establish delivery.</p></section>
+<section><h2>3. Handle an appeal</h2>
+<ol><li>Read the original request, decision and explanation. Use <strong>Record an appeal received</strong> to enter the person's actual challenge. Do not record the same pending appeal twice. The queue sets an appeal response date 45 days from recording it.</li>
+<li>Have a different authorized reviewer reconsider the decision when possible. If the original decision-maker handles it, enter the reason in <strong>If the original reviewer decides the appeal, explain why</strong>.</li>
+<li>Prepare and deliver the outcome. If denying the appeal, include instructions for submitting an Oregon Attorney General privacy complaint and confirm that they were delivered.</li>
+<li>In <strong>Record an appeal decision already delivered</strong>, choose Approve or Deny, enter the response and delivery reference, and record the decision.</li>
+<li>Complete any resulting work separately: for example, a revised family disclosure review or a corrected account record. Approving an appeal does not automatically release information or erase data.</li></ol>
+<p>For an appeal that arrived earlier, the current form has no original-receipt field: it calculates from entry time. Preserve the actual receipt time in the explanation and track any earlier applicable deadline separately. Do not treat late entry as extra response time.</p></section>
+<section><h2>4. Preserve a hidden account</h2>
+<p>A deletion-requested account stays hidden while preservation blockers are active. The <strong>Deletion requests</strong> section shows those blockers.</p>
+<dl><dt><strong>Add a preservation hold</strong></dt><dd>Enter the account's numeric user ID, the unresolved issue and why the scope is necessary, the reviewed lawful basis, and a case or decision reference. A new hold receives a review date 30 days ahead.</dd>
+<dt><strong>Review and retain</strong></dt><dd>Update the reason, continuing basis and reference. This renews the review date by 30 days and leaves the hold active.</dd>
+<dt><strong>Release this hold</strong></dt><dd>After the issue and applicable appeals are resolved, enter the final release reason and reference. A continuing basis is unnecessary. This releases only that hold; other blockers may remain.</dd></dl>
+<p>An overdue review does not automatically release a hold. <strong>No blocker found</strong> means this check found none, not that erasure occurred or that every deletion prerequisite is satisfied. The cancellation period and retention controls still apply. Permanent erasure remains disabled in the current release.</p></section>
+<section><h2>5. Record final case disposition</h2>
+<p>For a real linked moderation case, first close the case and resolve its applicable reports and appeals. Enter the case ID and a final decision explaining whether preservation remains necessary; attest that appeals are resolved or their filing periods ended. Recording a final disposition does not release a separate manual hold. Reopening a case makes it block erasure again.</p>
+<p>The simple practice hold has no linked moderation case, so it needs no invented case ID or disposition.</p></section>
+<section><h2>6. Schedule verification-document retention</h2>
+<p>After verification, keep a sufficient decision record and follow the adopted retention schedule. Enter the document's verification result/reference and approved number of days before eligibility for removal. The form accepts 1–365 days; that range is a software limit, not a legal recommendation. Preservation blockers prevent removal. Scheduling does not immediately remove a document or activate erasure.</p></section>
+{% endif %}
+<section><h2>Using an AI assistant</h2>
+<p>Give the assistant this guide and a redacted description of the request. Use placeholders for account IDs and contact details until you fill out the form yourself. Do not paste identity documents, private messages, credentials or unneeded personal information into an AI service. Review every suggested entry.</p>
+<p>Copy this prompt and replace the bracketed parts:</p>
+<pre>I am using Neonrest's {{ 'Family request review' if family else 'Privacy requests and preservation' }} screen.
+Use the staff guide below to help draft form entries. Do not submit anything.
+
+Environment: [Sandbox practice / real request]
+Task and selected action: [what I need to record]
+Current request/hold status: [status]
+Facts already verified by a human: [redacted facts, or unknown]
+Unresolved questions or restrictions: [details]
+Evidence/decision reference: [reference, or not yet available]
+Notice/response delivery: [actually delivered, draft only, or not applicable]
+
+Guide: [paste the relevant sections of this guide]
+
+Return a table with the exact field label, proposed text, and anything I must verify.
+Explain the expected result and what this action does not do.
+Never invent evidence, authority, consent, a legal basis, a case ID or delivery.
+Do not tell me to tick an attestation unless the stated facts support it.
+If essential facts are missing, identify them and suggest the appropriate pending/review step.
+For Sandbox exercises, clearly label all fictional statements PRACTICE ONLY.</pre>
+</section>
+</main>{% include 'partials/privacy_styles.html' %}
+{% endblock %}
