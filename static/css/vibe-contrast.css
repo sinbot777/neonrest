@@ -111,3 +111,6 @@ body:has(.vibe-page-wrapper) .page-wrapper .vibe-mode-switch a[aria-current="pag
 }
 /* Avoid interpolating through unreadable colors while theme styles load. */
 body .vibe-page-wrapper .vibe-feed a.vibe-label { transition: none; }
+
+/* Keep older theme caps from shrinking the configured logo frame. */
+body .vibe-page-wrapper .vibe-feed .vibe-masthead img.vibe-logo { max-height: 130px; }
