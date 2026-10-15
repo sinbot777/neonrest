@@ -1,0 +1,9 @@
+# Privacy Production candidate - not deployed
+
+This branch prepares reviewed privacy requests, preservation and private verification submission against the actual deployed Production source. Only source, templates, safe fixture tests and this record are exported. Runtime databases, source backup copies, document files, keys and invitation receipts are excluded. The existing Sandbox source stays on its separate branch.
+
+The isolated candidate passed 43 privacy regression tests, 17 baseline full-application privacy checks and 24 intake/notice/signup/restore checks. Test application writes were confined to copies, and SMTP was disabled. Original user, post, comment, family-link, case and evidence rows in the copied Production database were checked unchanged after migration and the synthetic tests. Existing policy acceptance records were preserved; new signup uses the existing Production Terms version and proposed October 14 Production privacy version.
+
+The candidate keeps permanent erasure and the combined retention job disabled. It does not close preserved Sandbox cases or authorize disposal. Live Production source and databases were not replaced. The read-only retention inventory on the parent branch records the legacy snapshot fingerprint mismatch and separate legacy/provider copy review.
+
+Before deployment: confirm environment-specific source/WSGI/database/media/backup roots, capture and verify a current rollback point, rehearse migration rollback and the permission/security regressions affected by these changes, and review the exact source diff. The current tests establish privacy integration readiness, not final v0.8.0 acceptance. Document and backup cleanup remain operator tasks. Public routing, secure-cookie/authentication isolation, real owner staff controls and notice rendering need post-deployment acceptance.
