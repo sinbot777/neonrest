@@ -20,6 +20,10 @@
   .studio-toolbar { display: grid; grid-template-columns: minmax(220px, 1fr) auto; align-items: end; gap: 20px; padding: 18px 22px; margin-bottom: 22px; background: #202734; border: 1px solid #38475a; border-radius: 17px; }
   .studio-field label, .studio-field > span { display: block; margin-bottom: 8px; color: #c4cedc; font-size: .86rem; font-weight: 700; }
   .studio-field input, .studio-field select, .studio-field textarea { width: 100%; max-width: none; min-width: 0; padding: 11px 13px; border: 1px solid #4a586d; border-radius: 10px; background: #111722; color: #f2f5fa; font: inherit; }
+  .studio-vibe-picker { margin: 0; }
+  .studio-vibe-picker-controls { display: flex; gap: 8px; align-items: stretch; }
+  .studio-vibe-picker-controls select { flex: 1; }
+  .studio-vibe-picker-controls button { padding: 10px 15px; border: 1px solid #4a586d; border-radius: 10px; background: #253347; color: #f2f5fa; cursor: pointer; }
   .studio-field input:focus, .studio-field select:focus, .studio-field textarea:focus { outline: 2px solid #7ed6c9; outline-offset: 2px; border-color: #7ed6c9; }
   .studio-toolbar select { max-width: 480px; }
   .studio-modes { display: flex; gap: 7px; align-items: center; flex-wrap: wrap; }
@@ -82,14 +86,18 @@
     {% if vibe %}<a class="studio-view-link" href="{{ url_for('vibe_page', vibe_name=vibe.name, mode=theme.mode) }}" target="_blank" rel="noopener">Open Vibe ↗</a>{% endif %}
   </header>
   <div class="studio-toolbar">
-    <div class="studio-field">
+    <form class="studio-field studio-vibe-picker" method="get" action="{{ url_for('edit_theme_index') }}">
       <label for="vibe-select">Editing Vibe</label>
-      <select id="vibe-select" aria-label="Choose a Vibe" onchange="window.location.assign(this.value)">
-        {% for item in editable_vibes %}
-          <option value="{{ url_for('edit_theme', slug=item.slug, mode=item.mode) }}" {% if item.slug == theme.slug %}selected{% endif %}>{{ item.name }}</option>
-        {% endfor %}
-      </select>
-    </div>
+      <input type="hidden" name="mode" value="{{ theme.mode }}">
+      <div class="studio-vibe-picker-controls">
+        <select id="vibe-select" name="vibe" aria-label="Choose a Vibe" onchange="this.form.requestSubmit()">
+          {% for item in editable_vibes %}
+            <option value="{{ item.slug }}" {% if item.slug == theme.slug %}selected{% endif %}>{{ item.name }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit">Go</button>
+      </div>
+    </form>
     {% if editable_modes %}
     <nav class="studio-modes" aria-label="CSS variant">
       <span>Mode</span>

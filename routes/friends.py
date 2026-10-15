@@ -69,7 +69,7 @@ def follow(user_id):
     ''', (follower, user_id))
     db.commit()
     flash("You are now following this user.", "success")
-    return redirect(request.referrer or '/')
+    return return_to_friends()
 
 
 
@@ -83,7 +83,7 @@ def unfollow(user_id):
     db.execute('UPDATE follows SET revoked = 1 WHERE follower_id = ? AND followed_id = ?', (follower, user_id))
     db.commit()
     flash("Unfollowed.", "info")
-    return redirect(request.referrer or '/')
+    return return_to_friends()
 
 @bp.route('/send_friend_request/<int:user_id>', methods=['POST'])
 def send_request(user_id):
