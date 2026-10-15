@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block title %}Mail queue - Neonrest{% endblock %}
+{% block content %}
+<div class="community-page">
+<h1>Mail queue</h1>
+<section><h2>Worker status</h2><p>Queue: <strong>{{ 'Enabled' if enabled else 'Disabled' }}</strong> · Worker heartbeat: <strong>{{ 'Recent' if healthy else 'Missing or older than two minutes' }}</strong></p><p>Refresh for current status. Queued recovery links become usable after SMTP acceptance. Acceptance does not guarantee inbox placement.</p><div class="community-grid">{% for state,count in counts.items() %}<article><strong>{{ count }}</strong><p>{{ state|title }}</p></article>{% else %}<p>No mail jobs yet.</p>{% endfor %}</div></section>
+<section><h2>Recent jobs</h2><p>Addresses, message contents and recovery links are hidden. Temporary SMTP rejections use bounded retries. Uncertain sends cannot be resent here; request a new link instead.</p>
+{% for job in jobs %}<article><h3>{{ job.purpose|title }} · {{ job.state|title }}</h3><p class="community-meta">Requested {{ mail_time(job.created_at) }} · Expires {{ mail_time(job.expires_at) }}{% if job.state=='retry' %} · Next attempt {{ mail_time(job.next_at) }}{% endif %}</p><p class="community-meta">Reference {{ job.id }} · {{ job.attempts }} attempts{% if job.last_error %} · {{ job.last_error }}{% endif %}</p>
+{% if job.state in ('queued','retry','dead') %}<form method="post"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}"><input type="hidden" name="job" value="{{ job.id }}">{% if job.state in ('retry','dead') and job.retry_available and job.attempts<8 %}<button name="action" value="retry">Retry eligible job</button>{% endif %}<button name="action" value="cancel">Cancel job</button></form>{% endif %}</article>{% else %}<p>No jobs to show.</p>{% endfor %}</section>
+<p><a class="button" href="{{ url_for('community_operations') }}">Back to Site operations</a></p>
+</div>
+{% endblock %}

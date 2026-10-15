@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block title %}Manage {{ account.handle }} - Neonrest{% endblock %}
+{% block content %}
+{% from 'partials/management_identity.html' import account as management_account %}
+<div class="management-page">
+  <a href="{{ url_for('manage_users') }}">← People</a>
+  <h1>{{ account.handle }}</h1>
+  <p>NUID #{{ '%03d'|format(account.id) }} · {{ 'Verified' if account.verified else 'Unverified' }} · Joined {{ account.created_at or 'unknown' }} · <a href="{{ url_for('user_by_handle', handle=account.handle.lstrip('@')) }}">Public profile ↗</a></p>
+  {% if account.id == 1 %}<p>Site owner · protected account</p>{% elif roles %}<p>Staff roles: {% for role in roles %}{{ role.role }}{% if not loop.last %}, {% endif %}{% endfor %} · protected account</p>{% endif %}
+  <section><h2>Staff disable flag</h2><p><strong>{{ 'Disabled and hidden' if disable_state and disable_state.disabled else 'Not disabled by staff' }}</strong></p><p>Disabling hides the profile and posts, blocks sign-in, and preserves all content. Restoring clears only this flag; bans, personal deactivation and pending deletion remain separate.</p>{% if disable_state %}<p>{{ disable_state.updated_at }} · {{ disable_state.reason }}</p>{% endif %}{% if account.id != 1 and not account.is_staff %}<form method="post" action="{{ url_for('staff_account_disable',target_id=account.id) }}" class="manage-controls"><input type="hidden" name="theme_csrf_token" value="{{ management_token }}"><label>Reason<input name="reason" maxlength="500" required></label><button name="disabled" value="{{ '0' if disable_state and disable_state.disabled else '1' }}">{{ 'Restore account' if disable_state and disable_state.disabled else 'Disable account' }}</button></form>{% endif %}</section>
+<section><h2>Account status</h2>
+    <ul><li>Ban: {{ 'Active' if account.banned else 'No' }}</li><li>Posting and comments: {{ 'Restricted' if account.posting_restricted else 'Allowed' }}</li><li>Reactions and social interactions: {{ 'Restricted' if account.interaction_restricted else 'Allowed' }}</li></ul>
+    {% if account.updated_by %}<p>Last changed by {{ account.updated_by }} at {{ account.updated_at }}: {{ account.reason }}</p>{% endif %}
+    {% if account.id != 1 and not account.is_staff %}
+    <form method="post" action="{{ url_for('moderate_user', target_id=account.id) }}" class="manage-controls"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
+      <input type="hidden" name="theme_csrf_token" value="{{ management_token }}">
+      <label>Control<select name="action"><option value="ban">Account ban</option><option value="posting">Posting and comments</option><option value="interaction">Reactions and social interactions</option></select></label>
+      <label>Set to<select name="state"><option value="1">Restricted</option><option value="0">Allowed</option></select></label>
+      <label>Reason<input name="reason" maxlength="500" required placeholder="Brief reason"></label>
+      <button type="submit">Apply change</button>
+    </form>{% endif %}
+  </section>
+  <section><h2>Recent posts</h2><ul>{% for post in posts %}<li><a href="{{ url_for('manage_posts', q=post.id) }}">#{{ post.id }}</a> · {{ post.created_at }}{% if post.hidden %} · Hidden{% endif %} · {{ post.content[:140] }}{% if post.content|length > 140 %}…{% endif %}</li>{% else %}<li>No posts.</li>{% endfor %}</ul></section>
+  <section><h2>Moderation history</h2><ul>{% for event in events %}<li>{{ event.created_at }} · {{ management_account(event.actor_handle, event.actor_id) }} · {{ event.action }}{% if event.post_id %} · <a href="{{ url_for('manage_posts', q=event.post_id) }}">post #{{ event.post_id }}</a>{% endif %} · {{ event.reason }}</li>{% else %}<li>No actions recorded.</li>{% endfor %}</ul><a href="{{ url_for('manage_history') }}">Full audit log →</a></section>
+</div>
+<style>
+.management-page{max-width:1050px;margin:2rem auto;padding:clamp(1.2rem,3vw,2.2rem);background:#171d2b;color:#f5f0e8;border:1px solid #526071;border-radius:22px}
+.management-page a{color:#aee4d8}.management-page section{padding:1rem;margin:1rem 0;border:1px solid #526071;border-radius:14px;background:#242e3e}.management-page li{margin:.5rem 0;overflow-wrap:anywhere}
+.manage-controls{display:flex;flex-wrap:wrap;gap:.7rem;align-items:end}.manage-controls label{display:grid;gap:.3rem}.manage-controls input,.manage-controls select{padding:.55rem;border:1px solid #7990a0;border-radius:7px;background:#111b2a;color:#fff;font:inherit}.manage-controls button{padding:.55rem .9rem;border:1px solid #aee4d8;border-radius:7px;background:#17433f;color:#fff;font:inherit;cursor:pointer}
+</style>
+{% endblock %}

@@ -1,10 +1,12 @@
 from flask import g, current_app
 import sqlite3
+from neonrest.community_features import register_db_functions
 
 def get_db():
     if 'db' not in g:
         g.db = sqlite3.connect(current_app.config['DATABASE'])
         g.db.row_factory = sqlite3.Row
+        register_db_functions(g.db)
     return g.db
 
 def are_friends(db, user_a, user_b):
@@ -55,29 +57,20 @@ def get_friend_status_map(viewer_id):
     return {row['other_user_id']: row['status'] for row in statuses}
 
 def get_top_friends(db, user_id):
-    rows = db.execute('''
-        SELECT u.id, u.handle, u.codename, u.avatar_path
-        FROM top_friends tf
-        JOIN users u ON u.id = tf.friend_id
-        WHERE tf.user_id = ?
-        ORDER BY tf.position_t9
-    ''', (user_id,)).fetchall()
-
-    friends = []
+    rows = db.execute("""SELECT tf.position_t9, u.id, u.handle, u.codename, u.avatar_path
+        FROM top_friends tf JOIN users u ON u.id = tf.friend_id
+        WHERE tf.user_id = ? AND tf.position_t9 BETWEEN 1 AND 9 AND community_profile_visible(u.id)=1
+        AND EXISTS (SELECT 1 FROM friend_requests fr WHERE fr.status = 'accepted'
+          AND ((fr.sender_id = ? AND fr.receiver_id = u.id)
+            OR (fr.receiver_id = ? AND fr.sender_id = u.id)))""", (user_id, user_id, user_id)).fetchall()
+    slots = [{"placeholder": True} for _ in range(9)]
     for row in rows:
-        friends.append({
-            "id": row["id"],
-            "handle": row["handle"],
-            "codename": row["codename"],
-            "avatar_path": f"/{row['avatar_path'].lstrip('/')}" if row["avatar_path"] else None,
+        slots[row['position_t9'] - 1] = {
+            "id": row['id'], "handle": row['handle'], "codename": row['codename'],
+            "avatar_path": f"/{row['avatar_path'].lstrip('/')}" if row['avatar_path'] else None,
             "placeholder": False
-        })
-
-    # Fill in blank slots
-    while len(friends) < 9:
-        friends.append({"placeholder": True})
-
-    return friends
+        }
+    return slots
 
 
 def set_top_friend(db, user_id, friend_id, position):

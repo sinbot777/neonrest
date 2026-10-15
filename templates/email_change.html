@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block title %}Change email - Neonrest{% endblock %}
+{% block content %}
+<div class="community-page">
+{% include 'partials/account_navigation.html' %}
+<h1>Change email</h1>
+{% if error %}<p class="community-warning" role="alert">{{ error }}</p>{% endif %}
+{% if confirmation %}
+<section><h2>Confirm your new address</h2><p>Change your sign-in email to <strong>{{ confirmation }}</strong>?</p>
+<p>This signs you out on every device. Your password, two-factor security, profile and friendships stay in place.</p>
+<form method="post"><input type="hidden" name="theme_csrf_token" value="{{ token }}"><button>Confirm email change</button></form></section>
+{% else %}
+<section><p>Current email: <strong>{{ user.email }}</strong></p><p>Your current address stays active until you verify the new one. Confirmation links expire in one hour.</p>
+{% if pending %}<p>{% if pending.delivered %}Awaiting confirmation at{% else %}Confirmation email queued for{% endif %} <strong>{{ pending.new_email }}</strong>.</p><form method="post"><input type="hidden" name="theme_csrf_token" value="{{ token }}"><button name="action" value="cancel">Cancel pending change</button></form>{% endif %}
+<form method="post"><input type="hidden" name="theme_csrf_token" value="{{ token }}"><label for="new-email">New email address</label><input id="new-email" type="email" name="email" autocomplete="email" maxlength="254" required><button name="action" value="request">Send confirmation email</button></form></section>
+{% endif %}
+<p><a class="button" href="{{ url_for('community_security') }}">Back to Account safety</a></p>
+</div>
+{% endblock %}

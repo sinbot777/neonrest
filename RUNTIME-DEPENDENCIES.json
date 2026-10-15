@@ -1,0 +1,10 @@
+{
+  "Flask": "3.0.3",
+  "Flask-Mail": "0.10.0",
+  "Pillow": "10.4.0",
+  "qrcode": "8.0",
+  "cryptography": "44.0.0",
+  "requests": "2.32.3",
+  "email-validator": "2.2.0",
+  "markdown2": "2.5.3"
+}

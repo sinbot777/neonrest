@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+{% block title %}Profile Studio — {{ user.handle }}{% endblock %}
+{% block content %}
+<style>
+.profile-studio {box-sizing:border-box;width:min(1180px,calc(100% - 32px));margin:28px auto 80px;padding:clamp(20px,3vw,38px);color:#eef1f6;background:#151a23;border:1px solid #394356;border-radius:24px;box-shadow:0 24px 80px rgba(3,7,18,.5);font-family:system-ui,sans-serif;text-align:left}
+.profile-studio * {box-sizing:border-box}
+.profile-studio h1 {margin:.25rem 0;color:#fff;font-size:clamp(2rem,4vw,3rem)}
+.profile-studio p {color:#bac6d4;line-height:1.5}
+.profile-studio .eyebrow {font-size:.8rem;text-transform:uppercase;letter-spacing:.15em;color:#8de2d2;font-weight:800}
+.profile-studio .top {display:flex;justify-content:space-between;gap:1rem;align-items:center;flex-wrap:wrap}
+.profile-studio a {color:#b4ecde}
+.profile-studio .view {border:1px solid #4d7978;background:#243b3c;border-radius:10px;padding:.7rem 1rem;text-decoration:none;font-weight:700}
+.profile-studio .modes {display:flex;gap:.5rem;margin:1.5rem 0}
+.profile-studio .modes a {padding:.7rem 1.1rem;border:1px solid #4a586d;border-radius:10px;text-decoration:none;font-weight:700}
+.profile-studio .modes a[aria-current=page] {background:#8de2d2;color:#12231f;border-color:#8de2d2}
+.profile-studio form {display:block}
+.profile-studio .studio-grid {display:grid;grid-template-columns:minmax(0,1.45fr) minmax(320px,.85fr);gap:20px;align-items:start}
+.profile-studio .studio-card {min-width:0;padding:20px;background:#202734;border:1px solid #3a475a;border-radius:18px}
+.profile-studio .studio-side {display:grid;gap:20px;min-width:0}
+.profile-studio .studio-card h2 {margin:0 0:.3rem;color:#fff;font-size:1.12rem}
+.profile-studio .studio-card .note {margin:.2rem 0 1rem;font-size:.87rem;color:#b6c3d1}
+.profile-studio .palette-preview {padding:16px;margin-bottom:12px;border:1px solid #526172;border-radius:11px;background:var(--sample-bg,#242830);color:var(--sample-text,#fdfdfd)}
+.profile-studio .palette-preview strong {display:block;color:var(--sample-accent,#fcb5a3)}
+.profile-studio .palette-preview span {display:block;margin-top:.4rem;font-size:.84rem}
+.profile-studio .studio-field {display:block;margin:12px 0 0}
+.profile-studio .studio-field label {display:block;margin:0 0 5px;color:#d7e1eb;font-size:.87rem;font-weight:700}
+.profile-studio .studio-field input,.profile-studio .studio-field select {width:100%;min-width:0;padding:9px;border:1px solid #566477;border-radius:9px;background:#101720;color:#eef1f6;font:inherit}
+.profile-studio .color-row {display:grid;grid-template-columns:minmax(0,1fr) 46px 92px;gap:8px;align-items:center;margin-top:10px}
+.profile-studio .color-row label {font-size:.85rem;font-weight:700}
+.profile-studio .color-row input[type=color] {width:46px;height:38px;padding:2px}
+.profile-studio .color-row input[type=text] {width:92px;font-size:.8rem}
+.profile-studio #contrast-status {margin:10px 0 0;font-size:.85rem}
+.profile-studio .actions {position:sticky;bottom:12px;z-index:2;padding:12px;border:1px solid #58746f;border-radius:12px;background:#172823}
+@media(max-width:920px) {.profile-studio .studio-grid {grid-template-columns:1fr}}
+
+.profile-studio label {display:block;margin-bottom:.7rem;font-weight:700}
+.profile-studio textarea {display:block;width:100%;height:clamp(380px,60vh,780px);padding:1rem;resize:vertical;border:1px solid #4b6074;border-radius:12px;background:#101720;color:#d8efdf;font:13px/1.65 ui-monospace,monospace;tab-size:2}
+.profile-studio textarea:focus-visible,.profile-studio a:focus-visible,.profile-studio button:focus-visible {outline:2px solid #8de2d2;outline-offset:2px}
+.profile-studio .actions {display:flex;gap:.7rem;justify-content:flex-end;flex-wrap:wrap;margin-top:1rem}
+.profile-studio button {border:1px solid #77c5b4;border-radius:10px;background:#243b3c;color:#e7fff8;padding:.8rem 1.2rem;font:inherit;font-weight:700;cursor:pointer}
+.profile-studio button.primary {background:#8de2d2;color:#12231f}
+.profile-studio code {color:#c8f6e9}
+.profile-studio .sr-only {position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+@media(max-width:600px) {.profile-studio {width:calc(100% - 16px);padding:16px}}
+</style>
+<div class="profile-studio">
+  <div class="top"><div><div class="eyebrow">Profile Studio</div><h1>{{ user.handle }} · {{ mode|capitalize }}</h1></div><a class="view" href="{{ url_for('user_by_handle', handle=user.handle.lstrip('@'), mode=mode) }}">View profile ↗</a></div>
+  <p>Give your profile its own look. Day and night have separate CSS. An empty editor uses the site's default style.</p>
+  <nav class="modes" aria-label="Edit profile mode"><a href="{{ url_for('edit_profile_style', mode='day') }}" {% if mode == 'day' %}aria-current="page"{% endif %}>Day</a><a href="{{ url_for('edit_profile_style', mode='night') }}" {% if mode == 'night' %}aria-current="page"{% endif %}>Night</a></nav>
+  <form method="post" id="profile-style-form"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
+    <input type="hidden" name="profile_edit_token" value="{{ profile_edit_token() }}">
+    <div class="studio-grid">
+      <section class="studio-card" aria-labelledby="css-heading">
+        <h2 id="css-heading">Custom CSS · {{ mode|capitalize }}</h2>
+        <p class="note">Edit the profile rules directly, or use the controls beside them.</p>
+        <label for="profile-css" class="sr-only">Custom CSS</label>
+        <textarea id="profile-css" name="custom_css" maxlength="30000" spellcheck="false" aria-describedby="css-help">{{ custom_css }}</textarea>
+        <p id="css-help">Quick settings append editable rules at the end. Imports, external URLs, and markup are blocked. Save &amp; Preview opens your profile in this mode.</p>
+      </section>
+      <aside class="studio-side" aria-label="Profile style controls">
+        <section class="studio-card" aria-labelledby="colors-heading">
+          <h2 id="colors-heading">Colors</h2>
+          <p class="note">Choose a panel, text, or accent color. Each change writes a rule into the CSS editor.</p>
+          <div class="palette-preview" id="palette-preview"><strong>{{ user.handle }}</strong><span>A preview of these colors together.</span></div>
+          <div class="color-row" data-key="panel"><label for="panel-color">Panel</label><input type="color" id="panel-color" value="#242830"><input type="text" id="panel-hex" value="#242830" maxlength="7" aria-label="Panel hex color" spellcheck="false"></div>
+          <div class="color-row" data-key="text"><label for="text-color">Text</label><input type="color" id="text-color" value="#fdfdfd"><input type="text" id="text-hex" value="#fdfdfd" maxlength="7" aria-label="Text hex color" spellcheck="false"></div>
+          <div class="color-row" data-key="accent"><label for="accent-color">Accent</label><input type="color" id="accent-color" value="#fcb5a3"><input type="text" id="accent-hex" value="#fcb5a3" maxlength="7" aria-label="Accent hex color" spellcheck="false"></div>
+          <p id="contrast-status" role="status" aria-live="polite"></p>
+        </section>
+        <section class="studio-card" aria-labelledby="identity-heading">
+          <h2 id="identity-heading">Profile identity</h2>
+          <p class="note">Shape the avatar and profile cards in this mode.</p>
+          <div class="studio-field"><label for="avatar-shape">Avatar corners</label><select id="avatar-shape"><option value="">Keep current CSS</option><option value="16px">Soft corners</option><option value="0">Square</option><option value="50%">Oval</option></select></div>
+          <div class="studio-field"><label for="card-shape">Card corners</label><select id="card-shape"><option value="">Keep current CSS</option><option value="0">Square</option><option value="8px">Subtle</option><option value="20px">Rounded</option></select></div>
+        </section>
+        <section class="studio-card" aria-labelledby="type-heading">
+          <h2 id="type-heading">Background &amp; type</h2>
+          <p class="note">Simple effects that work within the profile CSS rules.</p>
+          <div class="studio-field"><label for="panel-effect">Panel finish</label><select id="panel-effect"><option value="">Keep current CSS</option><option value="none">Solid</option><option value="linear-gradient(135deg, rgba(255,255,255,.12), transparent)">Soft sheen</option><option value="repeating-linear-gradient(0deg, transparent 0px, transparent 3px, rgba(255,255,255,.04) 4px)">Scanlines</option></select></div>
+          <div class="studio-field"><label for="profile-font">Font</label><select id="profile-font"><option value="">Keep current CSS</option><option value="'Space Grotesk', sans-serif">Space Grotesk</option><option value="'Space Mono', monospace">Space Mono</option><option value="Georgia, serif">Georgia</option><option value="'Trebuchet MS', sans-serif">Trebuchet MS</option><option value="'Courier New', monospace">Courier New</option></select></div>
+        </section>
+      </aside>
+    </div>
+    <div class="actions"><button type="submit" name="action" value="save">Save changes</button><button type="submit" name="action" value="preview" class="primary">Save &amp; Preview ↗</button></div>
+  </form>
+</div>
+<script>
+(() => {
+  const css = document.getElementById('profile-css');
+  const preview = document.getElementById('palette-preview');
+  const contrast = document.getElementById('contrast-status');
+  const begin = '/* Profile Studio quick settings */';
+  const finish = '/* End Profile Studio quick settings */';
+  const keys = ['panel','text','accent','avatar-shape','card-shape','panel-effect','profile-font'];
+  const settings = {};
+  const blockPattern = /\n?\/\* Profile Studio quick settings \*\/[\s\S]*?\/\* End Profile Studio quick settings \*\//g;
+  const current = css.value.match(blockPattern);
+  if (current) {
+    const block = current[current.length-1];
+    for (const key of keys) {
+      const line = block.split('\n').find(line => line.trim().startsWith('/* '+key+': '));
+      if (line) settings[key] = line.trim().slice(key.length+4,-3).trim();
+    }
+  }
+  function hex(value) {
+    const match = value.trim().match(/^#([a-f0-9]{3}|[a-f0-9]{6})$/i);
+    if (!match) return null;
+    return match[1].length === 3 ? '#'+[...match[1]].map(c => c+c).join('').toLowerCase() : '#'+match[1].toLowerCase();
+  }
+  function paint() {
+    for (const key of ['panel','text','accent']) preview.style.setProperty('--sample-'+(key==='panel'?'bg':key),settings[key] || document.getElementById(key+'-color').value);
+    const values = ['panel','text'].map(key => hex(settings[key] || document.getElementById(key+'-color').value));
+    const luminance = value => {
+      const rgb = [1,3,5].map(i => parseInt(value.slice(i,i+2),16)/255).map(c => c <= .04045 ? c/12.92 : ((c+.055)/1.055)**2.4);
+      return rgb[0]*.2126+rgb[1]*.7152+rgb[2]*.0722;
+    };
+    const a=luminance(values[0]), b=luminance(values[1]), ratio=(Math.max(a,b)+.05)/(Math.min(a,b)+.05);
+    contrast.textContent='Sample contrast: '+ratio.toFixed(1)+':1. '+(ratio < 4.5 ? 'Low for ordinary text.' : 'Meets 4.5:1 for ordinary text.')+' Other CSS can change the result.';
+  }
+  function update() {
+    const declarations = [];
+    if (settings.panel) declarations.push('background-color: '+settings.panel+';');
+    if (settings.text) declarations.push('color: '+settings.text+';');
+    if (settings['panel-effect']) declarations.push('background-image: '+settings['panel-effect']+';');
+    if (settings['profile-font']) declarations.push('font-family: '+settings['profile-font']+';');
+    const output = [];
+    if (declarations.length) output.push('.user-page, #main-content > .info-box { '+declarations.join(' ')+' }');
+    if (settings.accent) output.push('.user-page a, #main-content .profile-music-settings .button, #main-content .profile-bio-edit > summary { color: '+settings.accent+'; }');
+    if (settings['avatar-shape']) output.push('.user-page .avatar-img:not(.small) { border-radius: '+settings['avatar-shape']+'; }');
+    if (settings['card-shape']) output.push('#main-content > .info-box, .user-page .info-box { border-radius: '+settings['card-shape']+'; }');
+    const old = css.value.replace(blockPattern,'').trimEnd();
+    css.value = old + (output.length ? '\n\n'+begin+'\n'+keys.filter(key => settings[key]).map(key => '/* '+key+': '+settings[key]+' */').join('\n')+'\n'+output.join('\n')+'\n'+finish : '');
+    paint();
+    css.dispatchEvent(new Event('input',{bubbles:true}));
+  }
+  for (const key of ['panel','text','accent']) {
+    const picker=document.getElementById(key+'-color'), input=document.getElementById(key+'-hex');
+    if (hex(settings[key])) picker.value=input.value=hex(settings[key]);
+    picker.addEventListener('input', () => {input.value=picker.value;settings[key]=picker.value;update();});
+    input.addEventListener('input', () => {const value=hex(input.value);input.setCustomValidity(value?'':'Enter a 3 or 6 digit hex color.');if(value){picker.value=value;settings[key]=value;update();}});
+    input.addEventListener('blur', () => {if(hex(input.value)) input.value=hex(input.value);});
+  }
+  for (const key of keys.slice(3)) {
+    const input=document.getElementById(key);
+    if (settings[key] && [...input.options].some(option => option.value === settings[key])) input.value=settings[key];
+    input.addEventListener('change', () => {settings[key]=input.value;update();});
+  }
+  paint();
+  css.addEventListener('keydown', event => {
+    if(event.key!=='Tab') return;
+    event.preventDefault();const start=css.selectionStart,end=css.selectionEnd;
+    css.value=css.value.slice(0,start)+'  '+css.value.slice(end);css.selectionStart=css.selectionEnd=start+2;
+  });
+})();
+</script>
+{% endblock %}

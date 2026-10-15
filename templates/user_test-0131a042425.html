@@ -28,7 +28,7 @@
         <div class="mood-line">
           <span>Mood:</span>
           {% if session.user_id == user.id %}
-            <form method="POST" action="/update_mood" class="inline-form">
+            <form method="POST" action="/update_mood" class="inline-form"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
               <input type="text" name="mood" value="{{ user.mood or '' }}" class="glow-input small" placeholder="Enter your mood…">
               <button type="submit" class="icon-button" title="Save mood">✏️</button>
             </form>
@@ -39,7 +39,7 @@
         <div class="haunts-section">
           <span>Frequent haunts:</span>
           {% if session.user_id == user.id %}
-            <form method="POST" action="/update_haunts" class="inline-form">
+            <form method="POST" action="/update_haunts" class="inline-form"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
               <input type="text" name="haunts" value="{{ user.frequent_haunts or '' }}" class="glow-input small" placeholder="e.g. Retro Arcade, Blue Moon Café">
               <button type="submit" class="icon-button" title="Save haunts">📍</button>
             </form>
@@ -121,7 +121,7 @@
       <button id="toggle-post-form" class="button">Sign Guestbook</button>
     {% endif %}
     <div class="inline-post-form" id="inline-post-form" style="display: none;">
-      <form method="POST" action="/create_post">
+      <form method="POST" action="/create_post"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
         <textarea name="content" placeholder="Write something..." required></textarea>
         <input type="hidden" name="target_user_id" value="{{ user.id }}">
         <input type="text" name="vibes" placeholder="Vibes (comma separated)">

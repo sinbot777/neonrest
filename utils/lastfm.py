@@ -1,7 +1,7 @@
 import requests
 import logging
 
-API_KEY = "f1d69a02f308c0ef32e37f027316ffc6"
+API_KEY = __import__('os').environ.get('LASTFM_API_KEY', '')
 
 def get_now_playing(username):
     logging.warning(f"Now Playing check for {username}")

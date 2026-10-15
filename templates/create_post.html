@@ -1,42 +1,83 @@
 {% extends 'base.html' %}
 {% block title %}Create Post - Neonrest{% endblock %}
-
 {% block content %}
-  <div class="user-page">
-    <div class="user-header">
-      <div class="glow large">New Post</div>
-      <p>Share something honest. Markdown coming soon.</p>
-    </div>
-
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        <div class="flash-container">
-          {% for category, message in messages %}
-            <div class="flash flash-{{ category }}">{{ message }}</div>
-          {% endfor %}
-        </div>
-      {% endif %}
-    {% endwith %}
-
-    <form method="POST" action="/create_post">
-        <div class="user-section">
-          <label for="content">Post Content</label><br>
-                <textarea name="content" id="content" class="post-textarea" rows="8" required></textarea>
-            <small class="markdown-hint">
-              Formatting supported: <a href="/markdown-guide" target="_blank">Markdown Guide</a>
-            </small>
-
-        </div>
-      <div class="user-section">
-        <label for="vibes">Vibes</label><br>
-        <input type="text" id="vibes" name="vibes" placeholder="e.g., Backporch, Analog" class="glow-input">
-        <small>Separate multiple vibes with commas.</small>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/new_post.css') }}">
+<div class="user-page new-post-page">
+  <header class="user-header new-post-header">
+    <div class="glow large">New Post</div>
+    <p>Share something honest.</p>
+  </header>
+  <form method="POST" action="/create_post" enctype="multipart/form-data" class="new-post-form"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
+    <section class="post-form-panel" aria-labelledby="post-content-heading">
+      <h2 id="post-content-heading">Your post</h2>
+      <div class="post-form-field">
+        <label for="content">Post content</label>
+        <textarea name="content" id="content" class="post-textarea" rows="8"></textarea><label>Audience <select name="audience">{% for option in ('public','friends','private') %}<option value="{{ option }}" {% if community_defaults.post_audience == option %}selected{% endif %}>{{ option|title }}</option>{% endfor %}</select></label>
+        <small>Formatting supported: <a href="/markdown-guide" target="_blank" rel="noopener">Markdown Guide</a></small>
       </div>
-        <label for="circle">Circle</label><br>
-        <input type="text" id="circle" name="circle" maxlength="100" placeholder="e.g., Friends, Classmates" class="glow-input">
-      <div class="user-section">
-        <button type="submit">Post</button>
+    </section>
+
+    <section class="post-form-panel" aria-labelledby="attachments-heading">
+      <h2 id="attachments-heading">Attachments <span class="post-form-optional">optional</span></h2>
+      <p class="post-form-intro">Add an image or GIF, a MIDI, or both.</p>
+      <div class="post-form-grid">
+        <div class="post-form-group">
+          <h3>Image or GIF</h3>
+          <div class="post-form-field">
+            <label for="post_image">Choose image or GIF</label>
+            <input type="file" id="post_image" name="post_image" accept="image/jpeg,image/png,image/webp,image/gif">
+            <small>JPEG, PNG, WebP or GIF, up to 5 MB. Animated GIFs stay animated.</small>
+          </div>
+          <div class="post-form-field">
+            <label for="image_title">Title <span class="post-form-optional">optional</span></label>
+            <input type="text" id="image_title" name="image_title" maxlength="100" placeholder="Uses filename if blank">
+          </div>
+          <div class="post-form-field">
+            <label for="image_alt">Image description <span class="post-form-optional">optional</span></label>
+            <input type="text" id="image_alt" name="image_alt" maxlength="180" placeholder="Uses title or filename if blank">
+          </div>
+          <div class="post-form-field">
+            <label for="image_filter">Image filter</label>
+            <select id="image_filter" name="image_filter">
+              {% for value,label in [('original','Original'),('mono','Black & White'),('sepia','Sepia'),('negative','Negative'),('faded','Faded Print'),('contrast','High Contrast'),('blue','Cool Blue')] %}
+              <option value="{{ value }}">{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="post-form-group">
+          <h3>MIDI</h3>
+          <div class="post-form-field">
+            <label for="post_midi">Choose MIDI file</label>
+            <input type="file" id="post_midi" name="post_midi" accept=".mid,.midi,audio/midi,audio/x-midi">
+            <small>MIDI files up to 256 KB and 10 minutes.</small>
+          </div>
+          <div class="post-form-field">
+            <label for="midi_title">Title <span class="post-form-optional">optional</span></label>
+            <input type="text" id="midi_title" name="midi_title" maxlength="100" placeholder="Uses filename if blank">
+          </div>
+        </div>
       </div>
-    </form>
-  </div>
+    </section>
+
+    <section class="post-form-panel" aria-labelledby="destinations-heading">
+      <h2 id="destinations-heading">Where it goes</h2>
+      <div class="post-form-grid post-form-destinations">
+        <div class="post-form-field">
+          <label for="vibes">Vibes</label>
+          <input type="text" id="vibes" name="vibes" value="{{ request.args.get('vibe', '')|e }}" placeholder="e.g., Backporch, Analog">
+          <small>Separate multiple Vibes with commas.</small>
+        </div>
+        <div class="post-form-field">
+          <label for="circle">Circle <span class="post-form-optional">optional</span></label>
+          <input type="text" id="circle" name="circle" maxlength="100" placeholder="e.g., Friends, Classmates">
+        </div>
+      </div>
+    </section>
+{% if staff_announcement_allowed() %}<label><input type="checkbox" name="staff_announcement" value="1" > Staff announcement (public; visible to younger members)</label>{% endif %}
+    <div class="post-form-actions"><button type="submit">Post</button></div>
+  </form>
+</div>
+{% set saved_post = authorization_post_draft() %}
+{% if saved_post %}<p role="status">Your post text has been restored. Reattach any files before submitting.</p><script>document.addEventListener('DOMContentLoaded',function(){const draft={{ saved_post|tojson }};const form=document.querySelector('form[enctype="multipart/form-data"]');if(!form)return;for(const [name,value] of Object.entries(draft)){for(const field of Array.from(form.elements).filter(el=>el.name===name)){if(field.type==='checkbox')field.checked=value==='1';else if(field.type!=='file'&&field.type!=='password')field.value=value;}}});</script>{% endif %}
 {% endblock %}

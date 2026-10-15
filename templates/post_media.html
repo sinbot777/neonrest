@@ -1,0 +1,26 @@
+{% set attachments = media_for_post(post.id) %}
+{% set media = attachments.image %}
+{% if media %}
+  {% if media.kind == 'image' %}
+    <figure class="post-media filter-{{ media.filter_name }}">
+      <a class="post-image-link" href="{{ url_for('media_file', filename=media.filename) }}" aria-label="Enlarge image: {{ media.alt_text }}"><img src="{{ url_for('media_file', filename=media.filename) }}" alt="{{ media.alt_text }}" loading="lazy"></a>
+      {% if media.title %}<figcaption class="media-caption">{{ media.title }}</figcaption>{% endif %}
+    </figure>
+  {% elif media.kind == 'gif' %}
+    <figure class="post-media gif-card filter-{{ media.filter_name }}"
+            data-poster="{{ url_for('media_file', filename=media.poster) }}"
+            data-once="{{ url_for('media_file', filename=media.filename) }}"
+            data-loop="{{ url_for('media_file', filename=media.loop_filename) }}">
+      <img src="{{ url_for('media_file', filename=media.poster) }}" alt="{{ media.alt_text }}" loading="lazy">
+      <figcaption>{% if media.title %}<span class="media-caption">{{ media.title }}</span>{% endif %}
+        <button type="button" data-gif-action="play">Play GIF</button>
+        <button type="button" data-gif-action="pause">Pause</button>
+        <button type="button" data-gif-action="replay">Replay</button>
+        <button type="button" data-gif-action="loop" aria-pressed="false">Loop</button></figcaption>
+    </figure>
+  {% endif %}
+{% endif %}
+{% if attachments.midi %}
+  {% set midi_title = attachments.midi.title %}{% set midi_filename = attachments.midi.filename %}
+  {% include 'midi_player.html' %}
+{% endif %}

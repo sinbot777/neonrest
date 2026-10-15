@@ -1,47 +1,56 @@
 {% extends "base.html" %}
-{% block title %}Your Friends - Neonrest{% endblock %}
+{% block title %}{{ 'Your Friends' if editable else owner.handle ~ "'s Friends" }} - Neonrest{% endblock %}
 {% block content %}
-<div class="user-page">
-  <h1 class="glow large">Friends</h1>
-
-  <div class="user-section">
-    <h2>Incoming Requests</h2>
-    {% for user in incoming %}
-      <p>
-        @{{ user.handle }} —
-        <form method="POST" action="/accept_friend_request/{{ user.id }}" style="display:inline;">
-          <button type="submit">Accept</button>
-        </form>
-        <form method="POST" action="/decline_friend_request/{{ user.id }}" style="display:inline;">
-          <button type="submit">Decline</button>
-        </form>
-      </p>
-    {% else %}
-      <p>No incoming requests.</p>
-    {% endfor %}
-  </div>
-
-  <div class="user-section">
-    <h2>Outgoing Requests</h2>
-    {% for user in outgoing %}
-      <p>{{ user.handle }} — Pending</p>
-    {% else %}
-      <p>No outgoing requests.</p>
-    {% endfor %}
-  </div>
-
-  <div class="user-section">
-    <h2>Friends</h2>
-    {% for user in friends %}
-      <p>
-        <a href="/{{ user.handle }}">{{ user.handle }}</a>
-        <form method="POST" action="/remove_friend/{{ user.id }}" style="display:inline;">
-          <button type="submit">Remove</button>
-        </form>
-      </p>
-    {% else %}
-      <p>No friends yet.</p>
-    {% endfor %}
-  </div>
+<style>
+.friends-page {max-width: 860px; margin: 2rem auto; padding: 0 1rem; color: #fff}
+.friends-page section {background: rgba(25, 20, 32, .76); border: 1px solid rgba(255, 190, 207, .4); border-radius: 14px; padding: 1.25rem; margin: 1rem 0}
+.friends-page a {color: #ffd1db}.friends-page h1,.friends-page h2 {color: #ffb7cb}
+.friend-row {display: flex; align-items: center; flex-wrap: wrap; gap: .75rem; padding: .7rem 0; border-bottom: 1px solid rgba(255,255,255,.16)}
+.friend-row:last-child {border: 0}.friend-row img {width: 44px; height: 44px; object-fit: cover; border-radius: 50%}
+.friends-page form {display: inline}.friends-page button,.friends-page select {background: #302631; color: #ffe1e8; border: 1px solid #efaabf; border-radius: 8px; padding: .45rem .7rem; cursor: pointer}
+.friends-page button:hover {background: #624054}.top9-edit-grid {display: grid; grid-template-columns: repeat(auto-fit, minmax(210px,1fr)); gap: .75rem; margin: 1rem 0}
+.top9-edit-grid label {display: flex; flex-direction: column; gap: .35rem}.top9-edit-grid select {width: 100%}
+</style>
+<div class="friends-page">
+  <h1>{{ 'Your Friends' if editable else owner.handle ~ "'s Friends" }}</h1>
+  <p><a href="{{ url_for('user_by_handle', handle=owner.handle.lstrip('@')) }}">← {{ owner.handle }}'s profile</a></p>
+  {% if editable %}
+  <section>
+    <h2>Top 9 Friends</h2>
+    <p>Choose an accepted friend for each slot. Leave slots empty if you like.</p>
+    <form method="post" action="{{ url_for('friends.update_top9') }}"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
+      <input type="hidden" name="friend_csrf_token" value="{{ friend_csrf_token() }}">
+      <div class="top9-edit-grid">
+      {% for slot in range(1, 10) %}
+        <label>Slot {{ slot }}
+          <select name="slot_{{ slot }}">
+            <option value="">Empty</option>
+            {% for friend in friends %}
+              <option value="{{ friend.id }}" {% if slots.get(slot) == friend.id %}selected{% endif %}>@{{ friend.handle.lstrip('@') }}</option>
+            {% endfor %}
+          </select>
+        </label>
+      {% endfor %}
+      </div>
+      <button type="submit">Save Top 9</button>
+    </form>
+  </section>
+  <section><h2>Incoming Requests</h2>
+    {% for person in incoming %}<div class="friend-row"><a href="{{ url_for('user_by_handle', handle=person.handle.lstrip('@')) }}">@{{ person.handle.lstrip('@') }}</a>
+      <form method="post" action="{{ url_for('friends.accept_friend', user_id=person.id) }}"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}"><input type="hidden" name="friend_csrf_token" value="{{ friend_csrf_token() }}"><button>Accept</button></form>
+      <form method="post" action="{{ url_for('friends.decline_friend', user_id=person.id) }}"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}"><input type="hidden" name="friend_csrf_token" value="{{ friend_csrf_token() }}"><button>Decline</button></form></div>
+    {% else %}<p>No incoming requests.</p>{% endfor %}
+  </section>
+  <section><h2>Outgoing Requests</h2>
+    {% for person in outgoing %}<div class="friend-row"><a href="{{ url_for('user_by_handle', handle=person.handle.lstrip('@')) }}">@{{ person.handle.lstrip('@') }}</a> <span>Pending</span></div>
+    {% else %}<p>No outgoing requests.</p>{% endfor %}
+  </section>
+  {% endif %}
+  <section><h2>Friends ({{ friends|length }})</h2>
+    {% for person in friends %}<div class="friend-row"><img src="{{ person.avatar_path or '/static/default-avatar.png' }}" alt=""><a href="{{ url_for('user_by_handle', handle=person.handle.lstrip('@')) }}">@{{ person.handle.lstrip('@') }}</a>
+      {% if person.codename %}<span>{{ person.codename }}</span>{% endif %}
+      {% if editable %}<form method="post" action="{{ url_for('friends.remove_friend', user_id=person.id) }}"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}"><input type="hidden" name="friend_csrf_token" value="{{ friend_csrf_token() }}"><button>Remove friend</button></form>{% endif %}</div>
+    {% else %}<p>No friends yet.</p>{% endfor %}
+  </section>
 </div>
 {% endblock %}

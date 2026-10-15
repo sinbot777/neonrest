@@ -1,0 +1,31 @@
+{% macro workspace_link(endpoint, label) -%}
+{% set current = request.endpoint == endpoint or (endpoint == 'manage_home' and request.path.startswith('/manage') and request.endpoint != 'family_review') or (endpoint == 'family_settings' and request.path.startswith('/account/family')) %}
+<a class="workspace-link" href="{{ url_for(endpoint) }}"{% if current %} aria-current="page"{% endif %}>{{ label }}</a>
+{%- endmacro %}
+<nav class="account-workspace-navigation" aria-label="Account navigation">
+  <details class="workspace-menu" open>
+    <summary><span>Account &amp; tools</span><span class="workspace-menu-hint">Show / hide navigation</span></summary>
+    <div class="workspace-navigation-groups">
+      <section class="workspace-navigation-group" aria-label="Settings">
+        <h2>Settings</h2><div class="workspace-links">
+          {% for endpoint,label in [('account','Account'),('community_security','Account safety'),('community_privacy','Privacy'),('community_notifications','Notifications'),('community_data','Your data'),('media_settings','Media settings')] %}{{ workspace_link(endpoint,label) }}{% endfor %}
+        </div>
+      </section>
+      <section class="workspace-navigation-group" aria-label="Age and family">
+        <h2>Age &amp; family</h2><div class="workspace-links">
+          {{ workspace_link('age_setup','Age settings') }}
+          {% if age_policy_age is not none and age_policy_age >= 18 %}{{ workspace_link('family_settings','Family settings') }}{% endif %}
+        </div>
+      </section>
+      {% if can_access_manage() or family_review_allowed %}
+      <section class="workspace-navigation-group" aria-label="Staff tools">
+        <h2>Staff tools</h2><div class="workspace-links">
+          {% if can_access_manage() %}{{ workspace_link('manage_home','Management') }}{% endif %}
+          {% if family_review_allowed %}{{ workspace_link('family_review','Family consent review') }}{% endif %}
+        </div>
+      </section>
+      {% endif %}
+    </div>
+
+  </details>
+</nav>
