@@ -2,7 +2,7 @@
 
 Updated October 15, 2026 (Pacific). This supersedes the October 14 checkpoint and historical pending-owner notes in the privacy readiness documents.
 
-**Status: release prepared; final sign-off, displayed-version change and v0.8.0 tag are blocked by the two owner items below.**
+**Status: owner acceptance complete; final source release v0.8.0.**
 
 ## Completed
 
@@ -22,17 +22,16 @@ Updated October 15, 2026 (Pacific). This supersedes the October 14 checkpoint an
 - [x] Application source in both environments references `smtp.purelymail.com`; mail supervisor heartbeat is fresh. This establishes current configuration, not old-provider revocation.
 - [x] Known live credentials and private data are excluded from publication; the complete resulting Git tree is scanned before every push.
 
-## Two owner items required before final sign-off
+## Final owner acceptance
 
-- [ ] Confirm that the MailerSend API tokens and SMTP users implicated in the credential incident have been revoked. Owner reports an empty API-token list and a paused SMTP user on October 15; permanent SMTP credential deletion/revocation is still unconfirmed. Moving delivery to Purelymail does not itself revoke credentials at MailerSend. Limited earlier access-log review is recorded; provider-side incident review/revocation remains unconfirmed. Record the action/date and provider-log coverage without any credential values. Do not claim that no misuse occurred when logs are unavailable.
-- [ ] Complete the actual Production owner browser acceptance for authenticator replacement and recovery-code use/reuse rejection. Owner confirmed replacement enabled at 01:05 Pacific and successful login with the new authenticator at 01:08 on October 15; recovery-code use/reuse rejection remains unconfirmed. Keep credentials and recovery codes out of chat and release records. Record only the outcome and date; automated fixture coverage is already complete.
+- [x] Owner reports MailerSend API-token list empty and confirms deletion of the retired SMTP user after initially pausing it. Neonrest uses Purelymail. Earlier access-log review had limited coverage; no claim of complete historical incident visibility or absence of misuse is made.
+- [x] Production authenticator replacement enabled successfully; owner logged in with the new factor.
+- [x] Owner used a new recovery code successfully once and confirmed that reuse was rejected.
+- [x] Owner confirmed the corrected login-page redirect to the profile.
 
-## Finalization once both owner items close
+## Final release artifacts
 
-- [ ] Update both deployed base-template footers from 0.7.4e to 0.8.0, finalize release notes and current dev-log status, and reload the PythonAnywhere web app.
-- [ ] Verify the displayed version in Production and Sandbox, current route/asset health and disabled erasure configuration.
-- [ ] Create a source-only final commit on the existing audited branch, preserving the two-environment repository layout. Scan the entire resulting tree for credentials and private artifacts, push and verify its remote object ID.
-- [ ] Create and push a new annotated `v0.8.0` tag at that verified commit; fail rather than overwrite any existing tag. Main remains unchanged.
+Production and Sandbox display Version 0.8.0. Final release notes and owner outcomes are recorded without credentials. The final source commit is credential-scanned and published on the existing audited branch, preserving its two-environment layout and main. A new annotated `v0.8.0` tag identifies that verified commit; existing tags must never be overwritten. Live verification and remote commit/tag read-back are required before reporting publication complete.
 
 ## Deliberate release limitations
 

@@ -1,12 +1,16 @@
-# Neonrest v0.8.0 — draft pending final sign-off
+# Neonrest v0.8.0
 
-This release consolidates the account-security, moderation, privacy and family-request work, together with the final account-navigation and post-link styling updates.
+Released October 15, 2026 (Pacific), for Production and Sandbox.
 
-- Account security: email verification/change/recovery safeguards; authenticator setup and replacement; recovery-code and session controls; clearer confirmation errors.
-- Moderation and privacy: reviewed family exports, request deadlines and delivered-response records, appeals, preservation holds, final case dispositions, staff guides and private verification-document invitations.
-- Operations: documented document/backup retention targets, restore preflight, deployment review and rollback rehearsal, and separate Production/Sandbox mail and session boundaries.
-- Presentation: consistent Account-style frames, grouped navigation with active states, mobile collapse/wrapping, Feed/Profile shortcuts in the shared top bar, and readable post-content links.
+This milestone consolidates account security, moderation, privacy and family-request workflows, with the final navigation and presentation updates.
 
-The owner has accepted Production login, Vibe-management 2FA, the Production privacy staff pages, the Sandbox privacy walkthrough and the final styling. The separate owner recovery/replacement walkthrough and old MailerSend credential revocation are not yet confirmed. The release tag and displayed-version change have therefore not been issued.
+- Account security: verified email changes and recovery safeguards, authenticator setup/replacement, one-use recovery codes, session controls and clearer confirmation errors. Authenticated visits to the login page now land on the account profile; inactive and restricted-account gates remain enforced.
+- Moderation and privacy: case evidence, request deadlines and delivered-response records, appeals, preservation holds, final case dispositions, reviewed family exports, staff guides and private verification-document invitations.
+- Operations: documented document/backup retention targets, restore preflight, deployment review and rollback rehearsal, with distinct Production/Sandbox mail and session boundaries.
+- Presentation: consistent Account-style frames, grouped navigation with active states, mobile collapse/wrapping, Feed/Profile shortcuts in the top account bar and readable post-content links.
 
-Permanent erasure remains disabled. Document removal and backup rotation are staff-managed; preserved-case and legacy-copy review remain prerequisites to enabling future erasure. Private databases, uploads, keys, credentials and test receipts are excluded from the Git release. These source snapshots are not complete operational backups.
+Owner acceptance includes Production login, Vibe-management 2FA, Production privacy staff pages, the Sandbox privacy walkthrough, authenticator replacement, successful login with the new factor, recovery-code acceptance once and rejection on reuse, the corrected login landing and final styling. The owner confirmed deletion of the retired MailerSend SMTP user and an empty API-token list. Both application sources reference Purelymail; historical provider-log coverage remains limited and this release does not certify that no prior misuse occurred.
+
+Permanent account erasure and combined automatic retention remain disabled. Document removal and backup rotation are staff-managed. Preserved-case decisions, legacy/provider-copy review and reconciliation of the documented untrusted older snapshot remain prerequisites to enabling future erasure.
+
+The release retains the existing two-environment source layout and history on `sandbox-baseline-2026-10-13`, with an annotated `v0.8.0` tag identifying the final source commit; main is unchanged. Known live credentials are excluded from sanitized source, and private databases, uploads, keys and test receipts are not included. The tag is a source release, not a complete operational backup.

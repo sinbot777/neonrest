@@ -1,3 +1,7 @@
+# v0.8.0 final — October 15, 2026 (Pacific)
+
+Production and Sandbox deployment and owner acceptance are complete, including privacy staff pages, authenticator replacement/new-factor login, recovery-code acceptance once and rejection on reuse, and the corrected profile landing. The owner confirms the retired MailerSend SMTP user was deleted and no API tokens remain listed. Purelymail is the current mail provider. Final source release artifacts are RELEASE-CHECKLIST-v0.8.0.md, RELEASE-NOTES-v0.8.0.md and OWNER-ACCEPTANCE-v0.8.0.json. This section supersedes historical pending-owner and candidate-only notes below. Permanent erasure remains disabled; documented manual-retention and legacy/preserved-case review limitations remain. Historical incident-log coverage is limited; no no-misuse certification is made.
+
 # Current reconciliation — October 15, 2026 (Pacific)
 
 Owner Production acceptance of Privacy requests, Private verification documents and Family request review is complete. The final account/navigation and post-link styling is deployed and accepted. RELEASE-CHECKLIST-v0.8.0.md supersedes historical pending notes below. The owner recovery/replacement walkthrough and retired MailerSend credential revocation remain unconfirmed. Draft release notes are prepared; no final version/tag is issued. Permanent erasure remains disabled.

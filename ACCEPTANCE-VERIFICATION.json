@@ -34,7 +34,10 @@
   "diagnostic_fixture_cleanup_verified": true,
   "diagnostic_cleanup_checks": 11,
   "production_login_owner_confirmed": true,
-  "vibe_management_owner_acceptance": false,
+  "vibe_management_owner_acceptance": true,
   "production_reauth_specific_messages": true,
-  "current_source_isolated_checks": 1728
+  "current_source_isolated_checks": 1728,
+  "owner_security_acceptance_record": "OWNER-ACCEPTANCE-v0.8.0.json",
+  "current_release": "0.8.0",
+  "historical_test_counts_preserved": true
 }
