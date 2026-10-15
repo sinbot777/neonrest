@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% block title %}Management - Neonrest{% endblock %}
+{% block content %}
+{% from 'partials/management_identity.html' import account as management_account %}
+<div class="management-page">
+  <header><p class="manage-eyebrow">Neonrest</p><h1>Management</h1>
+    <p>Signed in as <a href="{{ url_for('user_by_handle', handle=user['handle'].lstrip('@')) }}">@{{ user['handle'].lstrip('@') }}</a>.</p></header>
+  {% if moderation %}
+  <section aria-labelledby="site-tools"><h2 id="site-tools">Site tools</h2>
+    <div class="manage-grid">
+{% if 'manage_roles' in permissions %}
+<article><h3>Privacy requests and preservation</h3><p>Review requests, responses, appeals and preservation holds.</p><a href="{{ url_for('privacy_management') }}">Privacy requests</a></article>
+<article><h3>Family request review</h3><p>Review authority and the exact scope of family data requests.</p><a href="{{ url_for('family_data_review') }}">Review family requests</a></article>
+{% endif %}
+
+      <article><h3>Case files</h3><p>Preserved evidence, related reports, actions, appeals, and staff notes.</p><a href="{{ url_for('community_cases') }}">Open cases</a></article>
+      {% if 'manage_roles' in permissions %}<article><h3>Operations</h3><p>Backups, errors, email failures, abuse signals, and deletion requests.</p><a href="{{ url_for('community_operations') }}">Site operations</a></article>{% endif %}
+      <article><h3>People</h3><p>{{ user_count }} accounts. Find a user, review restrictions, or set a ban.</p><a href="{{ url_for('manage_users') }}">Manage users →</a></article>
+      <article><h3>Posts</h3><p>{{ post_count }} visible posts. Review recent posts and hide or restore them.</p><a href="{{ url_for('manage_posts') }}">Moderate posts →</a></article>
+      <article><h3>Comments</h3><p>Find comments and hide or restore them.</p><a href="{{ url_for('manage_comments') }}">Moderate comments →</a></article>
+      <article><h3>Reports</h3><p>{{ open_reports }} open reports.</p><a href="{{ url_for('manage_reports') }}">Review reports →</a></article>
+      <article><h3>Appeals</h3><p>{{ open_appeals }} open appeals.</p><a href="{{ url_for('manage_appeals') }}">Review appeals →</a></article>
+      {% if 'manage_ads' in permissions %}<article><h3>Advertisements</h3><p>{{ ad_count }} campaigns. Schedule rail cards and a bottom banner.</p><a href="{{ url_for('manage_ads') }}">Manage ads →</a></article>{% endif %}
+      <article><h3>Review history</h3><p>Every ban, restriction, and post visibility change.</p><a href="{{ url_for('manage_history') }}">Open audit log →</a></article>
+      <article><h3>Staff roles</h3><p>Review assignments and manage authorized roles.</p><a href="{{ url_for('manage_roles') }}">View roles →</a></article>
+      {% if approvals %}<article><h3>Vibe approvals</h3><p>Review new Vibes waiting for approval.</p><a href="{{ url_for('pending_vibes') }}">Review pending Vibes →</a></article>{% endif %}
+    </div>
+  </section>
+  {% endif %}
+  <section aria-labelledby="managed-vibes"><h2 id="managed-vibes">Vibes</h2>
+    {% if editable %}
+      <div class="manage-grid">
+      {% for vibe in editable %}
+        <article><h3>{{ vibe.name }}</h3>
+          <a href="{{ url_for('manage_vibe', slug=vibe.slug) }}">Manage Vibe</a>
+          <a href="{{ url_for('vibe_page', vibe_name=vibe.name) }}">View page</a>
+        </article>
+      {% endfor %}
+      </div>
+    {% else %}<p>You have no assigned Vibe editors.</p>{% endif %}
+  </section>
+  {% if moderation %}
+  <section><h2>Recent moderation</h2>
+    <form class="manage-filter" method="get" action="{{ url_for('manage_home') }}">
+      <label>Action type <select name="mod_type"><option value="">All actions</option>{% for item in moderation_actions %}<option value="{{ item.action }}" {% if selected_action == item.action %}selected{% endif %}>{{ item.action }}</option>{% endfor %}</select></label>
+      <label>Match account as <select name="who"><option value="either" {% if moderation_who == "either" %}selected{% endif %}>Moderator or affected user</option><option value="actor" {% if moderation_who == "actor" %}selected{% endif %}>Acting moderator</option><option value="subject" {% if moderation_who == "subject" %}selected{% endif %}>Affected user</option></select></label>
+      <label>Username or NUID <input name="q" value="{{ moderation_query }}" placeholder="@username or #004" maxlength="60"></label>
+      <button type="submit">Filter</button><a href="{{ url_for('manage_home') }}">Clear</a>
+    </form>
+    <ul class="manage-log">
+    {% for event in recent_events %}<li>{{ event.created_at }} · {{ management_account(event.actor_handle, event.actor_id) }} · {{ event.action }}
+      {% if event.target_user_id %} · {{ management_account(event.target_handle, event.target_user_id) }}{% endif %}
+      {% if event.post_id %} · post #{{ event.post_id }}{% endif %} — {{ event.reason }}</li>{% else %}<li>No matching moderation actions.</li>{% endfor %}
+  </ul><a href="{{ url_for('manage_history', mod_type=selected_action, q=moderation_query, who=moderation_who) }}">View full matching history →</a></section>
+  {% endif %}
+</div>
+<style>
+.management-page{max-width:1050px;margin:2rem auto;padding:clamp(1.2rem,3vw,2.2rem);background:#171d2b;color:#f5f0e8;border:1px solid #526071;border-radius:22px}
+.management-page a{color:#aee4d8}.management-page a:focus-visible{outline:3px solid #ffd68a;outline-offset:3px}
+.manage-eyebrow{text-transform:uppercase;letter-spacing:.16em;color:#aee4d8}
+.manage-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1rem}
+.manage-grid article{padding:1rem;border:1px solid #526071;border-radius:14px;background:#242e3e}
+.manage-grid article a{display:inline-block;margin-right:1rem}.manage-log{padding-left:1.25rem}.manage-log li{margin:.55rem 0;overflow-wrap:anywhere}
+.manage-filter{display:flex;flex-wrap:wrap;gap:.75rem;align-items:end;margin:1rem 0}.manage-filter label{display:grid;gap:.3rem}.manage-filter input,.manage-filter select,.manage-filter button{font:inherit;padding:.55rem .7rem;border-radius:8px;border:1px solid #8198a3;background:#242e3e;color:#f5f0e8}.manage-filter button{cursor:pointer;background:#aee4d8;color:#17232b;font-weight:bold}.manage-filter a{padding:.55rem}
+</style>
+{% endblock %}

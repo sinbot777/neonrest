@@ -1,32 +1,15 @@
-# Neonrest
+# Neonrest v0.8.0
 
-**A people-first social network built for closeness — not chaos.**
+Neonrest is a social platform inspired by older social media, with customizable profiles, Vibes, account security, moderation, privacy and family-request workflows.
 
-Neonrest is a softer, more intentional take on social media. Instead of chasing metrics and engagement, it invites users to slow down, express something honest, and reconnect with friends in meaningful ways. Built around Vibe neighborhoods and emotional tags, it's like a digital hangout where mixtapes, late-night convos, and zines feel right at home. No tracking, no clout — just people, presence, and creative connection.
+Main contains the verified v0.8.0 Production application at the repository root. The package directory should be named neonrest, with its parent on Python's import path. Sandbox source is maintained separately and is not included in this tree.
 
-## Status
+See [release notes](RELEASE-NOTES-v0.8.0.md), the [release checklist](RELEASE-CHECKLIST-v0.8.0.md) and [privacy workflows](PRIVACY-WORKFLOWS.md). Requirements reflect the recorded release runtime dependencies; configure private deployment state separately. This repository update does not deploy PythonAnywhere.
 
-Early alpha — core features are under active development.
+The annotated v0.8.0 tag preserves the git@github.com:sinbot777/neonrest.gital two-environment release snapshot at cf8b9e9ab952e9738178526056449de13f84e4fb. Production application files here are byte-for-byte identical to that commit's neonrest/ subtree. Repository documentation and dependency metadata describe this Production-only layout.
 
-## Features (Planned & In Progress)
+Databases, user uploads, credentials, private configuration, verification documents, caches and backup archives are excluded. The Last.fm integration reads LASTFM_API_KEY from the environment in this sanitized source. A checkout is not a complete operational backup.
 
-- 🌈 Vibe-tagged posts (emotional tone, not just topic)
-- 🏠 Neighborhoods (customizable Vibe spaces)
-- 📝 Markdown-powered post editor
-- 👥 Circles for focused group sharing
-- 🔒 Minimal tracking, maximum intention
+Permanent account erasure and combined automatic retention remain disabled. Document removal and backup rotation remain staff-managed; preservation and legacy-copy reviews are prerequisites to future erasure activation.
 
-## Tech Stack
-
-- Python / Flask
-- SQLite (for now)
-- Hosted on PythonAnywhere
-
-## Dev Notes
-
-This is a public milestone version. Sensitive info like the database and `.env` are excluded.
-
----
-
-Want to help or just hang out? Say hi.
-# Neonrest
+License terms are in LICENSE.source-available and LICENSE.themes-only; see COPYRIGHT.md and CLA.md.

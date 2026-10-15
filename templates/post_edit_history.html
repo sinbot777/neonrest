@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}Edit history - Neonrest{% endblock %}
+{% block content %}<section class="panel community-page" style="max-width:800px;margin:1rem auto;padding:1rem;box-sizing:border-box;">
+<a class="button" href="{{ url_for('post_detail', post_id=post.id) }}">← Back to post</a><h1>Edit history</h1>
+<h2>Current version</h2><p>{{ post.last_edited or post.created_at }}</p><div style="white-space:pre-wrap;overflow-wrap:anywhere;">{{ post.content }}</div>
+{% for version in versions %}<article><h2>Previous version</h2><p>{{ version.version_at }} · Edited {{ version.replaced_at }}</p><div style="white-space:pre-wrap;overflow-wrap:anywhere;">{{ version.content }}</div>{% if version.vibe %}<p>Vibes: {{ version.vibe }}</p>{% endif %}</article>{% else %}<p>No previous versions recorded.</p>{% endfor %}
+<p><small>History records text and Vibe changes from when this feature was enabled. Earlier edits and attachment changes are not included.</small></p></section>{% endblock %}

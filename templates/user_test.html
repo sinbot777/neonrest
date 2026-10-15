@@ -1,8 +1,24 @@
 {% extends 'base.html' %}
 {% block title %}{{ user.handle }} - Neonrest{% endblock %}
-{% from 'partials/posts.html' import render_comment %}
+{% from 'partials/posts.html' import render_comment with context %}
+{% block body_class %}default-theme profile-page profile-page--{{ profile_mode }}{% endblock %}
 
 {% block content %}
+<style>
+.profile-mode-switch {display:flex;width:fit-content;box-sizing:border-box;max-width:100%;gap:.3rem;align-items:center;justify-content:center;flex-wrap:wrap;margin:.5rem auto .75rem;padding:.2rem .4rem;border:1px solid rgba(255,255,255,.28);border-radius:7px;background:rgba(18,25,30,.55);color:#fff;font-size:.75rem;line-height:1.2}
+.profile-mode-switch a {color:#9fe4cd;padding:.2rem .4rem;border-radius:4px;text-decoration:none}
+.profile-mode-switch a[aria-current="page"] {background:#39715f;color:#fff;text-decoration:none}
+.profile-style-settings {margin:.65rem 0}
+#main-content .profile-actions {display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;margin:.6rem 0 .8rem;max-width:100%;}
+#main-content .profile-actions form {display:contents;}
+#main-content .profile-actions :is(.friend-btn,a.button) {display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;max-width:100%;min-height:32px;margin:0;padding:.35rem .65rem;font:inherit;font-size:.8rem;font-weight:600;line-height:1.3;border-radius:7px;text-align:center;white-space:normal;}
+
+</style>
+{% if profile_css %}<style id="profile-custom-style">{{ profile_css | safe }}</style>{% endif %}
+<nav class="profile-mode-switch" aria-label="Profile appearance">
+  View: <a href="{{ url_for('user_by_handle', handle=user.handle.lstrip('@'), mode='day') }}" {% if profile_mode == 'day' %}aria-current="page"{% endif %}>Day</a>
+  <a href="{{ url_for('user_by_handle', handle=user.handle.lstrip('@'), mode='night') }}" {% if profile_mode == 'night' %}aria-current="page"{% endif %}>Night</a>
+</nav>
 {% if user_theme %}
   <style>
     :root {
@@ -28,62 +44,125 @@
   <div class="info-box">
     <div class="user-header">
       <img src="{{ user.avatar_path or '/static/default-avatar.png' }}" alt="Avatar" class="avatar-img">
+    {% if viewer_id == user['id'] %}
+    <details class="profile-edit profile-avatar-edit">
+      <summary>Change avatar</summary>
+      <form method="post" action="{{ url_for('upload_avatar') }}" enctype="multipart/form-data"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
+        <input type="hidden" name="profile_edit_token" value="{{ profile_edit_token() }}">
+        <label for="profile-avatar">Image (JPG, PNG, WebP, or GIF; up to 1.8 MB)</label>
+        <input id="profile-avatar" name="avatar" type="file" accept="image/jpeg,image/png,image/webp,image/gif" required>
+        <button type="submit">Upload avatar</button>
+      </form>
+    </details>
+    {% endif %}
       <h1 class="glow large">{{ user.handle }}</h1>
+        {% if viewer_id == user['id'] and can_access_manage() %}
+          <p class="profile-management"><a href="{{ url_for('manage_home') }}" class="button">Management</a></p>
+        {% endif %}
       <p class="nuid-badge">NUID: #{{ '%03d' | format(user['id']) }}</p>
       {% if user.codename %}
         <p><em>"{{ user.codename }}"</em></p>
       {% endif %}
         {% if viewer_id != user['id'] %}
-          {% include 'partials/friend_buttons.html' %}
+          <div class="profile-actions">{% include 'partials/friend_buttons.html' %}{% if viewer_id %}<a class="button" href="{{ url_for('report_content', kind='user', target_id=user['id']) }}">Report profile</a>{% endif %}</div>
         {% endif %}
     </div>
 
     <div class="user-section">
       <h2>Bio</h2>
       <p>{{ user.bio or "This user hasn’t written a bio yet." }}</p>
+    {% if viewer_id == user['id'] %}
+    <details class="profile-edit profile-bio-edit">
+      <summary>Edit Bio</summary>
+      <form method="post" action="{{ url_for('update_profile') }}"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
+        <input type="hidden" name="profile_edit_token" value="{{ profile_edit_token() }}">
+        <input type="hidden" name="field" value="bio">
+        <label for="profile-bio">About you</label>
+        <textarea id="profile-bio" name="bio" maxlength="2000" rows="5">{{ user.bio or '' }}</textarea>
+        <button type="submit">Save bio</button>
+      </form>
+    </details>
+    {% endif %}
+      {% if viewer_id == user.id %}<p class="profile-music-settings"><a href="{{ url_for('community_privacy') }}">Privacy and audience settings</a></p>{% endif %}
+{% if viewer_id == user.id %}<p class="profile-music-settings"><a href="{{ url_for('media_settings') }}" class="button">Edit profile music and playback</a></p>{% endif %}
+      {% if viewer_id == user.id %}<p class="profile-music-settings profile-style-settings"><a href="{{ url_for('edit_profile_style', mode=profile_mode) }}" class="button">Edit profile CSS</a></p>{% endif %}
     </div>
   </div>
 
-    <div class="info-box">
+    <div class="info-box profile-details-box">
       <div class="user-section">
         <h2>Details</h2>
-        <p>Timezone: {{ user.timezone or "Unset" }}</p>
-        <div class="mood-line">
-          <span>Mood:</span>
-          {% if session.user_id == user.id %}
-            <form method="POST" action="/update_mood" class="inline-form">
-              <input type="text" name="mood" value="{{ user.mood or '' }}" class="glow-input small" placeholder="Enter your mood…">
-              <button type="submit" class="icon-button" title="Save mood">✏️</button>
+        <dl class="profile-detail-list">
+          <div class="profile-detail-row"><dt>Timezone</dt><dd>{{ user.timezone or "Unset" }}</dd></div>
+          {% if user.relationship_status %}<div class="profile-detail-row"><dt>Relationship status</dt><dd>{{ user.relationship_status }}</dd></div>{% endif %}
+          {% if user.location %}<div class="profile-detail-row"><dt>City / state</dt><dd>{{ user.location }}</dd></div>{% endif %}
+          {% if user.pets %}<div class="profile-detail-row"><dt>Pets</dt><dd>{{ user.pets }}</dd></div>{% endif %}
+          <div class="profile-detail-row">
+            <dt>Mood</dt>
+            <dd>
+              {% if viewer_id == user['id'] %}
+                <form method="POST" action="/update_mood" class="inline-form"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
+                  <input type="text" name="mood" value="{{ user.mood or '' }}" class="glow-input small" placeholder="Enter your mood…" aria-label="Mood">
+                  <button type="submit" class="icon-button" title="Save mood" aria-label="Save mood">✏️</button>
+                </form>
+              {% else %}{{ user.mood or "—" }}{% endif %}
+            </dd>
+          </div>
+          <div class="profile-detail-row">
+            <dt>Frequent haunts</dt>
+            <dd>
+              {% if viewer_id == user['id'] %}
+                <form method="POST" action="/update_haunts" class="inline-form"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
+                  <input type="text" name="haunts" value="{{ user.frequent_haunts or '' }}" class="glow-input small" placeholder="e.g. Retro Arcade, Blue Moon Café" aria-label="Frequent haunts">
+                  <button type="submit" class="icon-button" title="Save haunts" aria-label="Save haunts">📍</button>
+                </form>
+              {% elif user.frequent_haunts %}
+                <ul class="haunt-list">
+                  {% for haunt in user.frequent_haunts.split(',') %}
+                    <li><a href="https://www.google.com/maps/search/{{ haunt | urlencode }}" target="_blank" rel="noopener noreferrer">{{ haunt.strip() }}</a></li>
+                  {% endfor %}
+                </ul>
+              {% else %}—{% endif %}
+            </dd>
+          </div>
+          <div class="profile-detail-row">
+            <dt>Now playing</dt>
+            <dd><span id="now-playing-text" aria-live="polite">—</span><div id="album-art"></div></dd>
+          </div>
+        </dl>
+        {% if viewer_id == user['id'] %}
+        <div class="profile-detail-actions">
+          <details class="profile-edit">
+            <summary>Edit timezone</summary>
+            <form method="post" action="{{ url_for('update_profile') }}"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
+              <input type="hidden" name="profile_edit_token" value="{{ profile_edit_token() }}">
+              <input type="hidden" name="field" value="timezone">
+              <label for="profile-timezone">Timezone</label>
+              <input id="profile-timezone" name="timezone" type="text" list="profile-timezone-options" value="{{ user.timezone or '' }}" placeholder="e.g. America/Los_Angeles" maxlength="100">
+              <datalist id="profile-timezone-options">
+                <option value="America/Los_Angeles"><option value="America/Denver"><option value="America/Chicago"><option value="America/New_York"><option value="Europe/London"><option value="Asia/Tokyo"><option value="Australia/Sydney">
+              </datalist>
+              <small>Leave blank to use server time.</small>
+              <button type="submit">Save timezone</button>
             </form>
-          {% else %}
-            <span>{{ user.mood or "—" }}</span>
-          {% endif %}
-        </div>
-        <div class="haunts-section">
-          <span>Frequent haunts:</span>
-          {% if session.user_id == user.id %}
-            <form method="POST" action="/update_haunts" class="inline-form">
-              <input type="text" name="haunts" value="{{ user.frequent_haunts or '' }}" class="glow-input small" placeholder="e.g. Retro Arcade, Blue Moon Café">
-              <button type="submit" class="icon-button" title="Save haunts">📍</button>
+          </details>
+          <details class="profile-edit">
+            <summary>Edit icebreakers</summary>
+            <form method="post" action="{{ url_for('update_profile') }}"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
+              <input type="hidden" name="profile_edit_token" value="{{ profile_edit_token() }}">
+              <input type="hidden" name="field" value="icebreakers">
+              <label for="profile-relationship">Relationship status</label>
+              <input id="profile-relationship" name="relationship_status" type="text" maxlength="80" value="{{ user.relationship_status or '' }}" placeholder="Whatever you'd like to share">
+              <label for="profile-location">City / state</label>
+              <input id="profile-location" name="location" type="text" maxlength="120" value="{{ user.location or '' }}" placeholder="e.g. Medford, OR">
+              <label for="profile-pets">Pets and their names</label>
+              <input id="profile-pets" name="pets" type="text" maxlength="300" value="{{ user.pets or '' }}" placeholder="e.g. Miso the cat">
+              <small>Optional. Anything you enter here appears on your public profile. Clear a field to remove it.</small>
+              <button type="submit">Save icebreakers</button>
             </form>
-          {% else %}
-            {% if user.frequent_haunts %}
-              <ul class="haunt-list">
-                {% for haunt in user.frequent_haunts.split(',') %}
-                  <li><a href="https://www.google.com/maps/search/{{ haunt | urlencode }}" target="_blank">{{ haunt.strip() }}</a></li>
-                {% endfor %}
-              </ul>
-            {% else %}
-              <span>—</span>
-            {% endif %}
-          {% endif %}
+          </details>
         </div>
-
-<p>
-  Now Playing:
-  <span id="now-playing-text" aria-live="polite">—</span>
-</p>
-<div id="album-art" style="margin-top: 0.5rem;"></div>
+        {% endif %}
 
 {% if user.lastfm_username %}
 <script>
@@ -118,76 +197,51 @@
 <!-- Right Column: Top 9 and Posts -->
 <div class="right-column">
   <aside class="top9-column">
-<div class="top9-header-row">
-  <h3 class="top9-label">Top 9 Friends</h3>
-  {% if viewer_id == user['id'] %}
-    <a href="/account/friends" class="top9-manage-link">+/-</a>
-  {% endif %}
-</div>
-
-
-    {% if session.user_id == user.id %}
-    <div id="top9-drag-container" class="top9-grid">
-      {% for i in range(9) %}
-        {% set friend = top_friends[i] if top_friends|length > i else None %}
-        <div class="top9-slot{% if not friend or friend.placeholder %} placeholder{% endif %}"
-             data-slot="{{ i }}"
-             {% if friend and not friend.placeholder %}draggable="true"{% endif %}
-             data-userid="{{ friend.id if friend and not friend.placeholder else '' }}">
-
-          {% if friend and not friend.placeholder %}
-            <img src="{{ friend.avatar_path or '/static/default-avatar.png' }}" alt="avatar" class="avatar-img small">
-            <div class="top9-name">
-              {% if friend.codename %}
-                <span class="user-handle">{{ friend.codename }}</span>
-              {% endif %}
-              <span class="user-handle">@{{ friend.handle.lstrip('@') }}</span>
-            </div>
-
-
-          {% else %}
-            <div class="avatar-frame add-friend-trigger" data-slot="{{ i }}">+</div>
-            <div class="top9-name">Empty</div>
-          {% endif %}
-
-        </div>
-      {% endfor %}
+    <div class="top9-header-row">
+      <h3 class="top9-label">Top 9 Friends</h3>
+      {% if viewer_id == user['id'] %}<a href="{{ url_for('friends.friends_page') }}" class="top9-manage-link">Edit</a>{% endif %}
     </div>
-<input type="hidden" id="slot_order" name="slot_order">
-
-    {% else %}
-    <div class="top9-grid">
+    {% if viewer_id == user['id'] %}<p class="top9-instructions">Drag friends to reorder, or focus a tile and use Alt + arrow keys.</p>{% endif %}
+    <div class="top9-grid"{% if viewer_id == user['id'] %} id="top9-drag-container" data-save-url="{{ url_for('friends.update_top9') }}" data-csrf="{{ friend_csrf_token() }}"{% endif %}>
       {% for friend in top_friends %}
-        <div class="top9-slot {% if friend.placeholder %}placeholder{% endif %}">
+        <div class="top9-slot{% if friend.placeholder %} placeholder{% endif %}" data-userid="{{ friend.id if not friend.placeholder else '' }}"{% if viewer_id == user['id'] and not friend.placeholder %} draggable="true" tabindex="0" aria-label="Move @{{ friend.handle.lstrip('@') }} in your Top 9"{% endif %}>
           {% if friend.placeholder %}
-            <div class="avatar-frame">+</div>
-            <a href="#" class="user-handle">Add</a>
+            <div class="avatar-frame" aria-hidden="true">+</div><div class="top9-name">Empty</div>
           {% else %}
-            <a href="/@{{ friend.handle.lstrip('@') }}">
-              <div class="avatar-frame">
-                <img src="{{ friend.avatar_path or '/static/default-avatar.png' }}" alt="Avatar" class="avatar-img small">
+            <a href="{{ url_for('user_by_handle', handle=friend.handle.lstrip('@')) }}" draggable="false">
+              <div class="avatar-frame"><img src="{{ friend.avatar_path or '/static/default-avatar.png' }}" alt="" class="avatar-img small" draggable="false"></div>
+              <div class="top9-name">
+                {% if friend.codename %}<span class="top9-codename">{{ friend.codename }}</span>{% endif %}
+                <span class="top9-handle">@{{ friend.handle.lstrip('@') }}</span>
               </div>
-                <div class="top9-name">
-                  <span class="user-handle">{{ friend.codename }}</span><br>
-                  <span class="user-handle">@{{ friend.handle.lstrip('@') }}</span>
-                </div>
             </a>
           {% endif %}
         </div>
       {% endfor %}
     </div>
-    {% endif %}
+    {% if viewer_id == user['id'] %}<p id="top9-save-status" class="top9-save-status" role="status" aria-live="polite"></p>{% endif %}
+    <p><a class="top9-manage-link" href="{{ url_for('friends.public_friends', handle=user.handle.lstrip('@')) }}">All friends ({{ friends|length }})</a></p>
   </aside>
 
-  {% if session.user_id %}
-    {% if session.user_id == user.id %}
+  {% if viewer_id %}
+    {% if viewer_id == user['id'] %}
       <button id="toggle-post-form" class="button">New Post</button>
     {% else %}
       <button id="toggle-post-form" class="button">Sign Guestbook</button>
     {% endif %}
     <div class="inline-post-form" id="inline-post-form" style="display: none;">
-      <form method="POST" action="/create_post">
-        <textarea name="content" placeholder="Write something..." required></textarea>
+      <form method="POST" enctype="multipart/form-data" action="/create_post"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
+        <textarea name="content" placeholder="Write something..."></textarea>
+        <label>Image or animated GIF <input type="file" name="post_image" accept="image/jpeg,image/png,image/webp,image/gif"></label>
+        <input name="image_title" maxlength="100" placeholder="Image/GIF title (uses filename if blank)">
+        <input name="image_alt" maxlength="180" placeholder="Description (optional)">
+        <label>Image filter <select name="image_filter">
+          <option value="original">Original</option><option value="mono">Black & White</option>
+          <option value="sepia">Sepia</option><option value="negative">Negative</option>
+          <option value="faded">Faded Print</option><option value="contrast">High Contrast</option>
+          <option value="blue">Cool Blue</option></select></label>
+        <label>Add MIDI (optional) <input type="file" name="post_midi" accept=".mid,.midi,audio/midi,audio/x-midi"></label>
+        <input name="midi_title" maxlength="100" placeholder="MIDI title (uses filename if blank)">
         <input type="hidden" name="target_user_id" value="{{ user.id }}">
         <input type="text" name="vibes" placeholder="Vibes (comma separated)">
         <input type="text" name="circle" placeholder="Circle (optional)">
@@ -197,6 +251,14 @@
   {% endif %}
 
 <div class="recent-posts">
+  {% set track = profile_midi(user.id) %}
+  {% if track %}
+    <section class="profile-music"><h3>Profile music</h3>
+      {% set midi_title = track.profile_midi_title %}
+      {% set midi_filename = track.profile_midi %}
+      {% include 'midi_player.html' %}
+    </section>
+  {% endif %}
   <h3>Recent Posts</h3>
   {% if posts %}
     {% set _posts = posts %}
@@ -212,62 +274,86 @@
 
 
 </div> <!-- end .right-column -->
-
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+{% if viewer_id == user['id'] %}
 <script>
-document.addEventListener("DOMContentLoaded", () => {
-  const container = document.getElementById('top9-drag-container');
-  let saveTimeout = null;
+(() => {
+  const grid = document.getElementById('top9-drag-container');
+  const status = document.getElementById('top9-save-status');
+  if (!grid || !status) return;
+  let dragged = null;
+  let saving = false;
+  const tiles = () => [...grid.querySelectorAll(':scope > .top9-slot')];
+  const say = (message) => { status.textContent = message; };
 
-  if (container) {
-    new Sortable(container, {
-      animation: 150,
-      ghostClass: 'dragging',
-      onEnd: () => {
-        clearTimeout(saveTimeout);
-        showFlash("💾 Saving...", "info");
-
-        saveTimeout = setTimeout(() => {
-          const ids = [...container.querySelectorAll('.top9-slot')]
-            .map(el => el.dataset.userid || '');
-          fetch("/update_top9", {
-            method: "POST",
-            headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body: new URLSearchParams({ slot_order: ids.join(',') })
-          }).then(res => {
-            if (res.ok) {
-              showFlash("Top 9 saved.", "success");
-            } else {
-              showFlash("Save failed.", "error");
-            }
-          }).catch(() => showFlash("Network error.", "error"));
-        }, 2500);
-      }
-    });
+  async function moveTo(source, target) {
+    if (!source || !target || source === target || saving) return;
+    const oldOrder = tiles();
+    const from = oldOrder.indexOf(source);
+    const to = oldOrder.indexOf(target);
+    if (from < 0 || to < 0) return;
+    if (from < to) grid.insertBefore(source, target.nextSibling);
+    else grid.insertBefore(source, target);
+    saving = true;
+    say('Saving Top 9…');
+    const data = new URLSearchParams({friend_csrf_token: grid.dataset.csrf});
+    tiles().forEach((tile, index) => data.set(`slot_${index + 1}`, tile.dataset.userid || ''));
+    try {
+      const response = await fetch(grid.dataset.saveUrl, {
+        method: 'POST', credentials: 'same-origin',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json'},
+        body: data
+      });
+      if (!response.ok || !(await response.json()).success) throw new Error('save failed');
+      say('Top 9 saved.');
+      source.focus({preventScroll: true});
+    } catch (error) {
+      oldOrder.forEach(tile => grid.appendChild(tile));
+      say('Could not save your Top 9. Try again.');
+    } finally { saving = false; }
   }
 
-    function showFlash(message, level = "info") {
-      const flash = document.createElement("div");
-      flash.className = `flash ${level}`;
-      flash.textContent = message;
-
-      // Style it with inline styles if your .flash CSS isn't visible
-      flash.style.position = "fixed";
-      flash.style.top = "1rem";
-      flash.style.right = "1rem";
-      flash.style.backgroundColor = "#222";
-      flash.style.color = "#fff";
-      flash.style.padding = "0.5rem 1rem";
-      flash.style.borderRadius = "8px";
-      flash.style.zIndex = "9999";
-      flash.style.boxShadow = "0 0 5px rgba(0,0,0,0.3)";
-
-      document.body.appendChild(flash);
-      setTimeout(() => flash.remove(), 2500);
-    }
-
-});
+  grid.addEventListener('dragstart', event => {
+    const tile = event.target.closest('.top9-slot[data-userid]');
+    if (!tile || !tile.dataset.userid || saving) { event.preventDefault(); return; }
+    dragged = tile;
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', tile.dataset.userid);
+    tile.classList.add('dragging');
+  });
+  grid.addEventListener('dragover', event => {
+    const target = event.target.closest('.top9-slot');
+    if (!dragged || !target || target === dragged) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    grid.querySelectorAll('.top9-drop-target').forEach(tile => tile.classList.remove('top9-drop-target'));
+    target.classList.add('top9-drop-target');
+  });
+  grid.addEventListener('drop', event => {
+    const target = event.target.closest('.top9-slot');
+    if (!dragged || !target) return;
+    event.preventDefault();
+    target.classList.remove('top9-drop-target');
+    moveTo(dragged, target);
+  });
+  grid.addEventListener('dragend', () => {
+    grid.querySelectorAll('.dragging, .top9-drop-target').forEach(tile => tile.classList.remove('dragging', 'top9-drop-target'));
+    dragged = null;
+  });
+  grid.addEventListener('keydown', event => {
+    if (!event.altKey || !['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)) return;
+    const tile = event.target.closest('.top9-slot[data-userid]');
+    if (!tile || !tile.dataset.userid) return;
+    const list = tiles();
+    const offset = event.key === 'ArrowLeft' ? -1 : event.key === 'ArrowRight' ? 1 : event.key === 'ArrowUp' ? -3 : 3;
+    const target = list[list.indexOf(tile) + offset];
+    if (target) { event.preventDefault(); moveTo(tile, target); }
+  });
+})();
 </script>
+{% endif %}
+
+
+
 <script>
   document.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll(".react-form").forEach(form => {
@@ -278,10 +364,11 @@ document.addEventListener("DOMContentLoaded", () => {
           const emoji = btn.dataset.emoji;
           console.log("Clicked:", emoji, "Post ID:", postId);  // 🧪 DEBUG
 
-          fetch(`/react/${postId}`, {
+          fetch({{ url_for("react_to_post", post_id=0) | tojson }}.replace(/0$/, String(postId)), {
             method: "POST",
             headers: {
-              "Content-Type": "application/json"
+              "Content-Type": "application/json",
+              "X-CSRF-Token": "{{ community_token() }}"
             },
             body: JSON.stringify({ emoji })
           })

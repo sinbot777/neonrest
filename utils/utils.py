@@ -57,12 +57,17 @@ def generate_prefixed_id(db, raw_id: int, prefix: str | None = None):
 
 
 def decode_prefixed_id(prefixed_id: str) -> int:
-    for i,c in enumerate(prefixed_id):
-        if c in ALPHABET:
-            base62_part = prefixed_id[i:]; break
-    else: raise ValueError("No Base62 segment found")
+    # strip any prefix & then drop leading 'A's (your pad character)
+    # soAAAABCD → ABCD, then decode ABCD from Base62 → integer
+    # (if the entire string was padding, fall back to full string)
+    # first strip non-ALPHABET prefix (for future prefixes):
+    base = ''.join(ch for ch in prefixed_id if ch in ALPHABET)
+    # now remove leading pad-chars:
+    base62_part = base.lstrip('A') or base
+
     n = 0
-    for ch in base62_part: n = n*62 + ALPHABET.index(ch)
+    for ch in base62_part:
+        n = n * 62 + ALPHABET.index(ch)
     return n
 
 def build_comment_tree(comments):

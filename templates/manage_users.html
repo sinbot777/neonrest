@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block title %}Manage users - Neonrest{% endblock %}
+{% block content %}
+<div class="management-page">
+  <a href="{{ url_for('manage_home') }}">← Management</a><h1>People</h1>
+  <p class="manage-note">Search handles or NUIDs. Changes are recorded; restrictions apply to signed-in accounts immediately.</p>
+  <form class="manage-search" method="get"><input type="search" name="q" value="{{ query }}" maxlength="60" placeholder="Find a handle" aria-label="Find a handle"><button type="submit">Search</button></form>
+  <div class="manage-list">
+    {% for account in users %}<article class="manage-item">
+      <h2><a href="{{ url_for('manage_user_detail', target_id=account.id) }}">@{{ account.handle.lstrip('@') }}</a></h2>
+      <p><a href="{{ url_for('user_by_handle', handle=account.handle.lstrip('@')) }}">Public profile ↗</a> · NUID #{{ '%03d'|format(account.id) }} · {{ 'Verified' if account.verified else 'Unverified' }}
+        {% if account.banned %} · Banned{% endif %}{% if account.posting_restricted %} · Posting restricted{% endif %}{% if account.interaction_restricted %} · Reactions restricted{% endif %}</p>
+      {% if account.id == 1 or account.is_staff %}<p class="manage-note">Staff account: moderation controls are unavailable here.</p>
+      {% else %}<form method="post" action="{{ url_for('moderate_user', target_id=account.id) }}"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
+        <input type="hidden" name="theme_csrf_token" value="{{ management_token }}">
+        <label>Control<select name="action"><option value="ban">Account ban</option><option value="posting">Posting and comments</option><option value="interaction">Reactions</option></select></label>
+        <label>Set to<select name="state"><option value="1">Restricted</option><option value="0">Allowed</option></select></label>
+        <label>Reason<input name="reason" maxlength="500" required placeholder="Brief reason"></label>
+        <button type="submit">Apply</button> <a href="{{ url_for('manage_user_detail', target_id=account.id) }}">History &amp; posts →</a>
+      </form>{% endif %}
+    </article>{% else %}<p>No users found.</p>{% endfor %}
+  </div>
+</div>
+<style>
+.management-page{max-width:1050px;margin:2rem auto;padding:clamp(1.2rem,3vw,2.2rem);background:#171d2b;color:#f5f0e8;border:1px solid #526071;border-radius:22px}
+.management-page a{color:#aee4d8}.management-page a:focus-visible,.management-page button:focus-visible{outline:3px solid #ffd68a;outline-offset:3px}
+.manage-list{display:grid;gap:1rem}.manage-item{padding:1rem;border:1px solid #526071;border-radius:14px;background:#242e3e;overflow-wrap:anywhere}
+.manage-item h2{margin:.1rem 0}.manage-item p{margin:.5rem 0}.manage-item form{display:flex;flex-wrap:wrap;align-items:end;gap:.55rem;margin-top:.8rem}
+.manage-item label{display:grid;gap:.25rem;font-size:.9rem}.manage-item input,.manage-item select,.management-page .manage-search input{box-sizing:border-box;max-width:100%;padding:.5rem;border:1px solid #7990a0;border-radius:7px;background:#111b2a;color:#fff;font:inherit}
+.manage-item input[name=reason]{min-width:min(100%,210px)}.manage-item button,.manage-search button{padding:.5rem .8rem;border:1px solid #aee4d8;border-radius:7px;background:#17433f;color:#fff;cursor:pointer;font:inherit}
+.manage-search{display:flex;flex-wrap:wrap;gap:.5rem;margin:1rem 0}.manage-note{color:#d7dfeb;font-size:.9rem}
+</style>
+{% endblock %}

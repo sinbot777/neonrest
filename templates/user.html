@@ -5,6 +5,7 @@
   <div class="user-page">
     <div class="user-header">
       <div class="glow large">{{ user.handle }}</div>
+{% if viewer_id == user['id'] and can_access_manage() %}<a class="manage-profile-link" href="{{ url_for('manage_home') }}">Management</a>{% endif %}
 <div class="identity-details">
   <p class="nuid-badge">
     {% if session.get('user_id') == user['id'] %}
@@ -30,7 +31,7 @@
       </h2>
 
       {% if session.get('user_id') == user['id'] %}
-        <form id="edit-bio-form" method="POST" action="/update_bio" style="display: none;">
+        <form id="edit-bio-form" method="POST" action="/update_bio" style="display: none;"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
           <textarea name="bio" rows="4" cols="50">{{ user.bio or '' }}</textarea>
           <br>
           <button type="submit">Save</button>
@@ -44,7 +45,7 @@
       <div class="user-section">
         <button class="post-action" id="toggle-post-form">New Post</button>
 
-        <form id="inline-post-form" method="POST" action="/create_post" style="display: none; margin-top: 1rem;">
+        <form id="inline-post-form" method="POST" action="/create_post" style="display: none; margin-top: 1rem;"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
           <textarea name="content" class="post-textarea" rows="4" placeholder="What's on your mind?" required></textarea><br>
           <input type="text" name="vibes" class="glow-input" maxlength="100" placeholder="Vibes"><br>
           <input type="text" name="circle" class="glow-input" maxlength="100" placeholder="Circle"><br>
