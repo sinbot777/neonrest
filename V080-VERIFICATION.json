@@ -8,11 +8,11 @@
     "/static/css/account-shell.css exact",
     "/static/post_overrides.css exact",
     "/manage/privacy anonymous access denied",
-    "/sandbox/login version 0.8.0",
-    "/sandbox/privacy version 0.8.0",
-    "/sandbox/static/css/account-shell.css exact",
-    "/sandbox/static/post_overrides.css exact",
-    "/sandbox/manage/privacy anonymous access denied",
+    "/login version 0.8.0",
+    "/privacy version 0.8.0",
+    "/static/css/account-shell.css exact",
+    "/static/post_overrides.css exact",
+    "/manage/privacy anonymous access denied",
     "Sandbox dev log final release",
     "Production public post 0.8.0"
   ],
@@ -21,8 +21,8 @@
   "permanent_erasure_enabled": false,
   "installed_source_sha256": {
     "neonrest/templates/base.html": "e8b4d4b88485d47e8e8e8bb3d905a1d336d7467f965581f36d1dcce570fde330",
-    "neonrest_sandbox/templates/base.html": "4d06bed74c9e85682af4134312b82c5625c8a13b4a2e9f3970eef0c24f784864",
-    "neonrest_sandbox/templates/dev_summary.html": "3fae6c22e2c839ef9905e10d1534f765d4e4cc4f7d6bf08d2590f1034610c220"
+    "neonrest/templates/base.html": "4d06bed74c9e85682af4134312b82c5625c8a13b4a2e9f3970eef0c24f784864",
+    "neonrest/templates/dev_summary.html": "3fae6c22e2c839ef9905e10d1534f765d4e4cc4f7d6bf08d2590f1034610c220"
   },
   "mail_supervisor_fresh": true,
   "recorded_login_regressions": 40,

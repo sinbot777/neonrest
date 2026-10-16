@@ -18,7 +18,7 @@ import posixpath
 from neonrest import age_policy as ages
 from neonrest import welcome
 
-KINDS = ('friends', 'comments', 'replies', 'moderation', 'appeals', 'reports')
+KINDS = ('friends', 'comments', 'replies', 'circles', 'circle_posts', 'moderation', 'appeals', 'reports')
 FIELDS = ('bio', 'dob', 'pronouns', 'location', 'pets', 'relationship_status', 'timezone', 'lastfm_username', 'mood', 'frequent_haunts')
 AUDIENCES = ('public', 'friends', 'private')
 
@@ -107,9 +107,12 @@ def member_visible(db, owner, viewer):
     return not (state and state['inactive']) and not blocked(db, owner, viewer) and ages.can_read(db,owner,viewer,profile=True)
 
 
-def visible_post(db, pid, viewer, muted=True):
+def visible_post(db, pid, viewer, muted=True, include_circle_removed=False):
     post = db.execute('SELECT user_id,target_user_id FROM posts WHERE id=?', (pid,)).fetchone()
     if not post: return False
+    from neonrest.circles import post_allowed
+    circle_access = post_allowed(db,pid,viewer,include_removed=include_circle_removed)
+    if circle_access is False: return False
     if welcome.staff(db,viewer): return True
     if welcome.personal_hidden(db,post['user_id'],viewer) and not welcome.announcement(db,pid): return False
     if db.execute('SELECT 1 FROM moderated_posts WHERE post_id=?', (pid,)).fetchone():
@@ -126,11 +129,12 @@ def visible_post(db, pid, viewer, muted=True):
     if muted and viewer != owner and db.execute('SELECT 1 FROM user_mutes WHERE user_id=? AND target_id=?', (viewer, owner)).fetchone():
         return False
     row = db.execute('SELECT audience FROM post_privacy WHERE post_id=?', (pid,)).fetchone()
-    return audience_allows(db, owner, viewer, row['audience'] if row else 'public')
+    return bool(circle_access) if circle_access is not None else audience_allows(db, owner, viewer, row['audience'] if row else 'public')
 
 
 def register_db_functions(db):
-    db.create_function('age_comment_visible',1,lambda cid: int(ages.comment_read(db,cid,session.get('user_id'))))
+    from neonrest.circles import comment_allowed
+    db.create_function('age_comment_visible',1,lambda cid: int(ages.comment_read(db,cid,session.get('user_id')) and comment_allowed(db,cid,session.get('user_id'))))
     db.create_function('community_profile_visible',1,lambda uid: int(member_visible(db,uid,session.get('user_id')) and audience_allows(db,uid,session.get('user_id'),settings(db,uid)['profile_audience'])))
     db.create_function('community_personal_profile_visible',1,lambda uid: int(member_visible(db,uid,session.get('user_id')) and not ages.limited_staff_profile(db,uid,session.get('user_id')) and audience_allows(db,uid,session.get('user_id'),settings(db,uid)['profile_audience'])))
     db.create_function('community_post_visible', 1, lambda pid: int(visible_post(db, pid, session.get('user_id'))))
@@ -160,6 +164,31 @@ def notification_visible(db, row, uid):
             or not ages.contact(db, uid, actor, invitation=row['kind']=='friends')):
         return False
     path = row['path'] or ''
+    if path.startswith('/circles/'):
+        from neonrest import circles, circle_ids
+        from urllib.parse import urlsplit,parse_qs
+        parsed=urlsplit(path)
+        parts = parsed.path[len('/circles/'):].split('/')
+        if len(parts) > 2 or len(parts) == 2 and parts[1] not in ('manage','reports'):
+            return False
+        try:
+            cid = circle_ids.resolve(db, parts[0])
+        except ValueError:
+            return False
+        circle = db.execute('SELECT * FROM circles WHERE id=?', (cid,)).fetchone()
+        if not circle or not circles.info_allowed(db, circle, uid):
+            return False
+        if len(parts) == 2:
+            member = circles.membership(db, circle, uid)
+            if not member or member['role'] not in ('owner','moderator'):return False
+            if parts[1]=='reports' and parsed.query:
+                params=parse_qs(parsed.query,keep_blank_values=True)
+                values=params.get('report_id',[])
+                if set(params)!={'report_id'} or len(values)!=1 or not values[0].isascii() or not values[0].isdecimal() or not 1<=len(values[0])<=18:return False
+                report=db.execute('SELECT author_id FROM circle_reports WHERE id=? AND circle_id=?',(int(values[0]),cid)).fetchone()
+                return bool(report and report['author_id']!=uid)
+            return True
+        return bool(circles.membership(db, circle, uid) or circles.invitation(db,cid,uid))
     if path == '/friends':
         return bool(actor and db.execute("SELECT 1 FROM friend_requests WHERE ((sender_id=? AND receiver_id=?) OR (sender_id=? AND receiver_id=?)) AND status IN ('pending','accepted')", (uid, actor, actor, uid)).fetchone())
     if path.startswith('/posts/'):
@@ -174,7 +203,8 @@ def notification_visible(db, row, uid):
             try:cid=resolve(db,'comment',cid,anchor=True)
             except ValueError:return False
             comment = db.execute('SELECT user_id FROM comments WHERE id=? AND post_id=?', (cid,pid)).fetchone()
-            if not comment or not member_visible(db, comment['user_id'], uid) or not ages.comment_read(db,cid,uid):
+            from neonrest.circles import comment_allowed
+            if not comment or not member_visible(db, comment['user_id'], uid) or not ages.comment_read(db,cid,uid) or not comment_allowed(db,cid,uid):
                 return False
         return True
     if path.startswith('/@'):
@@ -455,6 +485,11 @@ def register(app, core):
                     abort(400,description='Use a password between 12 and 128 characters.')
                 db.execute('UPDATE active_sessions SET revoked=1 WHERE user_id=?',(uid,))
                 db.commit()
+        if request.endpoint=='edit_comment':
+            from neonrest.circles import post_allowed,comment_allowed
+            if not comment_allowed(db,request.view_args.get('comment_id'),uid):abort(404)
+            comment=db.execute('SELECT post_id FROM comments WHERE id=?',(request.view_args.get('comment_id'),)).fetchone()
+            if comment and post_allowed(db,comment['post_id'],uid) is False: abort(404)
         if request.endpoint=='post_edit_history':
             history_owner=db.execute('SELECT user_id FROM posts WHERE id=?',(request.view_args.get('post_id'),)).fetchone()
             if history_owner and welcome.personal_hidden(db,history_owner['user_id'],uid): abort(404)
@@ -497,7 +532,8 @@ def register(app, core):
                     abort(404)
                 if kind=='comment':
                     row=db.execute('SELECT user_id,post_id FROM comments WHERE id=?',(target,)).fetchone()
-                    if not row or not member_visible(db,row['user_id'],uid) or not ages.comment_read(db,target,uid) or not visible_post(db,row['post_id'],uid,muted=False):
+                    from neonrest.circles import comment_allowed
+                    if not row or not member_visible(db,row['user_id'],uid) or not ages.comment_read(db,target,uid) or not comment_allowed(db,target,uid) or not visible_post(db,row['post_id'],uid,muted=False):
                         abort(404)
             else:
                 try:
@@ -794,6 +830,21 @@ def register(app, core):
                     db.execute('UPDATE notifications SET read_at=CURRENT_TIMESTAMP WHERE user_id=? AND read_at IS NULL',(uid,))
                 else:
                     db.execute('UPDATE notifications SET read_at=CURRENT_TIMESTAMP WHERE id=? AND user_id=?',(nid,uid))
+            elif request.form.get('action')=='view':
+                item=db.execute('SELECT * FROM notifications WHERE id=? AND user_id=?',(request.form.get('id'),uid)).fetchone()
+                if not item or not notification_visible(db,item,uid):
+                    abort(404)
+                from neonrest.public_ids import canonical_path
+                destination=canonical_path(db,item['path'])
+                from urllib.parse import unquote, urlsplit
+                decoded=unquote(destination or '')
+                if (not decoded.startswith('/') or decoded.startswith('//') or '\\' in decoded
+                        or any(ord(c)<32 or ord(c)==127 for c in decoded)
+                        or urlsplit(decoded).netloc or urlsplit(decoded).scheme):
+                    abort(400)
+                db.execute('UPDATE notifications SET read_at=COALESCE(read_at,CURRENT_TIMESTAMP) WHERE id=? AND user_id=?',(item['id'],uid))
+                db.commit()
+                return redirect(request.script_root+destination,code=303)
             elif request.form.get('action')=='preferences':
                 for kind in KINDS:
                     db.execute('INSERT INTO notification_settings VALUES (?,?,?) ON CONFLICT(user_id,kind) DO UPDATE SET enabled=excluded.enabled',(uid,kind,int(request.form.get(kind)=='on')))

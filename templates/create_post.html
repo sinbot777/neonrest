@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% block title %}Create Post - Neonrest{% endblock %}
 {% block content %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/new_post.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/new_post.css',v='20261015-controls2') }}">
 <div class="user-page new-post-page">
   <header class="user-header new-post-header">
     <div class="glow large">New Post</div>
@@ -70,14 +70,15 @@
         </div>
         <div class="post-form-field">
           <label for="circle">Circle <span class="post-form-optional">optional</span></label>
-          <input type="text" id="circle" name="circle" maxlength="100" placeholder="e.g., Friends, Classmates">
+          <select id="circle" name="circle_id"><option value="">No Circle — use the audience above</option>{% for c in circle_choices() %}<option value="{{ circle_public_id(c.id) }}" {% if selected_circle and selected_circle.id==c.id %}selected{% endif %}>{{ circle_label(c) }}</option>{% endfor %}</select><small>A Circle post is visible only to its members. Circle posts stay out of Vibes and guestbooks. The audience above applies only when no Circle is selected.</small>
         </div>
       </div>
     </section>
-{% if staff_announcement_allowed() %}<label><input type="checkbox" name="staff_announcement" value="1" > Staff announcement (public; visible to younger members)</label>{% endif %}
+{% if staff_announcement_allowed() %}<label class="post-announcement-option"{% if selected_circle %} hidden{% endif %}><input type="checkbox" name="staff_announcement" value="1"{% if selected_circle %} disabled{% endif %}> Staff announcement (public; visible to younger members)</label>{% endif %}
     <div class="post-form-actions"><button type="submit">Post</button></div>
   </form>
 </div>
+<script>document.addEventListener('DOMContentLoaded',function(){const circle=document.getElementById('circle');const option=document.querySelector('.post-announcement-option');if(!circle||!option)return;const checkbox=option.querySelector('input');function sync(){const privatePost=Boolean(circle.value);option.hidden=privatePost;checkbox.disabled=privatePost;if(privatePost)checkbox.checked=false;}circle.addEventListener('change',sync);sync();});</script>
 {% set saved_post = authorization_post_draft() %}
-{% if saved_post %}<p role="status">Your post text has been restored. Reattach any files before submitting.</p><script>document.addEventListener('DOMContentLoaded',function(){const draft={{ saved_post|tojson }};const form=document.querySelector('form[enctype="multipart/form-data"]');if(!form)return;for(const [name,value] of Object.entries(draft)){for(const field of Array.from(form.elements).filter(el=>el.name===name)){if(field.type==='checkbox')field.checked=value==='1';else if(field.type!=='file'&&field.type!=='password')field.value=value;}}});</script>{% endif %}
+{% if saved_post %}<p role="status">Your post text has been restored. Reattach any files before submitting.</p><script>document.addEventListener('DOMContentLoaded',function(){const draft={{ saved_post|tojson }};const form=document.querySelector('form[enctype="multipart/form-data"]');if(!form)return;for(const [name,value] of Object.entries(draft)){for(const field of Array.from(form.elements).filter(el=>el.name===name)){if(field.type==='checkbox')field.checked=value==='1';else if(field.type!=='file'&&field.type!=='password')field.value=value;}}document.getElementById('circle')?.dispatchEvent(new Event('change'));});</script>{% endif %}
 {% endblock %}

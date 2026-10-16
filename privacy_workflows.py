@@ -113,6 +113,10 @@ def blockers(db, uid):
             if kind=='comment' and 'comments' in ts:
                 involved |= bool(db.execute('SELECT 1 FROM comments WHERE id=? AND user_id=?',(target,uid)).fetchone())
             if involved: result.append('Open content report')
+    if 'circle_reports' in ts:
+        for report in db.execute("SELECT reporter_id,author_id,post_owner_id FROM circle_reports WHERE status='open'"):
+            involved=uid in report
+            if involved:result.append('Open Circle report')
     if 'family_data_requests' in ts:
         fields=ts['family_data_requests']
         if 'appealed_at' in fields and db.execute('SELECT 1 FROM family_data_requests WHERE (parent_id=? OR child_id=?) AND appealed_at IS NOT NULL AND appeal_reviewed_at IS NULL',(uid,uid)).fetchone():

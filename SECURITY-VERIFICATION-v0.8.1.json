@@ -7,17 +7,17 @@
   },
   "compatibility_suites": [
     {
-      "suite": "neonrest_sandbox-verify_authenticator_replacement",
+      "suite": "neonrest-verify_authenticator_replacement",
       "passed": true,
       "summary": [
-        "AUTHENTICATOR REPLACEMENT PASS neonrest_sandbox 61 checks; independent scan/code verification; disposable data only"
+        "AUTHENTICATOR REPLACEMENT PASS neonrest 61 checks; independent scan/code verification; disposable data only"
       ]
     },
     {
-      "suite": "neonrest_sandbox-verify_recovery_form_origins",
+      "suite": "neonrest-verify_recovery_form_origins",
       "passed": true,
       "summary": [
-        "RECOVERY FORM ORIGIN PASS neonrest_sandbox 62 checks; five mail intents and confirmations use disposable data and mocked SMTP only"
+        "RECOVERY FORM ORIGIN PASS neonrest 62 checks; five mail intents and confirmations use disposable data and mocked SMTP only"
       ]
     },
     {
@@ -101,20 +101,20 @@
       "neonrest synchronized narrow dev log",
       "neonrest private account page remains gated",
       "neonrest fresh mail worker DB heartbeat",
-      "neonrest_sandbox deployed source app.py",
-      "neonrest_sandbox deployed source public_ids.py",
-      "neonrest_sandbox deployed source routes/friends.py",
-      "neonrest_sandbox deployed source templates/edit_theme.html",
-      "neonrest_sandbox deployed source templates/base.html",
-      "neonrest_sandbox deployed source templates/dev_summary.html",
-      "neonrest_sandbox deployed source requirements.txt",
-      "neonrest_sandbox erasure disabled",
-      "neonrest_sandbox /login HTTP 200 v0.8.1",
-      "neonrest_sandbox /privacy HTTP 200 v0.8.1",
-      "neonrest_sandbox /dev HTTP 200 v0.8.1",
-      "neonrest_sandbox synchronized narrow dev log",
-      "neonrest_sandbox private account page remains gated",
-      "neonrest_sandbox fresh mail worker DB heartbeat",
+      "neonrest deployed source app.py",
+      "neonrest deployed source public_ids.py",
+      "neonrest deployed source routes/friends.py",
+      "neonrest deployed source templates/edit_theme.html",
+      "neonrest deployed source templates/base.html",
+      "neonrest deployed source templates/dev_summary.html",
+      "neonrest deployed source requirements.txt",
+      "neonrest erasure disabled",
+      "neonrest /login HTTP 200 v0.8.1",
+      "neonrest /privacy HTTP 200 v0.8.1",
+      "neonrest /dev HTTP 200 v0.8.1",
+      "neonrest synchronized narrow dev log",
+      "neonrest private account page remains gated",
+      "neonrest fresh mail worker DB heartbeat",
       "Dev logs identical",
       "sandbox worker uses patched runtime",
       "production worker uses patched runtime",

@@ -1015,6 +1015,7 @@ def create_post():
 
     user_id = session['user_id']
     db = get_db()
+    selected_circle = circles.selected(db, user_id, request.form.get('circle_id') if request.method == 'POST' else request.args.get('circle_id'))
 
     if request.method == 'POST':
         from neonrest import welcome
@@ -1025,6 +1026,10 @@ def create_post():
         vibes_input = request.form.get('vibes', '').strip()
         circle = request.form.get('circle', '').strip()
         target_user_id = int(request.form.get('target_user_id', user_id))
+        if selected_circle:
+            if request.form.get('staff_announcement'):
+                abort(400, description='Circle posts cannot be public staff announcements.')
+            vibes_input, circle, target_user_id = '', '', user_id
 
         if not content and not media:
             flash("Add text or an attachment to post.", 'error')
@@ -1032,13 +1037,17 @@ def create_post():
             now = datetime.utcnow().isoformat()
 
             db.execute('BEGIN IMMEDIATE')
+            if selected_circle:
+                selected_circle = circles.selected(db, user_id, selected_circle['id'])
             post_key=identifiers.next_post_key(db)
             cursor = db.execute('''
                 INSERT INTO posts (id,user_id, target_user_id, content, circle, created_at)
                 VALUES (?, ?, ?, ?, ?, ?)
             ''', (post_key,user_id, target_user_id, content, circle, now))
             identifiers.ensure(db,'post',post_key)
-            db.execute('INSERT INTO post_privacy(post_id,audience) VALUES (?,?)', (cursor.lastrowid, g.new_post_audience))
+            if selected_circle:
+                db.execute('INSERT INTO circle_posts VALUES (?,?)', (post_key, selected_circle['id']))
+            db.execute('INSERT INTO post_privacy(post_id,audience) VALUES (?,?)', (cursor.lastrowid, 'private' if selected_circle else g.new_post_audience))
             from neonrest.age_policy import age
             if age(db,user_id) is not None and age(db,user_id)<18:
                 db.execute('INSERT OR IGNORE INTO protected_age_posts VALUES (?)',(cursor.lastrowid,))
@@ -1048,13 +1057,17 @@ def create_post():
             attach_post_media(db, cursor.lastrowid, media)
             vibe_names = vibes_input.split(',')
             add_post_vibes(db, cursor.lastrowid, vibe_names)
+            from neonrest import circle_tools
+            circle_tools.notify_post(db,cursor.lastrowid,user_id)
             db.commit()
 
             flash("Post created!", 'success')
+            if selected_circle:
+                return redirect(url_for('circle_page', circle_id=selected_circle['id']))
             return redirect(url_for('user_page', user_id=target_user_id))
 
     # If GET, render standalone page
-    return render_template('create_post.html')
+    return render_template('create_post.html', selected_circle=selected_circle)
 
 @app.route('/create_comment', methods=['POST'])
 def create_comment():
@@ -1086,10 +1099,14 @@ def create_comment():
 
     # 3) Insert row, get its integer PK
     db = get_db()
+    db.execute('BEGIN IMMEDIATE')
+    if circles.post_allowed(db, post_id, session['user_id']) is False:
+        abort(404)
     if db.execute('SELECT 1 FROM moderated_posts WHERE post_id=?', (post_id,)).fetchone():
         abort(404)
     if parent_id is not None and (not db.execute('SELECT 1 FROM comments WHERE id=? AND post_id=?', (parent_id, post_id)).fetchone()
-            or db.execute('SELECT 1 FROM moderated_comments WHERE comment_id=?', (parent_id,)).fetchone()):
+            or db.execute('SELECT 1 FROM moderated_comments WHERE comment_id=?', (parent_id,)).fetchone()
+            or not circles.comment_allowed(db,parent_id,session['user_id'])):
         abort(404)
     cur = db.execute(
         'INSERT INTO comments (user_id, post_id, parent_comment_id, content) VALUES (?, ?, ?, ?)',
@@ -1208,14 +1225,18 @@ def post_edit_history(post_id):
 
 @app.route('/feed')
 @app.route('/posts/<string:post_id>', endpoint='post_detail')
-def feed(post_id=None):
+def feed(post_id=None, circle_context=None):
     if post_id is None and 'user_id' not in session:
         flash("Please log in to view your feed.", "error")
         return redirect('/login')
 
     db = get_db()
     page = 1 if post_id is not None else post_page()
-    total_posts = db.execute('SELECT COUNT(*) FROM posts p WHERE NOT EXISTS (SELECT 1 FROM moderated_posts mp WHERE mp.post_id=p.id) AND community_post_visible(p.id)=1').fetchone()[0]
+    cid = circle_context['circle']['id'] if circle_context else None
+    circle_query = request.args.get('q', '').strip()[:200] if circle_context else ''
+    circle_pattern = '%' + circle_query.replace('!', '!!').replace('%', '!%').replace('_', '!_') + '%'
+    pinned_id = circle_context['circle']['pinned_post_id'] if circle_context else None
+    total_posts = db.execute('SELECT COUNT(*) FROM posts p WHERE NOT EXISTS (SELECT 1 FROM moderated_posts mp WHERE mp.post_id=p.id) AND community_post_visible(p.id)=1 AND (? IS NULL OR p.id IN (SELECT post_id FROM circle_posts WHERE circle_id=?)) AND (?=\'\' OR p.content LIKE ? ESCAPE \'!\')', (cid,cid,circle_query,circle_pattern)).fetchone()[0]
     total_pages = 1 if post_id is not None else max(1,(total_posts+19)//20)
     if page > total_pages:
         abort(404)
@@ -1231,10 +1252,11 @@ def feed(post_id=None):
         JOIN users ON users.id = posts.user_id
         LEFT JOIN post_vibes ON posts.id = post_vibes.post_id
         LEFT JOIN vibes      ON post_vibes.vibe_id = vibes.id
-        WHERE NOT EXISTS (SELECT 1 FROM moderated_posts mp WHERE mp.post_id = posts.id) AND community_post_visible(posts.id)=1 AND (? IS NULL OR posts.id=?)
+        WHERE NOT EXISTS (SELECT 1 FROM moderated_posts mp WHERE mp.post_id = posts.id) AND community_post_visible(posts.id)=1 AND (? IS NULL OR posts.id=?) AND (? IS NULL OR posts.id IN (SELECT post_id FROM circle_posts WHERE circle_id=?))
+        AND (?='' OR posts.content LIKE ? ESCAPE '!')
         GROUP BY posts.id
-        ORDER BY posts.created_at DESC, posts.id DESC LIMIT 20 OFFSET ?
-    ''', (post_id,post_id,(page-1)*20)).fetchall()
+        ORDER BY (posts.id=COALESCE(?,-1)) DESC, posts.created_at DESC, posts.id DESC LIMIT 20 OFFSET ?
+    ''', (post_id,post_id,cid,cid,circle_query,circle_pattern,pinned_id,(page-1)*20)).fetchall()
     if post_id is not None and not rows:
         abort(404)
 
@@ -1339,9 +1361,14 @@ def feed(post_id=None):
         for row in vibe_rows
     }
 
-    rail_ads,banner_ad = ad_selection(db)
+    if circle_context:
+        from neonrest.vibe_gallery import build_vibe_gallery
+        init_media_tables(db)
+        circle_context['circle_query'] = circle_query
+        circle_context['gallery_items'] = build_vibe_gallery(db, [dict(p, handle=p['author_handle']) for p in posts_with_html], lambda f: url_for('media_file',filename=f), lambda f: url_for('static',filename=f))
+    rail_ads,banner_ad = ([],None) if circle_context else ad_selection(db)
     return render_template(
-        'feed.html', single_post=post_id is not None, page=page, total_pages=total_pages, rail_ads=rail_ads, banner_ad=banner_ad,
+        'circle_page.html' if circle_context else 'feed.html', **(circle_context or {}), single_post=post_id is not None, page=page, total_pages=total_pages, rail_ads=rail_ads, banner_ad=banner_ad,
         posts=posts_with_html,
         post_reactors=post_reactors,
         VALID_REACTS=VALID_REACTS,
@@ -1363,6 +1390,10 @@ def edit_post(post_id):
         flash("You don't have permission to edit this post.", 'error')
         return redirect('/feed')
 
+    circle_post = circles.post_circle(db, post_id)
+    if circle_post and not circles.post_allowed(db, post_id, session['user_id']):
+        abort(404)
+
     if request.method == 'POST':
         from neonrest import welcome
         welcome.validate_flag(db,session['user_id'])
@@ -1371,7 +1402,14 @@ def edit_post(post_id):
         init_media_tables(db)
         existing_media = db.execute('SELECT 1 FROM post_media WHERE post_id=?', (post_id,)).fetchone()
         new_vibe = request.form['vibes'].strip()
-        new_circle = request.form['circle'].strip()
+        new_circle = request.form.get('circle', '').strip()
+        db.execute('BEGIN IMMEDIATE')
+        if circle_post:
+            if not circles.post_allowed(db, post_id, session['user_id']):
+                abort(404)
+            if request.form.get('staff_announcement'):
+                abort(400, description='Circle posts cannot be public staff announcements.')
+            new_vibe, new_circle = '', ''
 
         if not new_content and not media and not existing_media:
             flash("Add text or an attachment to post.", 'error')
@@ -1386,7 +1424,7 @@ def edit_post(post_id):
                     last_edited = CURRENT_TIMESTAMP
                 WHERE id = ?
             ''', (new_content, new_vibe, new_circle, post_id))
-            if request.form.get('audience'):
+            if request.form.get('audience') and not circle_post:
                 db.execute('INSERT INTO post_privacy VALUES (?,?) ON CONFLICT(post_id) DO UPDATE SET audience=excluded.audience', (post_id, request.form['audience']))
             db.execute('DELETE FROM post_vibes WHERE post_id = ?', (post_id,))
             add_post_vibes(db, post_id, new_vibe.split(','))
@@ -2215,6 +2253,10 @@ def react_to_post(post_id):
 
     db = get_db()
 
+    db.execute('BEGIN IMMEDIATE')
+    if circles.post_allowed(db, post_id, user_id) is False:
+        abort(404)
+
     # Check if this reaction already exists
     existing = db.execute("""
         SELECT 1 FROM post_reactions WHERE post_id = ? AND user_id = ? AND emoji = ?
@@ -2580,6 +2622,9 @@ def ad_click(campaign_id):
 
 
 # Register community tools after all existing routes and helpers are defined.
+from neonrest import circles
+with app.app_context():
+    circles.initialize(get_db())
 import sys
 from neonrest.community_features import register as register_community
 register_community(app, sys.modules[__name__])
@@ -2601,6 +2646,9 @@ from neonrest.email_change import register as register_email_change
 register_email_change(app,sys.modules[__name__])
 from neonrest.mail_queue import register as register_mail_queue
 register_mail_queue(app,sys.modules[__name__])
+circles.register(app,sys.modules[__name__])
+from neonrest.site_search import register as register_site_search
+register_site_search(app,sys.modules[__name__])
 identifiers.register(app,sys.modules[__name__])
 
 @app.errorhandler(404)

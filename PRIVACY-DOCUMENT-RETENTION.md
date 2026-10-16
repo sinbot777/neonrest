@@ -51,7 +51,7 @@ For any restore:
 Operator command, only during an actual offline-copy restore from the PythonAnywhere Bash console with the project import path configured:
 
 ```bash
-python3.13 -m flask --app neonrest_sandbox.app privacy-restore-preflight --restored-database /ABSOLUTE/PATH/offline-restored.db --decisions-reconciled --files-checked
+python3.13 -m flask --app neonrest.app privacy-restore-preflight --restored-database /ABSOLUTE/PATH/offline-restored.db --decisions-reconciled --files-checked
 ```
 
 The flags attest that the checks were performed; they do not perform those human reviews. Do not run the command against the current live DB or check flags merely to get past a requirement.

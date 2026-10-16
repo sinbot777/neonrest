@@ -28,7 +28,7 @@
     </style>
   {% endif %}
 
-<link rel="stylesheet" href="{{ url_for('static', filename='post_overrides.css', v='20261015-links1') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='post_overrides.css', v='20261015-circles2') }}">
 {% if vibe_slug and vibe_slug != 'fresh-starts' %}
 <link rel="stylesheet" href="{{ url_for('static', filename='vibes/vibe_base.css') }}">
 {% if vibe_css %}<link rel="stylesheet" href="{{ url_for('static', filename=vibe_css) }}">{% endif %}
@@ -47,6 +47,7 @@ body > .session-info { display:flex; flex-wrap:wrap; align-items:center; justify
 body > .session-info > a { display:inline-flex; align-items:center; min-height:36px; text-underline-offset:3px; }
 body > .session-info > a:first-child { min-width:0; overflow-wrap:anywhere; }
 body > .session-info > a:focus-visible { outline:2px solid currentColor; outline-offset:3px; border-radius:4px; }
+#theme-root>.session-info .site-search{display:flex;flex-direction:column;gap:.3rem;margin:.3rem 0;max-width:100%;min-width:0;color:#edf2fa;text-align:left;font:14px/1.4 system-ui,sans-serif}#theme-root>.session-info .site-search-row{display:flex;gap:.35rem;align-items:center;min-width:0}#theme-root>.session-info .site-search input[type=search]{box-sizing:border-box;width:17rem;max-width:100%;min-width:0;flex:1 1 8rem;padding:.5rem .65rem;background:#0d1728;color:#f4f7fd;border:1px solid #8395ac;border-radius:8px;font:inherit}#theme-root>.session-info .site-search input[type=search]::placeholder{color:#c2ccdb}#theme-root>.session-info .site-search button{background:#c1e6ff;color:#102239;border:1px solid #c1e6ff;border-radius:8px;padding:.5rem .65rem;margin:0;width:auto;font:inherit;font-weight:600;cursor:pointer}#theme-root>.session-info .site-search-options{display:flex;flex-wrap:wrap;gap:.25rem .7rem;margin:0;padding:0;border:0;min-width:0;color:#edf2fa}#theme-root>.session-info .site-search-options label{display:inline-flex;align-items:center;gap:.2rem;white-space:nowrap;font:inherit;color:#edf2fa;margin:0}#theme-root>.session-info .site-search input[type=checkbox]{width:1rem;height:1rem;margin:0;padding:0;min-width:0;appearance:auto;accent-color:#c1e6ff}#theme-root>.session-info .site-search :focus-visible{outline:3px solid #ffd67d;outline-offset:3px}.site-search-label{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 </style>
 </head>
 
@@ -59,8 +60,10 @@ body > .session-info > a:focus-visible { outline:2px solid currentColor; outline
       <div class="session-info">
         <a href="/account" class="account-link">{{ session['user_email'] }}</a>
 <a href="{{ url_for('feed') }}" class="account-link">Feed</a>
+<a href="{{ url_for('circles_home') }}" class="account-link">Circles</a>
 <a href="{{ url_for('user_by_handle',handle=session.user_handle.lstrip('@')) }}" class="account-link">Your profile</a>
         <a href="{{ url_for('community_notifications') }}" class="account-link notifications-link" aria-label="Notifications{% if community_unread %}, {{ community_unread }} unread{% endif %}" title="Notifications{% if community_unread %} ({{ community_unread }} unread){% endif %}"><svg class="mailbox-icon" viewBox="0 0 28 28" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 20V12a5 5 0 0 1 10 0v8H4Zm5-13h11a5 5 0 0 1 5 5v8H14M8 13h2M17 10V3h6v4h-6M14 20v6M10 26h8" /></svg>{% if community_unread %}<span class="notification-count" aria-hidden="true">{{ community_unread }}</span>{% endif %}</a> <a href="/logout" class="logout-link">Log out</a>
+        <form class="site-search" role="search" method="get" action="{{ url_for('site_search') }}"><div class="site-search-row"><label class="site-search-label" for="site-search-query">Search Neonrest</label><input id="site-search-query" type="search" name="q" minlength="2" maxlength="120" required placeholder="Search Neonrest" value="{{ request.args.get('q','') if request.endpoint=='site_search' else '' }}"><button type="submit">Search</button></div><input type="hidden" name="scopes_present" value="1"><fieldset class="site-search-options"><legend class="site-search-label">Search categories</legend>{% for value,label in search_scope_labels.items() %}<label><input type="checkbox" name="scope" value="{{ value }}" {% if value in search_selected_scopes %}checked{% endif %}> {{ label }}</label>{% endfor %}</fieldset></form>
       </div>
     {% else %}
       <a class="button" href="/login">Log In</a>
@@ -187,6 +190,7 @@ body > .session-info > a:focus-visible { outline:2px solid currentColor; outline
 
 <script>window.NEON_MEDIA_PREFS = {{ media_preferences() | tojson }};</script>
 <script defer src="{{ url_for('static', filename='js/media.js') }}?v=20261008-pause"></script>
+<script defer src="{{ url_for('static', filename='js/reactions.js',v='20261015-circles1') }}"></script>
 <script type="module" src="{{ url_for('static', filename='js/image_upload.js') }}"></script>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/image_viewer.css') }}">
 <script defer src="{{ url_for('static', filename='js/image_viewer.js') }}"></script>

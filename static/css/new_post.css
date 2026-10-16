@@ -14,7 +14,7 @@
 .post-form-field:last-child { margin-bottom: 0; }
 .post-form-field label { font-weight: 700; }
 .post-form-field small { line-height: 1.4; opacity: .8; }
-.new-post-form input:not([type=file]), .new-post-form textarea, .new-post-form select, .new-post-form input[type=file] { width: 100%; max-width: 100%; min-height: 2.75rem; padding: .65rem .75rem; color: inherit; font: inherit; background: rgba(15, 17, 24, .52); border: 1px solid color-mix(in srgb, currentColor 55%, transparent); border-radius: 8px; }
+.new-post-form input:not([type=file]):not([type=checkbox]):not([type=radio]):not([type=hidden]), .new-post-form textarea, .new-post-form select, .new-post-form input[type=file] { width: 100%; max-width: 100%; min-height: 2.75rem; padding: .65rem .75rem; color: inherit; font: inherit; background: rgba(15, 17, 24, .52); border: 1px solid color-mix(in srgb, currentColor 55%, transparent); border-radius: 8px; }
 .new-post-form textarea { min-height: 10rem; resize: vertical; }
 .new-post-form input[type=file] { padding: .45rem; cursor: pointer; }
 .new-post-form input::file-selector-button { margin-right: .75rem; padding: .4rem .7rem; color: inherit; font: inherit; cursor: pointer; background: rgba(255,255,255,.1); border: 1px solid currentColor; border-radius: 6px; }
@@ -23,3 +23,7 @@
 .post-form-actions { display: flex; justify-content: flex-end; }
 .post-form-actions button { min-width: 8rem; padding: .7rem 1.25rem; border-radius: 8px; cursor: pointer; font: inherit; font-weight: 700; }
 @media (max-width: 680px) { .new-post-page { margin-top: 1rem; } .post-form-grid { grid-template-columns: 1fr; } .post-form-actions button { width: 100%; } }
+
+.post-announcement-option{display:flex;align-items:center;gap:.55rem;line-height:1.5;cursor:pointer}
+.post-announcement-option[hidden]{display:none}
+.new-post-form input:is([type=checkbox],[type=radio]){width:1.1rem;height:1.1rem;min-width:0;min-height:0;padding:0;margin:0;flex:none;appearance:auto}

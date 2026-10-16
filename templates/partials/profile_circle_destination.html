@@ -1,0 +1,8 @@
+<label class="profile-circle-destination">Circle (optional)
+  <select name="circle_id" class="glow-input" aria-describedby="profile-circle-help">
+    <option value="">No Circle — use my usual post audience</option>
+    {% for c in circle_choices() %}<option value="{{ circle_public_id(c.id) }}">{{ circle_label(c) }}</option>{% endfor %}
+  </select>
+</label>
+<small id="profile-circle-help">Choose a Circle you belong to. Circle posts are shared only with its members and are not added to Vibes.</small>
+<style>.profile-circle-destination{display:grid;gap:.35rem;margin:.6rem 0}.profile-circle-destination select{box-sizing:border-box;width:100%;max-width:100%;min-height:2.5rem;padding:.5rem;font:inherit}</style>
