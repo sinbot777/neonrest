@@ -27,3 +27,8 @@
 .post-announcement-option{display:flex;align-items:center;gap:.55rem;line-height:1.5;cursor:pointer}
 .post-announcement-option[hidden]{display:none}
 .new-post-form input:is([type=checkbox],[type=radio]){width:1.1rem;height:1.1rem;min-width:0;min-height:0;padding:0;margin:0;flex:none;appearance:auto}
+
+/* Readable composer help links. */
+#main-content .new-post-form small a:link, #main-content .new-post-form small a:visited { color: inherit; text-decoration: underline; text-underline-offset: .15em; }
+#main-content .new-post-form small a:hover { text-decoration-thickness: 2px; }
+#main-content .new-post-form small a:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; border-radius: 2px; }
