@@ -244,7 +244,7 @@
         <input name="midi_title" maxlength="100" placeholder="MIDI title (uses filename if blank)">
         <input type="hidden" name="target_user_id" value="{{ user.id }}">
         <input type="text" name="vibes" placeholder="Vibes (comma separated)">
-        <input type="text" name="circle" placeholder="Circle (optional)">
+        {% if viewer_id == user.id %}{% include 'partials/profile_circle_destination.html' %}{% endif %}
         <button type="submit" class="post-action update-post">Post</button>
       </form>
     </div>
@@ -354,43 +354,7 @@
 
 
 
-<script>
-  document.addEventListener("DOMContentLoaded", () => {
-    document.querySelectorAll(".react-form").forEach(form => {
-      const postId = form.dataset.postId;
 
-      form.querySelectorAll("button").forEach(btn => {
-        btn.addEventListener("click", () => {
-          const emoji = btn.dataset.emoji;
-          console.log("Clicked:", emoji, "Post ID:", postId);  // 🧪 DEBUG
-
-          fetch({{ url_for("react_to_post", post_id=0) | tojson }}.replace(/0$/, String(postId)), {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "X-CSRF-Token": "{{ community_token() }}"
-            },
-            body: JSON.stringify({ emoji })
-          })
-          .then(res => res.json())
-            .then(data => {
-              if (data.status === "ok") {
-                const emoji = data.emoji;
-                const count = data.count || 0;
-                const action = data.action;
-
-                btn.classList.toggle("active", action === "added");
-                btn.textContent = `${emoji} ${count > 0 ? count : ""}`;
-              } else {
-                console.error("Reaction failed:", data.message);
-              }
-            })
-          .catch(err => console.error("Fetch error:", err));
-        });
-      });
-    });
-  });
-</script>
 
 
 <script>

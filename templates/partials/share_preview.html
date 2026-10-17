@@ -1,0 +1,15 @@
+<section class="post-form-panel share-preview" aria-labelledby="share-preview-heading">
+  <h2 id="share-preview-heading">What you’re sharing</h2>
+  <p class="share-preview-notice">Preview for you. Your shared post displays the original content when its author and access settings allow it. Circle links still require membership. Replies are not included.</p>
+  <article class="share-preview-card{% if share_preview.image %} share-preview-card--image{% endif %}">
+    {% if share_preview.image %}<a class="share-preview-image" href="{{ share_preview.url }}" target="_blank" rel="noopener"><img src="{{ share_preview.image }}" alt="{{ share_preview.image_alt }}" loading="lazy"></a>{% endif %}
+    <div class="share-preview-details">
+      <small class="share-preview-kind">{{ share_preview.kind|title }}</small>
+      <h3><a href="{{ share_preview.url }}" target="_blank" rel="noopener">{{ share_preview.title }}</a></h3>
+      {% if share_preview.created_at %}<p class="share-preview-date">Posted {{ share_preview.created_at }}</p>{% endif %}
+      <p class="share-preview-audience">{{ share_preview.audience }}</p>
+      {% if share_preview.excerpt %}<p class="share-preview-excerpt">{{ share_preview.excerpt }}</p>{% endif %}
+      <a class="share-preview-original" href="{{ share_preview.url }}" target="_blank" rel="noopener">Open original ↗</a>
+    </div>
+  </article>
+</section>

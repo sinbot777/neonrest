@@ -23,7 +23,7 @@ def require_recent(db,uid):
     if not staff(db,uid): abort(403)
     if current_app.extensions['privileged_fresh'](): return
     db.execute('CREATE TABLE IF NOT EXISTS authorization_post_drafts(user_id INTEGER,path TEXT,fields TEXT,created_at INTEGER,PRIMARY KEY(user_id,path))')
-    fields={k:request.form[k] for k in ('content','vibes','circle','audience','target_user_id','staff_announcement') if k in request.form}
+    fields={k:request.form[k] for k in ('content','vibes','circle','circle_id','audience','target_user_id','staff_announcement') if k in request.form}
     db.execute('DELETE FROM authorization_post_drafts WHERE created_at<?',(int(time.time())-3600,))
     if len(json.dumps(fields))<=100000:
         db.execute('INSERT OR REPLACE INTO authorization_post_drafts VALUES (?,?,?,?)',(uid,request.path,json.dumps(fields),int(time.time())))

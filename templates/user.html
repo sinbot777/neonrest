@@ -48,7 +48,7 @@
         <form id="inline-post-form" method="POST" action="/create_post" style="display: none; margin-top: 1rem;"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
           <textarea name="content" class="post-textarea" rows="4" placeholder="What's on your mind?" required></textarea><br>
           <input type="text" name="vibes" class="glow-input" maxlength="100" placeholder="Vibes"><br>
-          <input type="text" name="circle" class="glow-input" maxlength="100" placeholder="Circle"><br>
+          {% include 'partials/profile_circle_destination.html' %}<br>
           <button type="submit" class="post-action update-post">Post</button>
         </form>
       </div>

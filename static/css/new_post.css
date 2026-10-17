@@ -14,7 +14,7 @@
 .post-form-field:last-child { margin-bottom: 0; }
 .post-form-field label { font-weight: 700; }
 .post-form-field small { line-height: 1.4; opacity: .8; }
-.new-post-form input:not([type=file]), .new-post-form textarea, .new-post-form select, .new-post-form input[type=file] { width: 100%; max-width: 100%; min-height: 2.75rem; padding: .65rem .75rem; color: inherit; font: inherit; background: rgba(15, 17, 24, .52); border: 1px solid color-mix(in srgb, currentColor 55%, transparent); border-radius: 8px; }
+.new-post-form input:not([type=file]):not([type=checkbox]):not([type=radio]):not([type=hidden]), .new-post-form textarea, .new-post-form select, .new-post-form input[type=file] { width: 100%; max-width: 100%; min-height: 2.75rem; padding: .65rem .75rem; color: inherit; font: inherit; background: rgba(15, 17, 24, .52); border: 1px solid color-mix(in srgb, currentColor 55%, transparent); border-radius: 8px; }
 .new-post-form textarea { min-height: 10rem; resize: vertical; }
 .new-post-form input[type=file] { padding: .45rem; cursor: pointer; }
 .new-post-form input::file-selector-button { margin-right: .75rem; padding: .4rem .7rem; color: inherit; font: inherit; cursor: pointer; background: rgba(255,255,255,.1); border: 1px solid currentColor; border-radius: 6px; }
@@ -23,3 +23,27 @@
 .post-form-actions { display: flex; justify-content: flex-end; }
 .post-form-actions button { min-width: 8rem; padding: .7rem 1.25rem; border-radius: 8px; cursor: pointer; font: inherit; font-weight: 700; }
 @media (max-width: 680px) { .new-post-page { margin-top: 1rem; } .post-form-grid { grid-template-columns: 1fr; } .post-form-actions button { width: 100%; } }
+
+.post-announcement-option{display:flex;align-items:center;gap:.55rem;line-height:1.5;cursor:pointer}
+.post-announcement-option[hidden]{display:none}
+.new-post-form input:is([type=checkbox],[type=radio]){width:1.1rem;height:1.1rem;min-width:0;min-height:0;padding:0;margin:0;flex:none;appearance:auto}
+
+.share-preview-notice { font-size:.9rem; line-height:1.5; margin:0 0 1rem; }
+.share-preview-card { border:1px solid currentColor; border-radius:10px; overflow:hidden; min-width:0; }
+.share-preview-card--image { display:grid; grid-template-columns:minmax(0,180px) minmax(0,1fr); }
+.share-preview-image { display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.15); padding:.65rem; min-width:0; }
+.share-preview-image img { display:block; max-width:100%; width:auto; height:auto; max-height:220px; object-fit:contain; border-radius:5px; }
+.share-preview-details { min-width:0; padding:1rem; overflow-wrap:anywhere; }
+.share-preview-details h3 { margin:.3rem 0 .5rem; font-size:1.05rem; }
+.share-preview-details a { color:inherit; text-decoration:underline; }
+.share-preview-kind { font-size:.8rem; text-transform:uppercase; letter-spacing:.06em; }
+.share-preview-date { font-size:.8rem; margin:.25rem 0; }
+.share-preview-audience { display:inline-block; margin:.4rem 0; padding:.2rem .5rem; border:1px solid currentColor; border-radius:5px; font-size:.8rem; }
+.share-preview-excerpt { white-space:pre-wrap; line-height:1.5; margin:.65rem 0; }
+.share-preview-original { display:inline-block; margin-top:.35rem; font-size:.9rem; }
+@media(max-width:540px) { .share-preview-card--image { grid-template-columns:minmax(0,1fr); } .share-preview-image img { max-height:180px; } }
+
+/* Readable composer help links. */
+#main-content .new-post-form small a:link, #main-content .new-post-form small a:visited { color: inherit; text-decoration: underline; text-underline-offset: .15em; }
+#main-content .new-post-form small a:hover { text-decoration-thickness: 2px; }
+#main-content .new-post-form small a:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; border-radius: 2px; }

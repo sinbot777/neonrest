@@ -1,0 +1,6 @@
+<div class="circle-share-permission" data-circle-sharing-option {% if not private_circle and not selected_circle %}hidden{% endif %}>
+<label>Circle post visibility<select name="circle_audience" data-circle-audience><option value="private">Private to this Circle</option><option value="public" {% if private_circle and not circle_is_public(private_circle) %}disabled{% endif %} {% if post is defined and circle_post_public(post.id) %}selected{% endif %}>Public</option></select></label>
+<p>Public posts can be read by visitors when this is a Public Circle. Private posts require membership. Existing age and account safeguards still apply. Replies and the member list stay members-only.</p>
+<label><input type="checkbox" name="allow_circle_sharing" value="1" {% if post is defined and circle_sharing_enabled is defined and circle_sharing_enabled(post.id) %}checked{% endif %}> Allow sharing outside this Circle</label>
+<p>Other people can share this post’s text and attachments where nonmembers may see them. For private posts, the original link still requires membership. Public posts in a Public Circle can always be shared. Turning this off hides the content from nonmembers in existing shares. Replies and the member list are never included.</p>
+</div>

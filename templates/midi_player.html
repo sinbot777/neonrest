@@ -1,4 +1,4 @@
-<div class="midi-card" data-midi-src="{{ url_for('media_file', filename=midi_filename) }}">
+<div class="midi-card" data-midi-src="{{ midi_src if midi_src is defined else url_for('media_file', filename=midi_filename) }}">
   <div class="midi-card-heading">♫ <strong>{{ midi_title }}</strong> <span class="midi-duration"></span></div>
   <canvas class="midi-roll" width="560" height="72" aria-label="Piano roll preview for {{ midi_title }}"></canvas>
   <div class="midi-controls">

@@ -1,0 +1,8 @@
+{% extends 'base.html' %}
+{% block title %}Search - Neonrest{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static',filename='css/search.css',v='20261016-1') }}">
+<main class="search-shell"><header class="search-panel"><h1>Search Neonrest</h1><p>Use the search field in the account bar above. Select Username, Posts, Circles or City to narrow your results.</p><p>City searches the City / state people have chosen to share. Private profile fields, restricted posts and hidden Circles you cannot access stay out of results.</p>{% if query %}<h2>Results for “{{ query }}”</h2>{% endif %}{% if message %}<p role="status">{{ message }}</p>{% endif %}</header>
+{% for group in groups %}<section class="search-panel" aria-labelledby="search-{{ group.kind }}"><h2 id="search-{{ group.kind }}">{{ group.label }}</h2>{% for item in group['items'] %}<article class="search-result"><h3><a href="{{ item.url }}">{{ item.title }}</a></h3>{% if item.date %}<small>{{ item.date }}</small>{% endif %}{% if item.text %}<p>{{ item.text }}</p>{% endif %}</article>{% else %}<p>No matching results on this page.</p>{% endfor %}{% if group.more %}<p>More {{ group.label|lower }} results are available on the next page.</p>{% endif %}</section>{% endfor %}
+{% if previous_url or next_url %}<nav class="search-panel search-pagination" aria-label="Search results pages">{% if previous_url %}<a href="{{ previous_url }}">← Previous</a>{% endif %}<span>Page {{ page }}</span>{% if next_url %}<a href="{{ next_url }}">Next →</a>{% endif %}</nav>{% endif %}</main>
+{% endblock %}

@@ -1,18 +1,20 @@
 {% extends 'base.html' %}
 {% block title %}Create Post - Neonrest{% endblock %}
 {% block content %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/new_post.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/new_post.css',v='20261017-help-links') }}">
 <div class="user-page new-post-page">
   <header class="user-header new-post-header">
     <div class="glow large">New Post</div>
     <p>Share something honest.</p>
   </header>
   <form method="POST" action="/create_post" enctype="multipart/form-data" class="new-post-form"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
+    {% if shared_source %}<input type="hidden" name="shared_source" value="{{ shared_source }}"><input type="hidden" name="shared_kind" value="{{ request.args.get('share_kind') }}">{% endif %}
+    {% if share_preview %}{% include 'partials/share_preview.html' %}{% endif %}
     <section class="post-form-panel" aria-labelledby="post-content-heading">
       <h2 id="post-content-heading">Your post</h2>
       <div class="post-form-field">
-        <label for="content">Post content</label>
-        <textarea name="content" id="content" class="post-textarea" rows="8"></textarea><label>Audience <select name="audience">{% for option in ('public','friends','private') %}<option value="{{ option }}" {% if community_defaults.post_audience == option %}selected{% endif %}>{{ option|title }}</option>{% endfor %}</select></label>
+        <label for="content">{{ 'Your comment (optional)' if shared_source else 'Post content' }}</label>
+        {% if shared_content %}<p class="share-composer-notice">Add your thoughts before posting. Your post displays the original content according to its sharing and access settings. The original Circle link still requires membership.</p>{% endif %}<textarea name="content" id="content" class="post-textarea" rows="8">{{ shared_content or '' }}</textarea><label>Audience <select name="audience">{% for option in ('public','friends','private') %}<option value="{{ option }}" {% if community_defaults.post_audience == option %}selected{% endif %}>{{ option|title }}</option>{% endfor %}</select></label>
         <small>Formatting supported: <a href="/markdown-guide" target="_blank" rel="noopener">Markdown Guide</a></small>
       </div>
     </section>
@@ -70,14 +72,17 @@
         </div>
         <div class="post-form-field">
           <label for="circle">Circle <span class="post-form-optional">optional</span></label>
-          <input type="text" id="circle" name="circle" maxlength="100" placeholder="e.g., Friends, Classmates">
+          <select id="circle" name="circle_id"><option value="">No Circle — use the audience above</option>{% for c in circle_choices() %}<option data-public="{{ 1 if circle_is_public(c) else 0 }}" value="{{ circle_public_id(c.id) }}" {% if selected_circle and selected_circle.id==c.id %}selected{% endif %}>{{ circle_label(c) }}</option>{% endfor %}</select><small>Choose Public or Private to this Circle below. Public is available in Public Circles. Circle posts stay out of Vibes and guestbooks. The audience above applies only when no Circle is selected.</small>
         </div>
       </div>
     </section>
-{% if staff_announcement_allowed() %}<label><input type="checkbox" name="staff_announcement" value="1" > Staff announcement (public; visible to younger members)</label>{% endif %}
+{% include 'partials/circle_share_permission.html' %}
+{% if staff_announcement_allowed() %}<label class="post-announcement-option"{% if selected_circle %} hidden{% endif %}><input type="checkbox" name="staff_announcement" value="1"{% if selected_circle %} disabled{% endif %}> Staff announcement (public; visible to younger members)</label>{% endif %}
     <div class="post-form-actions"><button type="submit">Post</button></div>
   </form>
 </div>
+<script>document.addEventListener('DOMContentLoaded',function(){const circle=document.getElementById('circle');const option=document.querySelector('.post-announcement-option');if(!circle||!option)return;const checkbox=option.querySelector('input');function sync(){const privatePost=Boolean(circle.value);option.hidden=privatePost;checkbox.disabled=privatePost;if(privatePost)checkbox.checked=false;}circle.addEventListener('change',sync);sync();});</script>
+<script>document.addEventListener('DOMContentLoaded',function(){const select=document.getElementById('circle'),option=document.querySelector('[data-circle-sharing-option]');if(!select||!option)return;function sync(){option.hidden=!select.value;option.querySelectorAll('input,select').forEach(el=>el.disabled=!select.value);const audience=option.querySelector('[data-circle-audience]'),allowed=select.selectedOptions[0]?.dataset.public==='1';audience.querySelector('[value=public]').disabled=!allowed;if(!allowed)audience.value='private';}select.addEventListener('change',sync);sync();});</script>
 {% set saved_post = authorization_post_draft() %}
-{% if saved_post %}<p role="status">Your post text has been restored. Reattach any files before submitting.</p><script>document.addEventListener('DOMContentLoaded',function(){const draft={{ saved_post|tojson }};const form=document.querySelector('form[enctype="multipart/form-data"]');if(!form)return;for(const [name,value] of Object.entries(draft)){for(const field of Array.from(form.elements).filter(el=>el.name===name)){if(field.type==='checkbox')field.checked=value==='1';else if(field.type!=='file'&&field.type!=='password')field.value=value;}}});</script>{% endif %}
+{% if saved_post %}<p role="status">Your post text has been restored. Reattach any files before submitting.</p><script>document.addEventListener('DOMContentLoaded',function(){const draft={{ saved_post|tojson }};const form=document.querySelector('form[enctype="multipart/form-data"]');if(!form)return;for(const [name,value] of Object.entries(draft)){for(const field of Array.from(form.elements).filter(el=>el.name===name)){if(field.type==='checkbox')field.checked=value==='1';else if(field.type!=='file'&&field.type!=='password')field.value=value;}}document.getElementById('circle')?.dispatchEvent(new Event('change'));});</script>{% endif %}
 {% endblock %}

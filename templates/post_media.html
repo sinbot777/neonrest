@@ -1,6 +1,7 @@
 {% set attachments = media_for_post(post.id) %}
 {% set media = attachments.image %}
 {% if media %}
+<div id="post-image-{{ public_post_id(post.id) }}">
   {% if media.kind == 'image' %}
     <figure class="post-media filter-{{ media.filter_name }}">
       <a class="post-image-link" href="{{ url_for('media_file', filename=media.filename) }}" aria-label="Enlarge image: {{ media.alt_text }}"><img src="{{ url_for('media_file', filename=media.filename) }}" alt="{{ media.alt_text }}" loading="lazy"></a>
@@ -19,6 +20,8 @@
         <button type="button" data-gif-action="loop" aria-pressed="false">Loop</button></figcaption>
     </figure>
   {% endif %}
+{% if session.get('user_id') == post.user_id and (repost_enabled is not defined or repost_enabled(post.id)) %}<div class="neon-share-row">{% set share_kind='image' %}{% set share_ref=public_post_id(post.id) %}{% set share_url=url_for('post_detail',post_id=post.id) ~ '#post-image-' ~ public_post_id(post.id) %}{% set share_label='Share image' %}{% set share_notice='This links to your image in its original post. Readers still need permission to view that post.' %}{% include 'partials/share_button.html' %}</div>{% endif %}
+</div>
 {% endif %}
 {% if attachments.midi %}
   {% set midi_title = attachments.midi.title %}{% set midi_filename = attachments.midi.filename %}

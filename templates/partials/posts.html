@@ -32,7 +32,7 @@
       </div>
       {% endif %}
       {% if viewer_id and viewer_id != comment.user_id %}
-      <div class="comment-actions"><button type="button" class="icon-button" aria-label="Comment options" aria-expanded="false" onclick="toggleCommentMenu(this)">⋮</button><div class="comment-dropdown" style="display:none;"><a href="{{ url_for('report_content', kind='comment', target_id=comment.raw_id) }}">Report comment</a></div></div>
+      <div class="comment-actions"><button type="button" class="icon-button" aria-label="Comment options" aria-expanded="false" onclick="toggleCommentMenu(this)">⋮</button><div class="comment-dropdown" style="display:none;"><a href="{{ url_for('report_content', kind='comment', target_id=comment.raw_id) }}">Report comment to site staff</a>{% set report_circle=circle_for_post(post.raw_id if post.raw_id is defined else post.id) %}{% if report_circle %}<a href="{{ url_for('circle_report',circle_id=report_circle.id,kind='comment',target_id=comment.id) }}">Report to Circle managers</a>{% endif %}</div></div>
       {% endif %}
     </div>
     <div class="comment-body comment-text">{{ comment.content }}</div>
@@ -57,6 +57,7 @@
 {%- endmacro -%}
 
 {% for post in posts %}
+{% if circle is defined and circle.pinned_post_id == post.id %}<p class="circle-badge">Pinned welcome post</p>{% endif %}
 <div id="post-{{ public_post_id(post.id) }}" class="post-preview{% if post.is_guestbook_outbound %} guestbook-outbound{% endif %}">
   <div class="post-header">
     <a href="{{ url_for('user_by_handle', handle=post.author_handle.lstrip('@')) }}">
@@ -69,6 +70,7 @@
       {% if post.target_handle %}&rarr; <a class="user-handle" href="{{ url_for('user_by_handle', handle=post.target_handle.lstrip('@')) }}">@{{ post.target_handle.lstrip('@') }}</a>{% endif %}
       <small><a class="post-permalink" href="{{ url_for('post_detail', post_id=post.id) }}" aria-label="Open this post">{{ post.created_at }}</a></small>
       {% if post.last_edited %}<small>(edited {{ post.last_edited }})</small>{% endif %}
+        {% set private_circle=circle_for_post(post.id) %}{% if private_circle %}<small class="post-circle">{{ 'Public Circle post' if circle_post_public(post.id) else 'Circle members' }} · <a href="{{ url_for('circle_page',circle_id=private_circle.id) }}">{{ circle_label(private_circle) }}</a></small>{% endif %}
         {# Updated Vibe Links #}
         {% if post.vibes %}
           <div class="post-vibes">
@@ -98,17 +100,20 @@
       </div>
     </div>
 
-  {% if viewer_id and viewer_id != post.user_id %}<div class="post-actions"><button type="button" class="icon-button" aria-label="Post options" aria-expanded="false" onclick="togglePostMenu(this)">⋮</button><div class="post-dropdown" style="display:none;"><a href="{{ url_for('report_content', kind='post', target_id=post.id) }}">Report post</a><a href="{{ url_for('post_edit_history', post_id=post.id) }}" class="link-button">Edit history</a></div></div>{% endif %}
+  {% if viewer_id and viewer_id != post.user_id %}<div class="post-actions"><button type="button" class="icon-button" aria-label="Post options" aria-expanded="false" onclick="togglePostMenu(this)">⋮</button><div class="post-dropdown" style="display:none;"><a href="{{ url_for('report_content', kind='post', target_id=post.id) }}">Report post to site staff</a>{% set report_circle=circle_for_post(post.raw_id if post.raw_id is defined else post.id) %}{% if report_circle %}<a href="{{ url_for('circle_report',circle_id=report_circle.id,kind='post',target_id=public_post_id(post.id)) }}">Report to Circle managers</a>{% endif %}<a href="{{ url_for('post_edit_history', post_id=post.id) }}" class="link-button">Edit history</a></div></div>{% endif %}
       {% if staff_announcement(post.id) %}<p class="vibe-pill">Staff announcement</p>{% endif %}
 <div class="post-content">{{ post.html_content | safe }}</div>
+  {% include 'partials/shared_post_card.html' %}
   {% include "post_media.html" %}
 
-  <div class="post-reactions-box react-form" data-post-id="{{ public_post_id(post.id) }}">
+  {% if repost_enabled is not defined or repost_enabled(post.id) %}<div class="neon-share-row">{% set share_label='Share' %}{% set share_kind='post' %}{% set share_ref=public_post_id(post.id) %}{% set share_url=url_for('post_detail',post_id=post.id) %}{% set share_notice='Public Circle post. Anyone eligible can read it; membership is required to reply.' if circle_post_public(post.id) else 'Only members with access to this Circle can open this post. Sharing does not invite or admit anyone.' if private_circle else 'Readers still need permission to view the original post. Sharing does not change its audience.' %}{% include 'partials/share_button.html' %}</div>{% else %}<p class="shared-post-notice">Sharing outside this Circle is off.{% if viewer_id==post.user_id %} <a href="{{ url_for('edit_post',post_id=post.id) }}">Edit sharing</a>{% endif %}</p>{% endif %}
+  <div class="post-reactions-box react-form" data-post-id="{{ public_post_id(post.id) }}" data-csrf-token="{{ community_token() }}">
     {% for emoji in VALID_REACTS %}
-      <button class="react-btn{% if post.reaction_counts.get(emoji) %} active{% endif %}" data-emoji="{{ emoji }}" data-post-id="{{ public_post_id(post.id) }}">
+      <button type="button" data-reaction-url="{{ url_for('react_to_post',post_id=post.id) }}"{% if not viewer_id or not circle_can_participate(post.id) %} disabled title="Sign in and join this Circle to react"{% endif %} class="react-btn{% if post.reaction_counts.get(emoji) %} active{% endif %}" data-emoji="{{ emoji }}" data-post-id="{{ public_post_id(post.id) }}">
         {{ emoji }}{% if post.reaction_counts.get(emoji) %}<sub>{{ post.reaction_counts.get(emoji) }}</sub>{% endif %}
       </button>
     {% endfor %}
+    <span class="reaction-status" role="status" aria-live="polite"></span>
 </div>
 
   {% if post.comments %}
@@ -119,7 +124,7 @@
   </div>
   {% endif %}
 
-  {% if viewer_id %}
+  {% if viewer_id and circle_can_participate(post.id) %}
   <div class="comment-form">
     <form id="comment-form-{{ public_post_id(post.id) }}" method="POST" action="/create_comment" data-post-id="{{ public_post_id(post.id) }}"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
       <input type="hidden" name="post_id" value="{{ public_post_id(post.id) }}">

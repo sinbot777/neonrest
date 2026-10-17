@@ -7,6 +7,7 @@
 {% block content %}
 <div class="page-wrapper vibe-page-wrapper">
   <nav class="vibe-mode-switch" aria-label="Theme mode">
+    {% set share_kind='vibe' %}{% set share_ref=vibe_name %}{% set share_url=url_for('vibe_page',vibe_name=vibe_name) %}{% set share_label='Share Vibe' %}{% set share_notice='Posts in this Vibe keep their own audiences. Each reader sees only posts they may access.' %}{% include 'partials/share_button.html' %}
     <span>View this Vibe:</span>
     <a href="{{ url_for('vibe_page', vibe_name=vibe_name, mode='day') }}" {% if theme_mode == 'day' %}aria-current="page"{% endif %}>Day</a>
     <a href="{{ url_for('vibe_page', vibe_name=vibe_name, mode='night') }}" {% if theme_mode == 'night' %}aria-current="page"{% endif %}>Night</a>
@@ -109,7 +110,9 @@
             </p>
 
             <p>{{ post['content'] }}</p>
+            {% include 'partials/shared_post_card.html' %}
             {% include "post_media.html" %}
+            <div class="neon-share-row">{% set share_kind='post' %}{% set share_ref=public_post_id(post.id) %}{% set share_url=url_for('post_detail',post_id=post.id) %}{% set share_label='Share' %}{% set share_notice='Readers still need permission to view the original post. Sharing does not change its audience.' %}{% include 'partials/share_button.html' %}</div>
             {% if post['last_edited'] %}
               <p class="post-timestamp">Last edited: {{ post['last_edited'] }}</p>
             {% endif %}

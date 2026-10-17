@@ -300,3 +300,9 @@
 .post-content a:link, .post-content a:visited { color:var(--link-color,#fcb5a3); text-decoration:underline; text-underline-offset:.16em; text-decoration-thickness:.08em; overflow-wrap:anywhere; }
 .post-content a:hover { color:var(--link-hover-color,#ffd2c7); text-decoration-thickness:.12em; }
 .post-content a:focus-visible { outline:2px solid currentColor; outline-offset:3px; border-radius:2px; }
+
+/* Private Circle destinations stay legible in profile, feed and Circle headers. */
+.post-preview .post-circle{display:inline-flex;align-items:baseline;flex-wrap:wrap;gap:.3rem;padding:.3rem .6rem;margin:.35rem 0;border:1px solid #718ba8;border-radius:9px;background:#1d2d43;color:#e6edf7!important;font-size:.8rem;line-height:1.5;text-shadow:none}
+.post-preview .post-circle a:link,.post-preview .post-circle a:visited{color:#b7e2ff!important;text-decoration:underline;text-underline-offset:.18em;text-shadow:none;overflow-wrap:anywhere}
+.post-preview .post-circle a:hover{color:#ffffff!important}
+.post-preview .post-circle a:focus-visible{outline:2px solid #ffdb91;outline-offset:3px;border-radius:2px}
