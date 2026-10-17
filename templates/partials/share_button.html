@@ -1,0 +1,1 @@
+<a class="neon-share-button" href="{{ url_for('create_post',share_kind=share_kind,share_ref=share_ref) }}" data-neon-share data-share-url="{{ share_url }}" data-share-compose="{{ url_for('create_post',share_kind=share_kind,share_ref=share_ref) }}" data-share-kind="{{ share_kind }}" data-share-notice="{{ share_notice }}">{{ share_label|default('Share') }}</a>

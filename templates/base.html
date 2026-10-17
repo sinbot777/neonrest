@@ -60,7 +60,7 @@ body > .session-info > a:focus-visible { outline:2px solid currentColor; outline
       <div class="session-info">
         <a href="/account" class="account-link">{{ session['user_email'] }}</a>
 <a href="{{ url_for('feed') }}" class="account-link">Feed</a>
-<a href="{{ url_for('circles_home') }}" class="account-link">Circles</a>
+<a href="/circles" class="account-link">Circles</a>
 <a href="{{ url_for('user_by_handle',handle=session.user_handle.lstrip('@')) }}" class="account-link">Your profile</a>
         <a href="{{ url_for('community_notifications') }}" class="account-link notifications-link" aria-label="Notifications{% if community_unread %}, {{ community_unread }} unread{% endif %}" title="Notifications{% if community_unread %} ({{ community_unread }} unread){% endif %}"><svg class="mailbox-icon" viewBox="0 0 28 28" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 20V12a5 5 0 0 1 10 0v8H4Zm5-13h11a5 5 0 0 1 5 5v8H14M8 13h2M17 10V3h6v4h-6M14 20v6M10 26h8" /></svg>{% if community_unread %}<span class="notification-count" aria-hidden="true">{{ community_unread }}</span>{% endif %}</a> <a href="/logout" class="logout-link">Log out</a>
         <form class="site-search" role="search" method="get" action="{{ url_for('site_search') }}"><div class="site-search-row"><label class="site-search-label" for="site-search-query">Search Neonrest</label><input id="site-search-query" type="search" name="q" minlength="2" maxlength="120" required placeholder="Search Neonrest" value="{{ request.args.get('q','') if request.endpoint=='site_search' else '' }}"><button type="submit">Search</button></div><input type="hidden" name="scopes_present" value="1"><fieldset class="site-search-options"><legend class="site-search-label">Search categories</legend>{% for value,label in search_scope_labels.items() %}<label><input type="checkbox" name="scope" value="{{ value }}" {% if value in search_selected_scopes %}checked{% endif %}> {{ label }}</label>{% endfor %}</fieldset></form>
@@ -196,5 +196,8 @@ body > .session-info > a:focus-visible { outline:2px solid currentColor; outline
 <script defer src="{{ url_for('static', filename='js/image_viewer.js') }}"></script>
 {% if account_shell_enabled %}<link rel="stylesheet" href="{{ url_for('static',filename='css/account-shell.css',v='20261015-account1') }}">{% endif %}
 {% if vibe_slug %}<link rel="stylesheet" href="{{ url_for('static',filename='css/vibe-contrast.css',v='20261015-gallery1') }}">{% endif %}
+{% include 'partials/share_dialog.html' %}
+<link rel="stylesheet" href="{{ url_for('static',filename='css/sharing.css',v='20261016-sharedcards1') }}">
+<script defer src="{{ url_for('static',filename='js/sharing.js',v='20261016-share1') }}"></script>
 </body>
 </html>

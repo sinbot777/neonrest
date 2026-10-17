@@ -6,7 +6,7 @@
   <p><strong>{{ staff_role }}</strong></p>
   <p>This staff profile is available for safety and reporting. Personal profile details and connections are restricted by age.</p>
   <p><a class="button" href="{{ url_for('report_content', kind='user', target_id=staff_id) }}">Report profile</a></p>
-  <p><a href="mailto:ToS@neonrest.com">Contact Neonrest support</a></p>
-  <p><a href="{{ url_for('feed') }}">Back to feed</a></p>
+  <p><a class="button" href="mailto:ToS@neonrest.com">Contact Neonrest support</a></p>
+  <p><a class="button" href="{{ url_for('feed') }}">Back to feed</a></p>
 </section>
 {% endblock %}

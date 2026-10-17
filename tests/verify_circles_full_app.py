@@ -6,7 +6,7 @@ from PIL import Image
 
 stage = Path(sys.argv[1]).resolve()
 assert stage.name == 'neonrest' and '/releases/CIRCLES-' in str(stage)
-fixture = Path('/home/sinbot/releases/V081-SECURITY-20261015/neonrest-fixture.db')
+fixture = Path('/home/sinbot/releases/CIRCLES-20261016/production-public-20261017/production-before.db')
 assert fixture.is_file()
 work = tempfile.TemporaryDirectory(prefix='circle-fixture-')
 root = Path(work.name)

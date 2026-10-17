@@ -107,11 +107,15 @@ def member_visible(db, owner, viewer):
     return not (state and state['inactive']) and not blocked(db, owner, viewer) and ages.can_read(db,owner,viewer,profile=True)
 
 
-def visible_post(db, pid, viewer, muted=True, include_circle_removed=False):
+def visible_post(db, pid, viewer, muted=True, include_circle_removed=False, external_circle_share=False):
     post = db.execute('SELECT user_id,target_user_id FROM posts WHERE id=?', (pid,)).fetchone()
     if not post: return False
     from neonrest.circles import post_allowed
     circle_access = post_allowed(db,pid,viewer,include_removed=include_circle_removed)
+    if external_circle_share and circle_access is False:
+        from neonrest.sharing import circle_external_allowed
+        if circle_external_allowed(db, pid, viewer):
+            circle_access = True
     if circle_access is False: return False
     if welcome.staff(db,viewer): return True
     if welcome.personal_hidden(db,post['user_id'],viewer) and not welcome.announcement(db,pid): return False
@@ -261,8 +265,11 @@ def ensure_case(db, kind, target_id, owner=None):
     return row['id']
 
 
-def preserve(db, case_id, kind, target_id, report_id=None, event_id=None, legacy=False):
+def preserve(db, case_id, kind, target_id, report_id=None, event_id=None, legacy=False, shared_source=False):
     data = target_snapshot(db,kind,target_id)
+    if shared_source:
+        data['comments'] = []
+        data['external_shared_source'] = True
     data['preserved_files']=[]
     folder=Path(current_app.instance_path)/'case-evidence'
     media_folder=Path(current_app.instance_path)/'media'
@@ -295,6 +302,12 @@ def preserve(db, case_id, kind, target_id, report_id=None, event_id=None, legacy
     snapshot = json.dumps(data, ensure_ascii=False,sort_keys=True)
     db.execute('INSERT INTO case_evidence(case_id,report_id,event_id,source_type,source_id,snapshot,sha256,legacy) VALUES (?,?,?,?,?,?,?,?)',
                (case_id,report_id,event_id,kind,target_id,snapshot,digest(snapshot),int(legacy)))
+    if not shared_source and kind == 'post' and db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_shares'").fetchone():
+        ref = db.execute('SELECT source_post_id FROM post_shares WHERE share_post_id=?',(target_id,)).fetchone()
+        if ref:
+            from neonrest.sharing import source_viewable
+            if source_viewable(db,ref[0],session.get('user_id')):
+                preserve(db,case_id,'post',ref[0],report_id=report_id,event_id=event_id,legacy=legacy,shared_source=True)
 
 
 def attach_report(db, report_id, legacy=False):

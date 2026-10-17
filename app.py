@@ -1021,6 +1021,10 @@ def create_post():
         from neonrest import welcome
         welcome.validate_flag(db,user_id)
         content = request.form['content'].strip()
+        from neonrest import sharing
+        share_ref = request.form.get('shared_source', '').strip()
+        if share_ref:
+            sharing.validate_reference(db, share_ref, request.form.get('shared_kind'), user_id)
         media = prepare_post_media()
         init_media_tables(db)
         vibes_input = request.form.get('vibes', '').strip()
@@ -1031,7 +1035,7 @@ def create_post():
                 abort(400, description='Circle posts cannot be public staff announcements.')
             vibes_input, circle, target_user_id = '', '', user_id
 
-        if not content and not media:
+        if not content and not media and not share_ref:
             flash("Add text or an attachment to post.", 'error')
         else:
             now = datetime.utcnow().isoformat()
@@ -1045,8 +1049,13 @@ def create_post():
                 VALUES (?, ?, ?, ?, ?, ?)
             ''', (post_key,user_id, target_user_id, content, circle, now))
             identifiers.ensure(db,'post',post_key)
+            if share_ref:
+                source_key = sharing.validate_reference(db, share_ref, request.form.get('shared_kind'), user_id)
+                db.execute('INSERT INTO post_shares(share_post_id,source_post_id) VALUES (?,?)',(post_key,source_key))
             if selected_circle:
                 db.execute('INSERT INTO circle_posts VALUES (?,?)', (post_key, selected_circle['id']))
+                sharing.set_permission(db, post_key, request.form.get('allow_circle_sharing'))
+                circles.save_visibility(db, post_key, request.form.get('circle_audience'))
             db.execute('INSERT INTO post_privacy(post_id,audience) VALUES (?,?)', (cursor.lastrowid, 'private' if selected_circle else g.new_post_audience))
             from neonrest.age_policy import age
             if age(db,user_id) is not None and age(db,user_id)<18:
@@ -1066,8 +1075,9 @@ def create_post():
                 return redirect(url_for('circle_page', circle_id=selected_circle['id']))
             return redirect(url_for('user_page', user_id=target_user_id))
 
-    # If GET, render standalone page
-    return render_template('create_post.html', selected_circle=selected_circle)
+    from neonrest.sharing import prepare as prepare_share
+    shared = prepare_share(db, request.args.get('share_kind'), request.args.get('share_ref'), user_id) if request.method == 'GET' else None
+    return render_template('create_post.html', selected_circle=selected_circle, shared_content=('' if request.args.get('share_kind') in ('post','image') else shared['content']) if shared else None, share_preview=shared['preview'] if shared else None, shared_source=request.args.get('share_ref') if shared and request.args.get('share_kind') in ('post','image') else None)
 
 @app.route('/create_comment', methods=['POST'])
 def create_comment():
@@ -1100,7 +1110,7 @@ def create_comment():
     # 3) Insert row, get its integer PK
     db = get_db()
     db.execute('BEGIN IMMEDIATE')
-    if circles.post_allowed(db, post_id, session['user_id']) is False:
+    if circles.post_allowed(db, post_id, session['user_id']) is False or not circles.participate(db, post_id, session['user_id']):
         abort(404)
     if db.execute('SELECT 1 FROM moderated_posts WHERE post_id=?', (post_id,)).fetchone():
         abort(404)
@@ -1217,6 +1227,8 @@ def markdown_guide():
 @app.route('/posts/<string:post_id>/history')
 def post_edit_history(post_id):
     db = get_db()
+    if not circles.participate(db, post_id, session.get('user_id')):
+        abort(404)
     if not db.execute('SELECT 1 FROM posts WHERE id=? AND community_post_visible(id)=1', (post_id,)).fetchone():
         abort(404)
     post = db.execute('SELECT * FROM posts WHERE id=?', (post_id,)).fetchone()
@@ -1226,7 +1238,7 @@ def post_edit_history(post_id):
 @app.route('/feed')
 @app.route('/posts/<string:post_id>', endpoint='post_detail')
 def feed(post_id=None, circle_context=None):
-    if post_id is None and 'user_id' not in session:
+    if post_id is None and circle_context is None and 'user_id' not in session:
         flash("Please log in to view your feed.", "error")
         return redirect('/login')
 
@@ -1381,17 +1393,17 @@ def feed(post_id=None, circle_context=None):
 def edit_post(post_id):
     if 'user_id' not in session:
         flash("Please log in to edit posts.", 'error')
-        return redirect('/login')
+        return redirect(url_for('login'))
 
     db = get_db()
     post = db.execute('SELECT * FROM posts WHERE id = ?', (post_id,)).fetchone()
 
     if not post or post['user_id'] != session['user_id']:
         flash("You don't have permission to edit this post.", 'error')
-        return redirect('/feed')
+        return redirect(url_for('feed'))
 
     circle_post = circles.post_circle(db, post_id)
-    if circle_post and not circles.post_allowed(db, post_id, session['user_id']):
+    if circle_post and (not circles.post_allowed(db, post_id, session['user_id']) or not circles.participate(db, post_id, session['user_id'])):
         abort(404)
 
     if request.method == 'POST':
@@ -1405,13 +1417,14 @@ def edit_post(post_id):
         new_circle = request.form.get('circle', '').strip()
         db.execute('BEGIN IMMEDIATE')
         if circle_post:
-            if not circles.post_allowed(db, post_id, session['user_id']):
+            if not circles.post_allowed(db, post_id, session['user_id']) or not circles.participate(db, post_id, session['user_id']):
                 abort(404)
             if request.form.get('staff_announcement'):
                 abort(400, description='Circle posts cannot be public staff announcements.')
             new_vibe, new_circle = '', ''
 
-        if not new_content and not media and not existing_media:
+        existing_share = db.execute('SELECT 1 FROM post_shares WHERE share_post_id=?',(post_id,)).fetchone()
+        if not new_content and not media and not existing_media and not existing_share:
             flash("Add text or an attachment to post.", 'error')
         else:
             if (new_content, new_vibe, new_circle) != (post['content'], post['vibe'] or '', post['circle'] or ''):
@@ -1431,12 +1444,16 @@ def edit_post(post_id):
             welcome.save_flag(db,post_id,session['user_id'])
             attach_post_media(db, post_id, media)
             update_post_media_labels(db, post_id, request.form)
+            if circle_post:
+                from neonrest.sharing import set_permission
+                set_permission(db, post_id, request.form.get('allow_circle_sharing'))
+                circles.save_visibility(db, post_id, request.form.get('circle_audience'))
             selected_filter = request.form.get('image_filter')
             if selected_filter in MEDIA_FILTERS:
                 db.execute("UPDATE post_media SET filter_name=? WHERE post_id=? AND kind IN ('image','gif')", (selected_filter, post_id))
             db.commit()
             flash("Post updated successfully!", 'success')
-            return redirect('/feed')
+            return redirect(url_for('feed'))
 
     linked_vibes = db.execute('''
         SELECT vibes.name FROM post_vibes
@@ -2254,7 +2271,7 @@ def react_to_post(post_id):
     db = get_db()
 
     db.execute('BEGIN IMMEDIATE')
-    if circles.post_allowed(db, post_id, user_id) is False:
+    if circles.post_allowed(db, post_id, user_id) is False or not circles.participate(db, post_id, user_id):
         abort(404)
 
     # Check if this reaction already exists
@@ -2628,6 +2645,8 @@ with app.app_context():
 import sys
 from neonrest.community_features import register as register_community
 register_community(app, sys.modules[__name__])
+from neonrest.sharing import register as register_sharing
+register_sharing(app, sys.modules[__name__])
 from neonrest.email_verification import register as register_verification
 register_verification(app, sys.modules[__name__])
 from neonrest.retention import initialize as initialize_retention

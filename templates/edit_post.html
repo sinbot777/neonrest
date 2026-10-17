@@ -20,10 +20,11 @@
     {% endwith %}
 
     <!-- ✅ Update form -->
-    <form method="POST" action="/edit_post/{{ post['id'] }}" enctype="multipart/form-data"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
+    <form method="POST" action="{{ url_for('edit_post', post_id=post['id']) }}" enctype="multipart/form-data"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
+      {% if private_circle %}{% include 'partials/circle_share_permission.html' %}{% endif %}
       <div class="user-section">
         <label for="content">Post Content</label><br>
-        <textarea name="content" id="content" class="post-textarea" rows="6" required>{{ post['content'] }}</textarea>{% if private_circle %}<p>Audience: members of {{ circle_label(private_circle) }}. This post cannot be moved into a public feed.</p>{% else %}<label>Audience <select name="audience">{% for option in ('public','friends','private') %}<option value="{{ option }}" {% if community_post_audience(post.id) == option %}selected{% endif %}>{{ option|title }}</option>{% endfor %}</select></label>{% endif %}
+        <textarea name="content" id="content" class="post-textarea" rows="6" {% if is_shared_post is not defined or not is_shared_post(post.id) %}required{% endif %}>{{ post['content'] }}</textarea>{% if private_circle %}<p>Choose the Circle post visibility above. Public is available only while {{ circle_label(private_circle) }} is a Public Circle.</p>{% else %}<label>Audience <select name="audience">{% for option in ('public','friends','private') %}<option value="{{ option }}" {% if community_post_audience(post.id) == option %}selected{% endif %}>{{ option|title }}</option>{% endfor %}</select></label>{% endif %}
         <small class="markdown-hint">
           You can use <a href="/markdown-guide" target="_blank">Markdown</a> to format your post.
         </small>
@@ -66,7 +67,7 @@
     </form>
 
     <!-- ✅ Separate delete form -->
-    <form method="POST" action="/delete_post/{{ post['id'] }}" onsubmit="return confirm('Are you sure you want to delete this post?');"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
+    <form method="POST" action="{{ url_for('delete_post', post_id=post['id']) }}" onsubmit="return confirm('Are you sure you want to delete this post?');"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
       <div class="user-section">
         <button type="submit" class="post-action delete-post">Delete Post</button>
       </div>

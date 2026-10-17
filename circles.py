@@ -39,13 +39,15 @@ def initialize(db):
     CREATE TRIGGER IF NOT EXISTS circle_post_cleanup AFTER DELETE ON posts
       BEGIN DELETE FROM circle_posts WHERE post_id=OLD.id; END;
     ''')
-    for name, declaration in (('rules', "TEXT NOT NULL DEFAULT ''"), ('pinned_post_id', 'INTEGER')):
+    for name, declaration in (('rules', "TEXT NOT NULL DEFAULT ''"), ('pinned_post_id', 'INTEGER'), ('public_read', 'INTEGER NOT NULL DEFAULT 0 CHECK(public_read IN (0,1))')):
         if name not in {r[1] for r in db.execute('PRAGMA table_info(circles)')}:
             db.execute('ALTER TABLE circles ADD COLUMN '+name+' '+declaration)
     if 'reason' not in {r[1] for r in db.execute('PRAGMA table_info(circle_events)')}:
         db.execute("ALTER TABLE circle_events ADD COLUMN reason TEXT NOT NULL DEFAULT ''")
     db.execute('CREATE TABLE IF NOT EXISTS circle_reads(circle_id INTEGER NOT NULL,user_id INTEGER NOT NULL,last_post_id INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(circle_id,user_id))')
     db.execute('CREATE TRIGGER IF NOT EXISTS circle_read_cleanup AFTER DELETE ON circles BEGIN DELETE FROM circle_reads WHERE circle_id=OLD.id; END')
+    db.execute("CREATE TABLE IF NOT EXISTS circle_post_visibility(post_id INTEGER PRIMARY KEY, audience TEXT NOT NULL DEFAULT 'private' CHECK(audience IN ('public','private')))")
+    db.execute('CREATE TRIGGER IF NOT EXISTS circle_visibility_cleanup AFTER DELETE ON posts BEGIN DELETE FROM circle_post_visibility WHERE post_id=OLD.id; END')
     db.commit()
     circle_ids.initialize(db)
     circle_names.initialize(db)
@@ -91,7 +93,38 @@ def invitation(db, cid, uid):
                       (cid, uid)).fetchone()
 
 
+def public_circle(circle):
+    return bool(circle and circle['mode'] == 'discoverable' and circle['public_read'])
+
+
+def public_info_allowed(db, circle, uid):
+    from neonrest.community_features import member_visible
+    return bool(public_circle(circle) and not circle['archived'] and usable(db, circle['owner_id'])
+                and member_visible(db, circle['owner_id'], uid)
+                and ages.can_read(db, circle['owner_id'], uid, profile=True))
+
+
+def public_post(db, pid):
+    circle = post_circle(db, pid)
+    return bool(public_circle(circle) and db.execute("SELECT 1 FROM circle_post_visibility WHERE post_id=? AND audience='public'", (pid,)).fetchone())
+
+
+def save_visibility(db, pid, value):
+    if value not in (None, '', 'public', 'private'):
+        abort(400, description='Choose Public or Private to this Circle.')
+    if value == 'public' and not public_circle(post_circle(db, pid)):
+        abort(400, description='Only a Public Circle may contain public posts.')
+    db.execute("INSERT INTO circle_post_visibility VALUES (?,?) ON CONFLICT(post_id) DO UPDATE SET audience=excluded.audience", (pid, value or 'private'))
+
+
+def participate(db, pid, uid):
+    circle = post_circle(db, pid)
+    return circle is None or bool(membership(db, circle, uid))
+
+
 def info_allowed(db, circle, uid):
+    if public_info_allowed(db, circle, uid):
+        return True
     return not circle['archived'] and eligible(db, circle, uid) and (
         circle['mode'] != 'hidden' or membership(db, circle, uid) or invitation(db, circle['id'], uid))
 
@@ -107,7 +140,12 @@ def post_allowed(db, pid, uid, include_removed=False):
         return None
     if not include_removed and db.execute("SELECT 1 FROM circle_content_removals WHERE target_type='post' AND target_id=? AND circle_id=?",(pid,mapping['circle_id'])).fetchone():return False
     circle = db.execute('SELECT * FROM circles WHERE id=?', (mapping['circle_id'],)).fetchone()
-    if circle is None or not membership(db, circle, uid):
+    if circle is None:
+        return False
+    author = db.execute('SELECT user_id FROM posts WHERE id=?', (pid,)).fetchone()
+    if author and usable(db, author['user_id']) and public_post(db, pid) and public_info_allowed(db, circle, uid):
+        return True  # The common post guard still applies author, age, block and moderation checks.
+    if not membership(db, circle, uid):
         return False
     post = db.execute('SELECT user_id FROM posts WHERE id=?', (pid,)).fetchone()
     return bool(post and compatible(db, post['user_id'], uid))
@@ -118,6 +156,8 @@ def comment_allowed(db, cid, uid, include_removed=False):
     if not row:
         return False
     if not include_removed and db.execute("WITH RECURSIVE ancestors(id,parent_comment_id) AS (SELECT id,parent_comment_id FROM comments WHERE id=? UNION SELECT c.id,c.parent_comment_id FROM comments c JOIN ancestors a ON c.id=a.parent_comment_id) SELECT 1 FROM ancestors a JOIN circle_content_removals r ON r.target_type='comment' AND r.target_id=a.id JOIN circle_posts cp ON cp.post_id=? AND cp.circle_id=r.circle_id",(cid,row['post_id'])).fetchone():return False
+    if not participate(db, row['post_id'], uid):
+        return False
     access = post_allowed(db, row['post_id'], uid, include_removed=include_removed)
     return access is not False and (access is None or compatible(db, row['user_id'], uid))
 
@@ -157,7 +197,7 @@ def register(app, core):
     def inbound_circle_id(endpoint, values):
         if endpoint not in endpoints or not values:
             return
-        if not session.get('user_id'):
+        if not session.get('user_id') and endpoint not in ('circle_page', 'circle_icon'):
             abort(404)
         original = values['circle_id']
         try:
@@ -239,11 +279,11 @@ def register(app, core):
         name = request.form.get('name', '').strip()
         description = request.form.get('description', '').strip()
         mode = request.form.get('mode', '')
-        if not 1 <= len(name) <= 60 or len(description) > 2000 or mode not in ('discoverable', 'hidden', 'followers'):
+        if not 1 <= len(name) <= 60 or len(description) > 2000 or mode not in ('public', 'discoverable', 'hidden', 'followers'):
             abort(400, description='Use a name of 1–60 characters, a description up to 2,000 characters and a listed membership mode.')
         if any(ord(c) < 32 for c in name):
             abort(400, description='Use a name without control characters.')
-        return name, description, mode
+        return name, description, ('discoverable' if mode == 'public' else mode)
 
     def save_icon():
         upload = request.files.get('icon')
@@ -277,10 +317,15 @@ def register(app, core):
             rows = db().execute("SELECT c.* FROM circles c JOIN circle_members m ON m.circle_id=c.id WHERE m.user_id=? AND m.status='active' AND c.archived=0 ORDER BY c.name,c.id", (uid,)).fetchall()
             return [c for c in rows if membership(db(), c, uid)]
         return dict(circle_choices=choices, circle_label=label, circle_public_id=lambda cid: circle_ids.public(db(),cid),
-                    circle_for_post=lambda pid: post_circle(db(), pid))
+                    circle_for_post=lambda pid: post_circle(db(), pid),
+                    circle_is_public=public_circle, circle_post_public=lambda pid: public_post(db(), pid),
+                    circle_can_participate=lambda pid: participate(db(), pid, session.get('user_id')))
 
     @app.route('/circles', methods=['GET', 'POST'])
     def circles_home():
+        if request.method == 'GET' and not session.get('user_id'):
+            rows = db().execute('SELECT * FROM circles WHERE public_read=1 AND archived=0 ORDER BY name,id').fetchall()
+            return render_template('circles.html', mine=[], discover=[c for c in rows if public_info_allowed(db(), c, None)], invitations=[], archived=[], pending=[], unread={})
         if not session.get('user_id'):
             return redirect(url_for('login'))
         uid = actor()
@@ -291,6 +336,7 @@ def register(app, core):
                 abort(429, description='You can create up to five Circles per day.')
             icon = save_icon()
             cid = db().execute('INSERT INTO circles(name,description,owner_id,mode,icon,rules) VALUES (?,?,?,?,?,?)', (name, description, uid, mode, icon, rules_field())).lastrowid
+            db().execute('UPDATE circles SET public_read=? WHERE id=?', (int(request.form.get('mode') == 'public'), cid))
             circle_ids.ensure(db(), cid)
             circle_names.assign(db(), cid, name)
             db().execute("INSERT INTO circle_members VALUES (?,?,'owner','active',CURRENT_TIMESTAMP)", (cid, uid))
@@ -316,17 +362,17 @@ def register(app, core):
 
     @app.route('/circles/<string:circle_id>')
     def circle_page(circle_id):
-        uid = actor()
+        uid = session.get('user_id')
         circle, member = circle_for(circle_id, uid)
         context = dict(circle=circle, membership=member,
                        invitation=invitation(db(), circle_id, uid),
                        my_request=db().execute('SELECT status FROM circle_members WHERE circle_id=? AND user_id=?', (circle_id, uid)).fetchone())
-        if not member:
+        if not member and not public_info_allowed(db(), circle, uid):
             return render_template('circle_page.html', **context)
         members = db().execute("SELECT m.*,u.handle FROM circle_members m JOIN users u ON u.id=m.user_id WHERE m.circle_id=? AND m.status='active' ORDER BY m.role,u.handle", (circle_id,)).fetchall()
-        context['members'] = [m for m in members if compatible(db(), uid, m['user_id'])]
+        context['members'] = [m for m in members if compatible(db(), uid, m['user_id'])] if member else []
         response = core.feed(circle_context=context)
-        if request.args.get('page', '1') == '1' and not request.args.get('q', '').strip():
+        if member and request.args.get('page', '1') == '1' and not request.args.get('q', '').strip():
             newest = db().execute("SELECT COALESCE(MAX(p.id),0) FROM posts p JOIN circle_posts cp ON cp.post_id=p.id WHERE cp.circle_id=? AND community_post_visible(p.id)=1 AND NOT EXISTS(SELECT 1 FROM moderated_posts mp WHERE mp.post_id=p.id)", (circle_id,)).fetchone()[0]
             db().execute('INSERT INTO circle_reads VALUES (?,?,?) ON CONFLICT(circle_id,user_id) DO UPDATE SET last_post_id=MAX(last_post_id,excluded.last_post_id)', (circle_id,uid,newest))
             db().commit()
@@ -346,7 +392,7 @@ def register(app, core):
 
     @app.route('/circles/<string:circle_id>/icon')
     def circle_icon(circle_id):
-        circle, _ = circle_for(circle_id, actor())
+        circle, _ = circle_for(circle_id, session.get('user_id'))
         if not circle['icon']:
             abort(404)
         response = send_file(Path(app.instance_path) / 'circle_icons' / circle['icon'], mimetype='image/png')
@@ -411,6 +457,10 @@ def register(app, core):
                     # Mode changes could silently revoke follower-only memberships.
                     if mode != circle['mode']:
                         abort(400, description='Membership mode is fixed for this first version. Create a separate Circle for another mode.')
+                    public_read = int(mode == 'discoverable' and request.form.get('mode') == 'public')
+                    if public_read != circle['public_read']:
+                        record(circle_id, uid, 'public_viewing_enabled' if public_read else 'public_viewing_disabled')
+                    db().execute('UPDATE circles SET public_read=? WHERE id=?', (public_read, circle_id))
                     icon = save_icon()
                     db().execute('UPDATE circles SET name=?,description=?,icon=COALESCE(?,icon),rules=? WHERE id=?', (name, description, icon, rules_field(), circle_id))
                     circle_names.assign(db(), circle_id, name)
