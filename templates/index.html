@@ -10,11 +10,12 @@
   <div class="buttons">
     <a class="button" href="/explore">Explore Vibes</a>
     {% if session.get('user_email') %}
-      <a class="button" href="/logout">Log out</a>
+      <a class="button" href="{{ url_for('feed') }}">Go to your feed</a>
     {% else %}
       <a class="button" href="/login">Sign Up / Log In</a>
     {% endif %}
     <a class="button" href="/about">About</a>
+    <a class="button" href="{{ url_for('user_guide') }}">User guide</a>
   </div>
   <div class="under-construction">
   <a href="{{ url_for('dev_summary') }}">
