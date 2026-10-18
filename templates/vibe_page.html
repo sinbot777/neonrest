@@ -5,6 +5,7 @@
 {% endblock %}
 
 {% block content %}
+{% set vm_state = vibe_management_state(vibe_name) %}
 <div class="page-wrapper vibe-page-wrapper">
   <nav class="vibe-mode-switch" aria-label="Theme mode">
     {% set share_kind='vibe' %}{% set share_ref=vibe_name %}{% set share_url=url_for('vibe_page',vibe_name=vibe_name) %}{% set share_label='Share Vibe' %}{% set share_notice='Posts in this Vibe keep their own audiences. Each reader sees only posts they may access.' %}{% include 'partials/share_button.html' %}
@@ -68,8 +69,8 @@
       <div class="glow large">#{{ vibe.name }}</div>
     {% endif %}
 
-      <div class="vibe-post-action"><a href="{{ url_for('create_post', vibe=vibe_name) }}" class="vibe-post-button">Post to this Vibe</a>{% if can_manage_vibe %}<a href="{{ url_for('manage_vibe', slug=vibe_slug) }}" class="vibe-manage-button">Manage Vibe</a>{% endif %}</div>
-    <div class="vibe-intro"><p>{{ vibe['welcome_message'] or ('Welcome to the ' ~ vibe_name ~ ' vibe space.') }}</p></div>
+      <div class="vibe-post-action">{% if not vm_state.archived %}<a href="{{ url_for('create_post', vibe=vibe_name) }}" class="vibe-post-button">Post to this Vibe</a>{% endif %}{% if can_manage_vibe or vibe_management_can_manage(vibe.id) %}<a href="{{ url_for('manage_vibe', slug=vibe_slug) }}" class="vibe-manage-button">Manage Vibe</a>{% endif %}</div>
+    <div class="vibe-intro"><p>{{ vibe['welcome_message'] or ('Welcome to the ' ~ vibe_name ~ ' vibe space.') }}</p></div>{% if vm_state.archived %}<div class="vibe-intro"><strong>This Vibe is archived.</strong><p>Existing posts remain available under their usual permissions. New posts cannot be added.</p></div>{% endif %}{% if vm_state.rules %}<details class="vibe-intro"><summary>Vibe rules</summary><p style="white-space:pre-wrap">{{ vm_state.rules }}</p></details>{% endif %}
     </div>
 
     <div class="user-section">

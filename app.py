@@ -1443,8 +1443,9 @@ def edit_post(post_id):
             ''', (new_content, new_vibe, new_circle, post_id))
             if request.form.get('audience') and not circle_post:
                 db.execute('INSERT INTO post_privacy VALUES (?,?) ON CONFLICT(post_id) DO UPDATE SET audience=excluded.audience', (post_id, request.form['audience']))
+            previous_vibe_ids = {row[0] for row in db.execute('SELECT vibe_id FROM post_vibes WHERE post_id=?',(post_id,))}
             db.execute('DELETE FROM post_vibes WHERE post_id = ?', (post_id,))
-            add_post_vibes(db, post_id, new_vibe.split(','))
+            add_post_vibes(db, post_id, new_vibe.split(','), allow_archived=previous_vibe_ids)
             welcome.save_flag(db,post_id,session['user_id'])
             attach_post_media(db, post_id, media)
             update_post_media_labels(db, post_id, request.form)
@@ -1466,6 +1467,8 @@ def edit_post(post_id):
         ORDER BY post_vibes.rowid
     ''', (post_id,)).fetchall()
     vibes_value = ', '.join(item['name'] for item in linked_vibes) if linked_vibes else (post['vibe'] or '')
+    if db.execute('SELECT 1 FROM vibe_post_removals WHERE post_id=? AND active=1',(post_id,)).fetchone():
+        vibes_value = ', '.join(item['name'] for item in linked_vibes)
     return render_template('edit_post.html', post=post, vibes_value=vibes_value)
 
 @app.route('/delete_post/<string:post_id>', methods=['POST'])
@@ -1825,13 +1828,8 @@ def manage_home():
 
 @app.route('/manage/vibes/<slug>')
 def manage_vibe(slug):
-    scope = management_scope()
-    if scope is None:
-        abort(403)
-    vibe = next((v for v in scope['editable'] if v['slug'] == slug), None)
-    if vibe is None:
-        abort(404)
-    return render_template('manage_vibe.html', vibe=vibe)
+    from neonrest.vibe_tools import dashboard
+    return dashboard(sys.modules[__name__], slug)
 
 
 @app.route('/manage/users')
@@ -2412,9 +2410,11 @@ def manage_reports():
     status = request.args.get('status','open')
     if status not in ('open','resolved','dismissed'):
         abort(400)
+    from neonrest.vibe_tools import report_filter
+    vibe_clause,vibe_params,vibe_filter_name=report_filter(get_db(),request.args.get('vibe_id',''))
     records = get_db().execute('''SELECT r.*, u.handle AS member_handle FROM content_reports r
-        JOIN users u ON u.id=r.reporter_id WHERE r.status=? ORDER BY r.id DESC LIMIT 100''', (status,)).fetchall()
-    return render_template('workflow_queue.html', heading='Reports', records=records, queue='reports',
+        JOIN users u ON u.id=r.reporter_id WHERE r.status=?''' + vibe_clause + ' ORDER BY r.id DESC LIMIT 100', [status]+vibe_params).fetchall()
+    return render_template('workflow_queue.html', heading=('Reports · '+vibe_filter_name if vibe_filter_name else 'Reports'), records=records, queue='reports',
                            status=status, token=theme_csrf_token())
 
 
@@ -2674,6 +2674,8 @@ circles.register(app,sys.modules[__name__])
 from neonrest.site_search import register as register_site_search
 register_site_search(app,sys.modules[__name__])
 identifiers.register(app,sys.modules[__name__])
+from neonrest.vibe_tools import register as register_vibe_tools
+register_vibe_tools(app,sys.modules[__name__])
 
 @app.errorhandler(404)
 def unavailable_page(error):

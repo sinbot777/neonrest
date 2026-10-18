@@ -68,7 +68,7 @@
         <div class="post-form-field">
           <label for="vibes">Vibes</label>
           <input type="text" id="vibes" name="vibes" value="{{ request.args.get('vibe', '')|e }}" placeholder="e.g., Backporch, Analog">
-          <small>Separate multiple Vibes with commas.</small>
+          <small>Separate multiple Vibes with commas. Archived Vibes cannot receive new posts. <a href="{{ url_for('explore') }}">Browse active Vibes</a>.</small>
         </div>
         <div class="post-form-field">
           <label for="circle">Circle <span class="post-form-optional">optional</span></label>
