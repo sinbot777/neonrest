@@ -28,7 +28,10 @@ OUTCOMES = {
     'created_mail_problem':'Account created; verification could not be queued/sent',
     'invalid_email':'Email format rejected', 'unavailable':'Handle or email unavailable',
     'rejected':'Form or eligibility check rejected', 'limited':'Request rate limited',
-    'error':'Server error', 'incomplete':'No account created; other response',
+    'agreement':'Terms / privacy acknowledgment missing', 'name':'Required name missing or invalid',
+    'fields':'Required signup fields missing', 'password':'Password length rejected',
+    'eligibility':'Age / eligibility rejected', 'timezone':'Birthday timezone invalid',
+    'security':'Security / origin check rejected', 'error':'Server error', 'incomplete':'No account created; other response',
     'verified':'Email verification completed', 'verification_invalid':'Invalid or expired verification link',
 }
 BOT = re.compile(r'bot|crawler|spider|slurp|headless|python|curl|wget|monitor|preview|facebookexternalhit|lighthouse', re.I)
@@ -59,6 +62,8 @@ def initialize(path):
         db.execute('CREATE TABLE IF NOT EXISTS metadata(key TEXT PRIMARY KEY,value TEXT NOT NULL)')
         db.execute("INSERT OR IGNORE INTO metadata VALUES ('started_at',?)", (datetime.now(timezone.utc).isoformat(timespec='seconds'),))
     os.chmod(path, 0o600)
+    from .statistics_detail import initialize as initialize_detail
+    initialize_detail(path)
 
 
 def add_counts(path, counts, day=None):
@@ -77,10 +82,6 @@ def eligible(core):
     if request.headers.get('DNT')=='1' or request.headers.get('Sec-GPC')=='1':
         return False
     if BOT.search(request.headers.get('User-Agent','')[:512]):
-        return False
-    # Staff traffic is excluded; no staff/user identifier is stored.
-    uid=session.get('user_id')
-    if uid and (uid==1 or core.staff_permissions(core.get_db(), uid)):
         return False
     return True
 
@@ -197,8 +198,10 @@ def register(app,core):
                         counts.append(('flow',prev,label))
             if request.endpoint=='signup' and request.method=='POST':
                 outcome=getattr(g,'statistics_signup_outcome',None)
+                if response.status_code>=500 and not str(outcome or '').startswith('created_'):
+                    outcome='error'
                 if not outcome:
-                    outcome='error' if response.status_code>=500 else 'limited' if response.status_code==429 else 'rejected' if response.status_code>=400 else 'incomplete'
+                    outcome='error' if response.status_code>=500 else 'limited' if response.status_code==429 else 'security' if response.status_code==403 else 'rejected' if response.status_code>=400 else 'incomplete'
                 if outcome in OUTCOMES:
                     counts.append(('signup',outcome,''))
             if request.endpoint=='verify_email' and request.method=='GET':
@@ -206,11 +209,14 @@ def register(app,core):
                 if outcome in ('verified','verification_invalid'):
                     counts.append(('signup',outcome,''))
             if counts:
-                add_counts(path,counts)
+                from .statistics_detail import record
+                record(core,path,counts)
         except Exception:
             # Metrics must never prevent login, signup, posting, or response delivery.
             app.logger.warning('Optional site statistics write skipped')
         return response
+    from .statistics_suite import register as register_suite
+    register_suite(app,core,path)
     def selected_days():
         value=request.args.get('days','7')
         if value not in ('7','30','90'):
@@ -218,23 +224,30 @@ def register(app,core):
         return int(value)
     @app.get('/manage/statistics')
     def site_statistics():
-        days=selected_days()
         if not available:
             abort(503,description='Site statistics storage is temporarily unavailable.')
-        data=report(path,days)
-        response=make_response(render_template('site_statistics.html',days=days,labels=LABELS,outcome_labels=OUTCOMES,**data))
+        from .statistics_detail import options, build_report
+        try:
+            data=build_report(core,path,options())
+            from .statistics_suite import report as suite_report
+            data['suite']=suite_report(path,data['opts'])
+        except sqlite3.Error:
+            abort(503,description='Statistics storage is busy. Try again shortly.')
+        response=make_response(render_template('site_statistics.html',**data))
         response.headers['Cache-Control']='private, no-store'
         return response
     @app.get('/manage/statistics.csv')
     def site_statistics_csv():
         if not available:
             abort(503,description='Site statistics storage is temporarily unavailable.')
-        data=report(path,selected_days());stream=io.StringIO();writer=csv.writer(stream)
-        writer.writerow(['UTC day','Metric','Category','Destination','Count'])
-        for row in data['rows']:
-            # Only fixed labels and counts, never request input or spreadsheet formulas.
-            writer.writerow([row['day'],row['kind'],LABELS.get(row['label'],OUTCOMES.get(row['label'],'Unknown')),LABELS.get(row['detail'],''),row['value']])
-        response=make_response(stream.getvalue());response.mimetype='text/csv'
+        from .statistics_detail import options, build_report, csv_report
+        try:
+            data=build_report(core,path,options())
+            from .statistics_suite import report as suite_report
+            data['suite']=suite_report(path,data['opts'])
+        except sqlite3.Error:
+            abort(503,description='Statistics storage is busy. Try again shortly.')
+        response=make_response(csv_report(data));response.mimetype='text/csv'
         response.headers['Content-Disposition']='attachment; filename=neonrest-statistics.csv'
         response.headers['Cache-Control']='private, no-store'
         return response

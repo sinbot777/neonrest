@@ -473,13 +473,17 @@ from datetime import datetime
 def signup():
     if request.method == 'POST':
         if request.form.get('consent') not in ('on', '1'):
+            g.statistics_signup_outcome='agreement'
             abort(400, description='Agree to the Terms and acknowledge the Privacy Policy before signing up.')
         actual_name = ' '.join(request.form.get('actual_name', '').split())
         if not actual_name or len(actual_name) > 100 or any(ord(c) < 32 or ord(c) == 127 for c in actual_name):
+            g.statistics_signup_outcome='name'
             abort(400, description='Enter your actual name (up to 100 characters). It is kept private.')
+        g.statistics_signup_outcome='fields'
         email = request.form['email'].strip()
         handle = '@' + request.form['handle'].strip().lstrip('@')
         password = request.form['password']
+        g.statistics_signup_outcome=None
 
         # Ensure email is valid
         try:

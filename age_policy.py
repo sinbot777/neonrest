@@ -191,10 +191,10 @@ def register(app,core, fresh):
                     if path.endswith('/static/'+name) and not member_visible(db,row['id'],uid): abort(404)
         if request.method=='POST' and ep=='signup':
             d=parse_dob(request.form.get('dob'));g.signup_timezone=age_clock.valid_zone(request.form.get('timezone','UTC'))
-            if not g.signup_timezone:abort(400,description='Invalid local timezone.')
+            if not g.signup_timezone:g.statistics_signup_outcome='timezone';abort(400,description='Invalid local timezone.')
             a=age_of(d.isoformat(),age_clock.local_date(g.signup_timezone)) if d else None
-            if a is None or a<10: abort(400,description='Signup requires age 13 or older. New enrollment for children under 13 is not available.')
-            if a<13: abort(403,description='Signup is for ages 13 and older. New enrollment for children under 13 is not available.')
+            if a is None or a<10: g.statistics_signup_outcome='eligibility';abort(400,description='Signup requires age 13 or older. New enrollment for children under 13 is not available.')
+            if a<13: g.statistics_signup_outcome='eligibility';abort(403,description='Signup is for ages 13 and older. New enrollment for children under 13 is not available.')
             g.signup_dob=d.isoformat()
         if request.method=='POST' and uid and ep not in ('age_setup','family_settings') and 'dob' in request.form: abort(400,description='Date of birth cannot be changed.')
         allowed={'static','login','signup','verify_email','community_login_factor','community_reauth','community_security','account_email','account_email_confirm','logout','age_setup','age_clock_setup','community_data','community_export','community_reactivate','password_reset_request','password_reset','family_settings','family_review'}
