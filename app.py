@@ -2657,6 +2657,8 @@ from neonrest import circles
 with app.app_context():
     circles.initialize(get_db())
 import sys
+from neonrest.network_security import register as register_network_security
+register_network_security(app,sys.modules[__name__])
 from neonrest.community_features import register as register_community
 register_community(app, sys.modules[__name__])
 from neonrest.sharing import register as register_sharing
