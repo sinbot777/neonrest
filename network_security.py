@@ -249,7 +249,7 @@ def register(app,core):
             if ip:events=[dict(r) for r in db.execute('SELECT * FROM security_events WHERE ip=? ORDER BY last_seen DESC LIMIT 100 OFFSET ?',(canonical(ip),(page-1)*100))]
             else:events=[dict(r) for r in db.execute('SELECT * FROM security_events ORDER BY last_seen DESC LIMIT 100 OFFSET ?',((page-1)*100,))]
             bans=[dict(r) for r in db.execute('SELECT * FROM ip_bans ORDER BY id DESC LIMIT 100')];history=[dict(r) for r in db.execute('SELECT * FROM network_audit ORDER BY id DESC LIMIT 100')];meta=dict(db.execute('SELECT * FROM metadata'))
-        return render_template('network_security.html',events=events,bans=bans,history=history,meta=meta,page=page,ip_filter=ip,proxy_mode=app.config['CLIENT_IP_MODE'],ip_available=bool(client_ip()),csrf=session.get('theme_csrf_token',''))
+        return render_template('network_security.html',events=events,bans=bans,history=history,meta=meta,page=page,ip_filter=ip,proxy_mode=app.config['CLIENT_IP_MODE'],ip_available=bool(client_ip()),csrf=session.setdefault('theme_csrf_token',secrets.token_urlsafe(32)))
     @app.post('/manage/security/ban')
     @storage_errors
     def network_ban():

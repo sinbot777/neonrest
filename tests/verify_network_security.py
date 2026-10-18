@@ -56,6 +56,12 @@ def visit(route='/guide',client=None,ip='198.51.100.10',headers=None,method='GET
 def ban(ip='198.51.100.10',client=None,**extra):return visit('/manage/security/ban',client=client or clients['Owner'],ip='198.51.100.1',method='POST',data={'ip':ip,'hours':'1','reason':'PRACTICE ONLY: repeated fictional scanning','shared_warning':'yes','theme_csrf_token':token,**extra})
 for who in ['Owner','Admin']:
  r=get(who,'/manage/security');check(r.status_code==200,'Security access '+who);check(b'Security logs and IP restrictions' in r.data and b'Expires after' in r.data,'Instructions and controls '+who);check('no-store' in r.headers['Cache-Control'] and r.headers['Referrer-Policy']=='no-referrer','Private headers '+who)
+with clients['Owner'].session_transaction() as s:s.pop('theme_csrf_token',None)
+r=get('Owner','/manage/security')
+with clients['Owner'].session_transaction() as s:new_csrf=s.get('theme_csrf_token','')
+check(r.status_code==200 and bool(new_csrf) and ('value="'+new_csrf+'"').encode() in r.data,'Fresh reauthorization produces a usable form')
+with clients['Owner'].session_transaction() as s:s['theme_csrf_token']=token
+
 for who in ['Regular','Moderator','Manager','SiteManager','Teen']:
  check(get(who,'/manage/security').status_code==403,'No security access '+who);check(ban(client=clients[who]).status_code==403,'No restriction access '+who)
 check(visit('/manage/security').status_code==403,'Guest security denied')
