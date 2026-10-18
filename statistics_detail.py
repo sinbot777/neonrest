@@ -241,4 +241,8 @@ def csv_report(data):
         row('Public community','Other or no-longer-public destinations',data['unavailable_destinations'])
     for item in data['flows']:
         row('Navigation',item['from'],item['count'],destination=item['to'])
+    if 'suite' in data:
+        from .statistics_suite import csv_rows
+        for section,label,value in csv_rows(data):
+            row(section,label,value if value is not None else 'Unavailable')
     return stream.getvalue()

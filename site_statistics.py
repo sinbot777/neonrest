@@ -215,6 +215,8 @@ def register(app,core):
             # Metrics must never prevent login, signup, posting, or response delivery.
             app.logger.warning('Optional site statistics write skipped')
         return response
+    from .statistics_suite import register as register_suite
+    register_suite(app,core,path)
     def selected_days():
         value=request.args.get('days','7')
         if value not in ('7','30','90'):
@@ -227,6 +229,8 @@ def register(app,core):
         from .statistics_detail import options, build_report
         try:
             data=build_report(core,path,options())
+            from .statistics_suite import report as suite_report
+            data['suite']=suite_report(path,data['opts'])
         except sqlite3.Error:
             abort(503,description='Statistics storage is busy. Try again shortly.')
         response=make_response(render_template('site_statistics.html',**data))
@@ -239,6 +243,8 @@ def register(app,core):
         from .statistics_detail import options, build_report, csv_report
         try:
             data=build_report(core,path,options())
+            from .statistics_suite import report as suite_report
+            data['suite']=suite_report(path,data['opts'])
         except sqlite3.Error:
             abort(503,description='Statistics storage is busy. Try again shortly.')
         response=make_response(csv_report(data));response.mimetype='text/csv'
