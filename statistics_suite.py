@@ -188,3 +188,5 @@ def register(app,core,path):
             if counts:detail.write(path,counts,segment)
         except Exception:app.logger.warning('Optional extended statistics write skipped')
         return response
+    from .statistics_insights import register as register_insights
+    register_insights(app,core,path)
