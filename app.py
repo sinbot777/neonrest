@@ -2333,7 +2333,8 @@ def privacy():
 
 @app.route("/explore")
 def explore():
-    return render_template("explore.html")
+    from neonrest.vibe_directory import directory
+    return directory(get_db())
 
 @app.route("/about-mailersend")
 def about_mailersend():
