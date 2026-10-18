@@ -459,6 +459,10 @@ def test():
 def home():
     return render_template('index.html')
 
+@app.get('/guide')
+def user_guide():
+    return render_template('user_guide.html')
+
 @app.route('/about')
 def about():
     return render_template('about.html')

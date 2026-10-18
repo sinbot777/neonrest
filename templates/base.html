@@ -49,6 +49,8 @@ body > .session-info > a { display:inline-flex; align-items:center; min-height:3
 body > .session-info > a:first-child { min-width:0; overflow-wrap:anywhere; }
 body > .session-info > a:focus-visible { outline:2px solid currentColor; outline-offset:3px; border-radius:4px; }
 #theme-root>.session-info .site-search{display:flex;flex-direction:column;gap:.3rem;margin:.3rem 0;max-width:100%;min-width:0;color:#edf2fa;text-align:left;font:14px/1.4 system-ui,sans-serif}#theme-root>.session-info .site-search-row{display:flex;gap:.35rem;align-items:center;min-width:0}#theme-root>.session-info .site-search input[type=search]{box-sizing:border-box;width:17rem;max-width:100%;min-width:0;flex:1 1 8rem;padding:.5rem .65rem;background:#0d1728;color:#f4f7fd;border:1px solid #8395ac;border-radius:8px;font:inherit}#theme-root>.session-info .site-search input[type=search]::placeholder{color:#c2ccdb}#theme-root>.session-info .site-search button{background:#c1e6ff;color:#102239;border:1px solid #c1e6ff;border-radius:8px;padding:.5rem .65rem;margin:0;width:auto;font:inherit;font-weight:600;cursor:pointer}#theme-root>.session-info .site-search-options{display:flex;flex-wrap:wrap;gap:.25rem .7rem;margin:0;padding:0;border:0;min-width:0;color:#edf2fa}#theme-root>.session-info .site-search-options label{display:inline-flex;align-items:center;gap:.2rem;white-space:nowrap;font:inherit;color:#edf2fa;margin:0}#theme-root>.session-info .site-search input[type=checkbox]{width:1rem;height:1rem;margin:0;padding:0;min-width:0;appearance:auto;accent-color:#c1e6ff}#theme-root>.session-info .site-search :focus-visible{outline:3px solid #ffd67d;outline-offset:3px}.site-search-label{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+
+#theme-root>.site-help-links{box-sizing:border-box;width:fit-content;max-width:calc(100% - 2rem);margin:1rem auto;padding:.5rem .9rem;border:1px solid #43536d;border-radius:10px;background:#101c2f;font:14px/1.5 system-ui,sans-serif}#theme-root>.site-help-links a:link,#theme-root>.site-help-links a:visited{color:#ffd0ad;text-decoration:underline;text-underline-offset:3px}#theme-root>.site-help-links a:focus-visible{outline:3px solid #ffd67d;outline-offset:3px}
 </style>
 </head>
 
@@ -56,13 +58,14 @@ body > .session-info > a:focus-visible { outline:2px solid currentColor; outline
       class="{% block body_class %}{% if theme_slug %}vibe-{{ vibe_slug }} vibe-{{ vibe_slug }}--{{ theme_mode or 'base' }} theme-{{ theme_slug }}{% else %}default-theme{% endif %}{% endblock %}"
       data-mode="{{ theme_mode or 'base' }}">
 
-  {% if request.path != '/' %}
+  {% if session.get('user_email') or request.path != '/' %}
     {% if session.get('user_email') %}
       <div class="session-info">
         <a href="/account" class="account-link">{{ session['user_email'] }}</a>
 <a href="{{ url_for('feed') }}" class="account-link">Feed</a>
 <a href="/circles" class="account-link">Circles</a>
 <a href="{{ url_for('user_by_handle',handle=session.user_handle.lstrip('@')) }}" class="account-link">Your profile</a>
+<a href="{{ url_for('user_guide') }}" class="account-link">User guide</a>
         <a href="{{ url_for('community_notifications') }}" class="account-link notifications-link" aria-label="Notifications{% if community_unread %}, {{ community_unread }} unread{% endif %}" title="Notifications{% if community_unread %} ({{ community_unread }} unread){% endif %}"><svg class="mailbox-icon" viewBox="0 0 28 28" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 20V12a5 5 0 0 1 10 0v8H4Zm5-13h11a5 5 0 0 1 5 5v8H14M8 13h2M17 10V3h6v4h-6M14 20v6M10 26h8" /></svg>{% if community_unread %}<span class="notification-count" aria-hidden="true">{{ community_unread }}</span>{% endif %}</a> <a href="/logout" class="logout-link">Log out</a>
         <form class="site-search" role="search" method="get" action="{{ url_for('site_search') }}"><div class="site-search-row"><label class="site-search-label" for="site-search-query">Search Neonrest</label><input id="site-search-query" type="search" name="q" minlength="2" maxlength="120" required placeholder="Search Neonrest" value="{{ request.args.get('q','') if request.endpoint=='site_search' else '' }}"><button type="submit">Search</button></div><input type="hidden" name="scopes_present" value="1"><fieldset class="site-search-options"><legend class="site-search-label">Search categories</legend>{% for value,label in search_scope_labels.items() %}<label><input type="checkbox" name="scope" value="{{ value }}" {% if value in search_selected_scopes %}checked{% endif %}> {{ label }}</label>{% endfor %}</fieldset></form>
       </div>
@@ -142,7 +145,8 @@ body > .session-info > a:focus-visible { outline:2px solid currentColor; outline
 {% endif %}
 
   <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile.css') }}">
-  <footer id="footer-tagline">✨ Stay human, stay weird ✨</footer>
+  <nav class="site-help-links" aria-label="Help"><a href="{{ url_for('user_guide') }}">User guide</a></nav>
+<footer id="footer-tagline">✨ Stay human, stay weird ✨</footer>
 
   <!-- Tagline Rotator -->
   <script>
