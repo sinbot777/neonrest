@@ -1,6 +1,6 @@
 """Single-use email verification and safe resend flow for Sandbox."""
 import secrets,time
-from flask import request,session,redirect,url_for,render_template,flash,current_app
+from flask import g,request,session,redirect,url_for,render_template,flash,current_app
 from flask_mail import Message
 from neonrest.community_features import digest
 from neonrest.email_delivery import deliver,finish_token_delivery
@@ -51,6 +51,7 @@ def register(app,core):
             flash('If that account needs verification, we will attempt to email a link. Check your inbox and spam folder. If nothing arrives, wait a minute and try again; a previously received link stays usable if the new send fails.','info')
         return render_template('email_verification.html',state='request')
     def verify_email(token):
+        g.statistics_verification_outcome='verification_invalid'
         db=core.get_db();now=int(time.time())
         row=db.execute('SELECT v.*,u.email AS current_email,u.verified FROM email_verifications v JOIN users u ON u.id=v.user_id WHERE token_hash=?',(digest(token),)).fetchone() if len(token)<=128 else None
         if not row or row['used'] or row['expires_at']<=now or row['email']!=row['current_email'] or row['verified']:
@@ -59,6 +60,7 @@ def register(app,core):
             changed=db.execute('UPDATE email_verifications SET used=1 WHERE token_hash=? AND used=0 AND expires_at>?',(digest(token),now))
             if not changed.rowcount:return render_template('email_verification.html',state='invalid'),400
             db.execute('UPDATE users SET verified=1 WHERE id=? AND email=?',(row['user_id'],row['email']))
+        g.statistics_verification_outcome='verified'
         return render_template('email_verification.html',state='success')
     app.view_functions['verify_email']=verify_email
     def verified_session():

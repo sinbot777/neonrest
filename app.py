@@ -485,6 +485,7 @@ def signup():
         try:
             validate_email(email)
         except Exception as e:
+            g.statistics_signup_outcome = 'invalid_email'
             flash(str(e), 'error')
             return redirect(url_for('signup'))
 
@@ -495,6 +496,7 @@ def signup():
         # Check if email or handle already exists
         existing = db.execute('SELECT 1 FROM users WHERE handle IN (?, ?) OR email = ? COLLATE NOCASE', (handle, handle.lstrip('@'), email)).fetchone()
         if existing:
+            g.statistics_signup_outcome = 'unavailable'
             flash("That handle or email is already in use. Try something else!", 'error')
             return redirect(url_for('signup'))
 
@@ -525,11 +527,14 @@ def signup():
                         VALUES (?, ?, 1)
                     ''', (created.lastrowid, first_friend['id']))
         except sqlite3.IntegrityError:
+            g.statistics_signup_outcome = 'unavailable'
             flash('That handle or email is already in use. Try something else!', 'error')
             return redirect(url_for('signup'))
 
+        g.statistics_signup_outcome = 'created_mail_problem'
         from neonrest.email_verification import send_verification
         delivered = send_verification(sys.modules[__name__],db,email)
+        g.statistics_signup_outcome = 'created_mail_problem' if delivered is False else 'created_queued' if delivered == 'queued' else 'created_sent'
         if delivered is False:
             flash("Account created, but the verification email could not be delivered. Try Resend verification email on the sign-in page.", "error")
             return redirect(url_for("login"))
@@ -2676,6 +2681,9 @@ register_site_search(app,sys.modules[__name__])
 identifiers.register(app,sys.modules[__name__])
 from neonrest.vibe_tools import register as register_vibe_tools
 register_vibe_tools(app,sys.modules[__name__])
+from neonrest.site_statistics import register as register_site_statistics
+app.config['SITE_STATISTICS_DATABASE'] = os.environ.get('NEONREST_PRODUCTION_STATISTICS_DATABASE', '/home/sinbot/private/neonrest_production/site-statistics.sqlite')
+register_site_statistics(app,sys.modules[__name__])
 
 @app.errorhandler(404)
 def unavailable_page(error):
