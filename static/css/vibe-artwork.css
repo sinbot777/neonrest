@@ -1,0 +1,2 @@
+/* Approved 2026-10-18 artwork: a consistent backing protects light lettering in either theme. */
+.vibe-masthead img.vibe-logo[src*="-logo-20261018.webp"]{background:#101c2f;border:1px solid #465773;border-radius:12px;object-fit:contain;max-width:100%;max-height:none!important;box-sizing:border-box}
