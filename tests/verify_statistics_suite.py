@@ -190,7 +190,7 @@ check(count('request','Unmatched route')>=1,'Errors use safe unmatched group')
 check(not any('NEVER-SAVE' in str(x) or 'HIDDEN' in str(x) for x in raw()),'Raw error and referrer values absent')
 with app.test_request_context('/manage/statistics',query_string={'traffic':'all'},environ_overrides=env):sr=suite.report(path,detail.options())
 check(sr['client_errors']>=1 and sr['responses']>=sr['client_errors'] and sr['bot_total']==2,'HTTP and crawler report denominators')
-r=get('Owner','/manage/statistics',traffic='all');check(r.status_code==200 and b'Opt-in browsers' in r.data and b'Identities are unverified' in r.data,'Expanded dashboard renders');r=get('Owner','/manage/statistics.csv',traffic='all');check(r.status_code==200 and b'bot_total' in r.data and b'reddit.com' in r.data,'Extended CSV renders')
+r=get('Owner','/manage/statistics',traffic='all');check(r.status_code==200 and b'Opt-in browsers' in r.data and b'Identities are unverified' in r.data,'Expanded dashboard renders');r=get('Owner','/manage/statistics.csv',traffic='all');check(r.status_code==200 and b'bot_total' in r.data and any(row.get('Label')=='reddit.com' for row in __import__('csv').DictReader(io.StringIO(r.data.decode()))),'Extended CSV renders')
 r=visit('/privacy');check(b'random first-party' in r.data and r.data.count(b'id="analytics"')==1,'Privacy choice renders once')
 
 # Deterministic bounce and conversion math, with no live account actions.

@@ -104,7 +104,13 @@ def csv_rows(data):
     return rows
 
 def register(app,core,path):
-    initialize(path);detail.KINDS.update({'request','feature','referrer','measurement'})
+    try:
+        initialize(path)
+    except (OSError,sqlite3.Error):
+        app.config['SITE_STATISTICS_ENABLED']=False
+        app.logger.warning('Optional extended statistics storage unavailable')
+    detail.KINDS.update({'request','feature','referrer','measurement'})
+    basic.BOT=re.compile(basic.BOT.pattern+'|chatgpt-user',re.I)
     serializer=URLSafeTimedSerializer(app.secret_key,salt='neonrest-optional-analytics-v1')
     prefix='nr_sandbox_analytics_' if app.name.endswith('sandbox.app') else 'nr_analytics_'
     # app package name varies; the configured mount is authoritative at request time.
@@ -119,7 +125,7 @@ def register(app,core,path):
     def digest(value):return hmac.new(str(app.secret_key).encode(),('analytics:'+value).encode(),hashlib.sha256).hexdigest()
     @app.context_processor
     def analytics_context():
-        show=bool(basic.category(request.path)) and not bot_name()
+        show=bool(app.config.get('SITE_STATISTICS_ENABLED')) and bool(basic.category(request.path)) and not bot_name()
         if show and 'theme_csrf_token' not in session:session['theme_csrf_token']=secrets.token_urlsafe(32)
         return {'analytics_banner':show and choice() not in ('yes','no') and not signal(),'analytics_choice':choice(),'analytics_signal':signal()}
     @app.post('/analytics/preference')
