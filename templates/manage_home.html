@@ -14,7 +14,7 @@
 {% endif %}
 
       <article><h3>Case files</h3><p>Preserved evidence, related reports, actions, appeals, and staff notes.</p><a href="{{ url_for('community_cases') }}">Open cases</a></article>
-      {% if 'manage_roles' in permissions %}<article><h3>Site statistics</h3><p>Aggregate page activity, navigation and signup results.</p><a href="{{ url_for('site_statistics') }}">View statistics</a></article><article><h3>Operations</h3><p>Backups, errors, email failures, abuse signals, and deletion requests.</p><a href="{{ url_for('community_operations') }}">Site operations</a></article>{% endif %}
+      {% if 'manage_roles' in permissions %}<article><h3>Network security</h3><p>Review private security logs and temporary IP restrictions.</p><a href="{{ url_for('manage_network_security') }}">Security logs and IP restrictions</a></article><article><h3>Site statistics</h3><p>Aggregate page activity, navigation and signup results.</p><a href="{{ url_for('site_statistics') }}">View statistics</a></article><article><h3>Operations</h3><p>Backups, errors, email failures, abuse signals, and deletion requests.</p><a href="{{ url_for('community_operations') }}">Site operations</a></article>{% endif %}
       <article><h3>People</h3><p>{{ user_count }} accounts. Find a user, review restrictions, or set a ban.</p><a href="{{ url_for('manage_users') }}">Manage users →</a></article>
       <article><h3>Posts</h3><p>{{ post_count }} visible posts. Review recent posts and hide or restore them.</p><a href="{{ url_for('manage_posts') }}">Moderate posts →</a></article>
       <article><h3>Comments</h3><p>Find comments and hide or restore them.</p><a href="{{ url_for('manage_comments') }}">Moderate comments →</a></article>

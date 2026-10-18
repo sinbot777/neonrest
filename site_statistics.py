@@ -231,6 +231,12 @@ def register(app,core):
             data=build_report(core,path,options())
             from .statistics_suite import report as suite_report
             data['suite']=suite_report(path,data['opts'])
+            extension=app.extensions.get('network_security',{})
+            data['network_errors']={'rows':[],'started':'Unavailable','skips':0}
+            if extension.get('available'):
+                from .network_security import errors_report
+                try:data['network_errors']=errors_report(extension['path'],data['opts'])
+                except sqlite3.Error:pass
         except sqlite3.Error:
             abort(503,description='Statistics storage is busy. Try again shortly.')
         response=make_response(render_template('site_statistics.html',**data))
@@ -245,6 +251,12 @@ def register(app,core):
             data=build_report(core,path,options())
             from .statistics_suite import report as suite_report
             data['suite']=suite_report(path,data['opts'])
+            extension=app.extensions.get('network_security',{})
+            data['network_errors']={'rows':[],'started':'Unavailable','skips':0}
+            if extension.get('available'):
+                from .network_security import errors_report
+                try:data['network_errors']=errors_report(extension['path'],data['opts'])
+                except sqlite3.Error:pass
         except sqlite3.Error:
             abort(503,description='Statistics storage is busy. Try again shortly.')
         response=make_response(csv_report(data));response.mimetype='text/csv'

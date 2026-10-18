@@ -245,4 +245,6 @@ def csv_report(data):
         from .statistics_suite import csv_rows
         for section,label,value in csv_rows(data):
             row(section,label,value if value is not None else 'Unavailable')
+    for item in data.get('network_errors',{}).get('rows',[]):
+        row('Redacted error requests',item['method']+' '+str(item['status'])+' '+item['path']+' | '+item['classification'],item['count'],destination=item['referrer'])
     return stream.getvalue()
