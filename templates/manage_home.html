@@ -27,7 +27,7 @@
     </div>
   </section>
   {% endif %}
-  <section aria-labelledby="managed-vibes"><h2 id="managed-vibes">Vibes</h2>
+  <section aria-labelledby="managed-vibes"><h2 id="managed-vibes">Vibes</h2><p><a class="button" href="{{ url_for('vibe_tools_home') }}">Open Vibe management</a> — search active and archived Vibes, review posts, and see the tools available to your role.</p>
     {% if editable %}
       <div class="manage-grid">
       {% for vibe in editable %}

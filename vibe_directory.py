@@ -50,6 +50,7 @@ def directory(db):
           AND NOT EXISTS (SELECT 1 FROM moderated_posts mp WHERE mp.post_id = p.id)
           AND community_post_visible(p.id) = 1
         WHERE NOT EXISTS (SELECT 1 FROM pending_vibes pending WHERE pending.vibe_id = v.id)
+          AND NOT EXISTS (SELECT 1 FROM vibe_management vm WHERE vm.vibe_id = v.id AND vm.archived=1)
         GROUP BY v.id
     ''').fetchall()
     entries = []

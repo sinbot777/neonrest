@@ -16,6 +16,8 @@ def minimum_users():
 
 
 def init_vibe_tables(db):
+    from neonrest.vibe_tools import initialize
+    initialize(db)
     columns = {row[1] for row in db.execute('PRAGMA table_info(vibes)')}
     if 'welcome_message' not in columns:
         db.execute('ALTER TABLE vibes ADD COLUMN welcome_message TEXT')
@@ -91,7 +93,7 @@ def canonical_vibe(db, name):
                                          ' ' not in row['name'], row['id'])) if matches else None
 
 
-def add_post_vibes(db, post_id, names, threshold=None):
+def add_post_vibes(db, post_id, names, threshold=None, allow_archived=()):
     """Attach names to a post and promote pending Vibes at the threshold."""
     threshold = minimum_users() if threshold is None else threshold
     for raw_name in names:
@@ -110,6 +112,8 @@ def add_post_vibes(db, post_id, names, threshold=None):
                 db.execute('INSERT INTO pending_vibes (vibe_id) VALUES (?)', (vibe_id,))
         else:
             vibe_id = vibe['id']
+        from neonrest.vibe_tools import validate_tag
+        validate_tag(db,vibe_id,post_id,allow_archived)
         db.execute(
             'INSERT OR IGNORE INTO post_vibes (post_id, vibe_id) VALUES (?, ?)',
             (post_id, vibe_id)
