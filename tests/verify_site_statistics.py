@@ -45,87 +45,113 @@ def post_fixture(text,audience='public',vibes=None):
   for cid in vibes or [vid]:db.execute('INSERT INTO post_vibes VALUES (?,?)',(pid,cid))
   db.commit();return pid,core.identifiers.public(db,'post',pid)
 
-stats=importlib.import_module(package+'.site_statistics');verification=importlib.import_module(package+'.email_verification');from flask import g
-path=app.extensions['site_statistics']['path']
-check(str(path).startswith(str(w)),'Statistics store must be in disposable directory')
-ua={'User-Agent':'Mozilla/5.0 NeonrestAcceptance'}
-def raw():
- with sqlite3.connect(path) as db:return db.execute('SELECT day,kind,label,detail,value FROM counters ORDER BY day,kind,label,detail').fetchall()
-def reset():
- with sqlite3.connect(path) as db:db.execute('DELETE FROM counters')
-def count(kind,label=None):return sum(r[4] for r in raw() if r[1]==kind and (label is None or r[2]==label))
-def visit(route='/',client=None,headers=None,**kw):return (client or app.test_client()).get(route,headers={**ua,**(headers or {})},environ_overrides=env,**kw)
-for name in ['Owner','Admin']:
- r=get(name,'/manage/statistics');check(r.status_code==200,'Authorized dashboard '+name+' '+str(r.status_code));check(b'site-statistics.css' in r.data,'Stylesheet wired');check('no-store' in r.headers.get('Cache-Control',''),'No shared caching')
- check(get(name,'/manage/statistics.csv').status_code==200,'CSV same permission '+name)
-for name in ['Moderator','SiteManager','Manager','OtherManager','Regular','Teen']:
- check(get(name,'/manage/statistics').status_code==403,'No analytics role escalation '+name);check(get(name,'/manage/statistics.csv').status_code==403,'No CSV role escalation '+name)
-check(get('NoFactor','/manage/statistics').status_code in (302,403),'No factor cannot see statistics')
-check(visit('/manage/statistics').status_code==403,'Guest dashboard forbidden');check(visit('/manage/statistics.csv').status_code==403,'Guest CSV forbidden')
-check(get('Owner','/manage/statistics',days='999').status_code==400,'Invalid range rejected')
-for days in ['7','30','90']:check(get('Owner','/manage/statistics',days=days).status_code==200,'Allowed range '+days)
-with clients['Owner'].session_transaction() as s:s['fresh_at']=0
-r=get('Owner','/manage/statistics');check(r.status_code==302 and 'reauth' in r.location,'Stale auth requires reauthentication')
-with clients['Owner'].session_transaction() as s:s['fresh_at']=now
-change('UPDATE account_safety SET totp_secret=NULL WHERE user_id=?',(users['Admin'],));r=get('Admin','/manage/statistics');check(r.status_code==302 and '/account/security' in r.location,'2FA setup enforced');change('UPDATE account_safety SET totp_secret=? WHERE user_id=?',('JBSWY3DPEHPK3PXP',users['Admin']))
-reset();r=visit('/');check(r.status_code==200 and count('page','home')==1,'Guest page counted');check('site-statistics' not in r.headers.get('Set-Cookie',''),'No analytics cookie')
-visit('/',headers={'DNT':'1'});visit('/',headers={'Sec-GPC':'1'});visit('/',headers={'User-Agent':'Googlebot'});visit('/',client=clients['Owner']);visit('/',client=clients['Moderator']);check(count('page','home')==1,'Privacy signals, bots and staff excluded')
-visit('/guide?search=PRIVATE-SEARCH-SENTINEL',headers={'Referer':'https://localhost'+mount+'/?private=SECRET-QUERY'});check(count('flow','home')==1,'Only aggregate referrer category saved')
-visit('/guide',headers={'Referer':'https://evil.example/'+mount+'/feed'});check(count('flow')==1,'Cross-site referrer ignored')
-visit('/guide',headers={'Referer':'https://localhost'+('/' if mount else '/sandbox/')+'feed'});check(count('flow')==1,'Other environment referrer ignored')
-for route in ['/manage/statistics','/account/security','/this-path-does-not-exist','/static/css/site-statistics.css']:
- before=count('page');visit(route);check(count('page')==before,'Sensitive, unavailable and asset routes excluded '+route)
-check(all('SECRET' not in str(row) and 'PRIVATE' not in str(row) for row in raw()),'No raw query/referrer recorded')
-for route,cat in [('/@ExamplePrivateHandle','profile'),('/posts/private-id','post'),('/circles/opaque-circle','circle'),('/vibe/Private%20Name','vibe')]:check(stats.category(route)==cat,'Identifier collapsed '+cat)
-for route in ['/manage/users','/account','/verify_email/secret','/circles/abc/reports','/posts/abc/history','/edit_post/abc']:check(stats.category(route) is None,'Sensitive route omitted '+route)
-reset();core.validate_email=lambda email: None
-verification.send_verification=lambda *a:'queued'
-form={'consent':'on','actual_name':'Fictional Statistics Person','email':'stats-one@example.invalid','handle':'StatsFixtureOne','password':'Fictional-Only-Password-4682','dob':'1990-01-01','timezone':'UTC','theme_csrf_token':token}
-def signup(data,network):
- c=app.test_client()
- with c.session_transaction() as s:s['theme_csrf_token']=token
- return c.post('/signup',data=data,headers=ua,environ_overrides={**env,'REMOTE_ADDR':network})
-r=signup(form,'192.0.2.10');check(r.status_code==302 and count('signup','created_queued')==1,'Actual signup queued '+str(r.status_code)+' '+r.data[:160].decode())
-r=signup(form,'192.0.2.11');check(r.status_code==302 and count('signup','unavailable')==1,'Duplicate signup category')
-r=signup({**form,'email':'stats-two@example.invalid','handle':'StatsFixtureTwo','consent':''},'192.0.2.12');check(r.status_code==400 and count('signup','rejected')==1,'Rejected form category')
-r=signup({**form,'email':'stats-three@example.invalid','handle':'StatsFixtureThree','dob':'2018-01-01'},'192.0.2.13');check(r.status_code in (400,403) and count('signup','rejected')==2,'Age rejection counted without DOB')
-verification.send_verification=lambda *a:False
-r=signup({**form,'email':'stats-four@example.invalid','handle':'StatsFixtureFour'},'192.0.2.14');check(r.status_code==302 and count('signup','created_mail_problem')==1,'Created account with delivery problem category')
-verification.send_verification=lambda *a:True
-r=signup({**form,'email':'stats-five@example.invalid','handle':'StatsFixtureFive'},'192.0.2.15');check(r.status_code==302 and count('signup','created_sent')==1,'Created sent category')
-def invalid(email):raise ValueError('Fictional invalid format')
-core.validate_email=invalid
-r=signup({**form,'email':'stats-six@example.invalid','handle':'StatsFixtureSix'},'192.0.2.16');check(r.status_code==302 and count('signup','invalid_email')==1,'Invalid email category')
-with app.app_context():raw_token=verification.issue_token(core.get_db(),'stats-one@example.invalid')
-r=visit('/verify_email/'+raw_token);check(r.status_code==200 and count('signup','verified')==1,'Actual single-use verification counted')
-r=visit('/verify_email/'+raw_token);check(r.status_code==400 and count('signup','verified')==1 and count('signup','verification_invalid')==1,'Verification reuse not counted as success')
-check(not any(any(x in str(row) for x in ['stats-one','StatsFixture','192.0.2','1990-01-01',raw_token]) for row in raw()),'No identity, address, DOB or token in counters')
-data=stats.report(path,7);check(data['totals']['created']==3 and data['totals']['attempts']==7 and data['totals']['verified']==1,'Aggregate totals match actual events '+str(dict(data['totals'])))
-r=get('Owner','/manage/statistics.csv');check(b'stats-one' not in r.data and b'Account created' in r.data and 'attachment' in r.headers.get('Content-Disposition',''),'Safe aggregate CSV')
+
 from datetime import datetime,timedelta,timezone
-old=(datetime.now(timezone.utc).date()-timedelta(days=90)).isoformat();keep=(datetime.now(timezone.utc).date()-timedelta(days=89)).isoformat()
-with sqlite3.connect(path) as db:db.execute('INSERT INTO counters VALUES (?,?,?,?,?)',(old,'page','home','',5));db.execute('INSERT INTO counters VALUES (?,?,?,?,?)',(keep,'page','home','',6))
-visit('/');check(not any(r[0]==old for r in raw()) and any(r[0]==keep for r in raw()),'Exact 90 UTC-day retention boundary')
-# Verify separate connection cannot commit the main account transaction.
-with app.test_request_context('/'):
- db=core.get_db();db.execute("UPDATE users SET bio='UNCOMMITTED-STATS-SENTINEL' WHERE id=?",(users['Regular'],));stats.add_counts(path,[('page','home','')]);db.rollback()
-check(query('SELECT bio FROM users WHERE id=?',(users['Regular'],))[0][0]!='UNCOMMITTED-STATS-SENTINEL','Metrics never commit application data')
-# A locked metrics database must not break ordinary pages.
-lock=sqlite3.connect(path);lock.execute('BEGIN EXCLUSIVE');r=visit('/guide');check(r.status_code==200,'Busy statistics store fails open');lock.rollback();lock.close()
-before=raw();app.config['SITE_STATISTICS_ENABLED']=False;visit('/');check(raw()==before,'Collection can be disabled');app.config['SITE_STATISTICS_ENABLED']=True
-check(visit('/privacy').status_code==200 and b'Aggregate site statistics' in visit('/privacy').data,'Privacy notice updated');check(visit('/dev').status_code==200 and b'Aggregate site statistics' in visit('/dev').data,'Dev log updated')
+stats=importlib.import_module(package+'.site_statistics');detail=importlib.import_module(package+'.statistics_detail');verification=importlib.import_module(package+'.email_verification');circlemod=importlib.import_module(package+'.circles');circleids=importlib.import_module(package+'.circle_ids');circlenames=importlib.import_module(package+'.circle_names')
+path=app.extensions['site_statistics']['path'];check(str(path).startswith(str(w)),'Isolated sidecar')
+today=datetime.now(timezone.utc).date();day=today.isoformat();headers={'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/130.0 Safari/537.36'}
+def raw():
+ with sqlite3.connect(path) as db:return db.execute('SELECT bucket,segment,kind,label,detail,value FROM hourly_counters ORDER BY bucket,segment,kind,label,detail').fetchall()
+def reset():
+ with sqlite3.connect(path) as db:db.execute('DELETE FROM hourly_counters');db.execute('DELETE FROM counters');db.execute("UPDATE metadata SET value='0' WHERE key='detail_capacity_skips'")
+def count(kind,label=None,segment=None):return sum(r[5] for r in raw() if r[2]==kind and (label is None or r[3]==label) and (segment is None or r[1]==segment))
+def visit(route='/',client=None,extra=None):return (client or app.test_client()).get(route,headers={**headers,**(extra or {})},environ_overrides=env)
+def report(traffic='ordinary',days='7',**values):
+ with app.test_request_context('/manage/statistics',query_string={'traffic':traffic,'days':days,**values},environ_overrides=env):return detail.build_report(core,path,detail.options())
+with sqlite3.connect(path) as db:db.execute('INSERT INTO counters VALUES (?,?,?,?,?)',(day,'page','home','',5))
+stats.initialize(path);stats.initialize(path);check(report()['totals']['views']==5,'Repeated migration preserves legacy counters')
+for who in ['Owner','Admin']:
+ r=get(who,'/manage/statistics');check(r.status_code==200,'Dashboard '+who);check(b'Hourly totals' in r.data and b'Public communities' in r.data and b'Traffic' in r.data,'Expanded sections '+who)
+ check(get(who,'/manage/statistics.csv').status_code==200,'CSV '+who);check('no-store' in r.headers.get('Cache-Control',''),'Cache protection '+who)
+for who in ['Moderator','SiteManager','Manager','OtherManager','Regular','Teen']:
+ check(get(who,'/manage/statistics').status_code==403,'Unauthorized dashboard '+who);check(get(who,'/manage/statistics.csv').status_code==403,'Unauthorized export '+who)
+check(visit('/manage/statistics').status_code==403,'Guest dashboard blocked');check(visit('/manage/statistics.csv').status_code==403,'Guest CSV blocked')
+with clients['Owner'].session_transaction() as s:s['fresh_at']=0
+r=get('Owner','/manage/statistics');check(r.status_code==302 and 'reauth' in r.location,'Fresh authentication required')
+with clients['Owner'].session_transaction() as s:s['fresh_at']=now
+change('UPDATE account_safety SET totp_secret=NULL WHERE user_id=?',(users['Admin'],));r=get('Admin','/manage/statistics');check(r.status_code==302 and '/account/security' in r.location,'2FA required');change('UPDATE account_safety SET totp_secret=? WHERE user_id=?',('JBSWY3DPEHPK3PXP',users['Admin']))
+for opts in [{'days':'999'},{'traffic':'injection'},{'days':'custom','start':'bad','end':day},{'days':'custom','start':day,'end':(today-timedelta(days=1)).isoformat()},{'days':'custom','start':(today-timedelta(days=91)).isoformat(),'end':day},{'days':'custom','start':day,'end':(today+timedelta(days=1)).isoformat()}]:
+ check(get('Owner','/manage/statistics',**opts).status_code==400,'Invalid options rejected '+str(opts))
+for period in ['1','7','30','90']:
+ check(get('Owner','/manage/statistics',days=period).status_code==200,'Supported date preset '+period)
+for group in ['ordinary','all','staff','guest','member']:
+ check(get('Owner','/manage/statistics',traffic=group).status_code==200,'Traffic filter '+group)
+reset();visit('/');visit('/guide',client=clients['Regular']);visit('/guide',client=clients['Owner']);visit('/guide',client=clients['Moderator'])
+check(count('page',segment='guest')==1 and count('page',segment='member')==1 and count('page',segment='staff')==2,'Guest member staff separate')
+check(report()['totals']['views']==2 and report('all')['totals']['views']==4 and report('staff')['totals']['views']==2,'Traffic totals filter correctly')
+with sqlite3.connect(path) as db:db.execute('INSERT INTO counters VALUES (?,?,?,?,?)',(day,'page','home','',5))
+check(report()['totals']['views']==7 and report('all')['totals']['views']==9 and report('guest')['totals']['views']==1 and report('member')['totals']['views']==1,'Legacy totals never assigned to guest/member/staff')
+check(sum(x['count'] for x in report()['hours'])==2,'Hourly chart excludes legacy daily counts')
+before=raw();visit('/',extra={'DNT':'1'});visit('/',extra={'Sec-GPC':'1'});visit('/',extra={'User-Agent':'Googlebot'});visit('/',client=clients['Owner'],extra={'DNT':'1'});check(raw()==before,'Privacy signals and bots excluded including staff')
+for route in ['/account/security','/manage/statistics','/nonexistent-stats-private','/static/css/site-statistics.css']:
+ before=count('page');visit(route);check(count('page')==before,'Sensitive/assets/unavailable excluded '+route)
+reset();visit('/guide?secret=QUERY-SECRET',extra={'Referer':'https://www.google.com/search?q=PRIVATE-TERM','User-Agent':'Mozilla/5.0 (iPhone) Version/17.0 Mobile Safari/604.1'})
+check(count('source','google')==1 and count('device','mobile')==1 and count('browser','safari')==1,'Search mobile Safari categories')
+visit('/guide',extra={'Referer':'https://www.facebook.com/path?token=REFERRER-SECRET'});visit('/guide',extra={'Referer':'https://evilfacebook.com/'});visit('/guide',extra={'Referer':'https://localhost'+mount+'/feed?private=FLOW-SECRET'});visit('/guide',extra={'Referer':'http://['})
+check(count('source','facebook')==1 and count('source','external')==1 and count('source','internal')==1 and count('source','direct')==1,'Referral categories bounded and deceptive host rejected')
+check(count('flow','feed')==1,'Same-environment category pair');visit('/guide',extra={'Referer':'https://localhost'+('/feed' if mount else '/sandbox/feed')});check(count('flow','feed')==1,'No cross-environment navigation pair')
+for ua,expected in [('Mozilla/5.0 (iPad) Version/17 Safari/604','tablet'),('Mozilla/5.0 (Android 14) Chrome/130 Safari/537','tablet'),('Mozilla/5.0 (Android 14; Mobile) Chrome/130 Safari/537','mobile')]:
+ with app.test_request_context('/',headers={'User-Agent':ua}):check(detail.device_browser()[0]==expected,'Coarse device '+expected)
+check(not any(any(x in str(r) for x in ['PRIVATE-TERM','QUERY-SECRET','REFERRER-SECRET','FLOW-SECRET','facebook.com','Windows NT']) for r in raw()),'No raw query referrer or UA strings')
+reset()
 with app.app_context():
- # Only fixture tables from the copied DB were used; erasure stays off.
- check(not app.config.get('PERMANENT_ERASURE_ENABLED',False),'Permanent erasure remains disabled')
-# Render a fictional-only preview for visual QA; never expose account data.
-reset();stats.add_counts(path,[('page','home','')]*18+[('page','guide','')]*7+[('page','circles','')]*5+[('flow','home','guide')]*4+[('signup','created_queued','')]*3+[('signup','rejected','')]+[('signup','verified','')]*2)
-r=get('Owner','/manage/statistics');check(r.status_code==200,'Final fictional preview renders')
-html=r.data.decode().replace(mount+'/static/','/static/');(stage.parent.parent/'preview.html').write_text(html)
-from flask import Flask
-fake=Flask('statistics-startup-fixture');original_initialize=stats.initialize
-def unavailable_store(path):raise OSError('Fictional unavailable store')
-stats.initialize=unavailable_store
+ db=core.get_db();public=db.execute("INSERT INTO circles(name,owner_id,mode,public_read) VALUES ('Stats Public Fixture',?,'discoverable',1)",(users['Writer'],)).lastrowid;hidden=db.execute("INSERT INTO circles(name,owner_id,mode,public_read) VALUES ('PRIVATE-CIRCLE-SENTINEL',?,'hidden',0)",(users['Writer'],)).lastrowid
+ for cid,name in [(public,'Stats Public Fixture'),(hidden,'PRIVATE-CIRCLE-SENTINEL')]:
+  circleids.ensure(db,cid);circlenames.assign(db,cid,name);db.execute("INSERT INTO circle_members VALUES (?,?,'owner','active',CURRENT_TIMESTAMP)",(cid,users['Writer']))
+ public_id=circleids.public(db,public);hidden_id=circleids.public(db,hidden);db.commit()
+r=visit('/circles/'+public_id);check(r.status_code==200 and count('destination','c:'+str(public))==1,'Public Circle counted '+str(r.status_code))
+r=visit('/circles/'+hidden_id,client=clients['Writer']);check(r.status_code==200 and count('destination','c:'+str(hidden))==0,'Hidden Circle not identified')
+r=visit('/vibe/VM%20Fixture%20One');check(r.status_code==200 and count('destination','v:'+str(vid))==1,'Approved Vibe counted')
+data=report();check(any('Stats Public Fixture' in x['label'] for x in data['destinations']) and 'PRIVATE-CIRCLE-SENTINEL' not in str(data['destinations']),'Only public labels resolved')
+change('UPDATE circles SET mode=\'hidden\',public_read=0 WHERE id=?',(public,));change('INSERT INTO vibe_management(vibe_id,archived) VALUES (?,1)',(vid,))
+data=report();csvdata=detail.csv_report(data);check(not data['destinations'] and data['unavailable_destinations']==2,'Privacy changes redact previous public labels');check('Stats Public Fixture' not in csvdata and 'VM Fixture One' not in csvdata and 'c:'+str(public) not in csvdata,'Export redacts now-private identifiers')
+change('UPDATE circles SET mode=\'discoverable\',public_read=1 WHERE id=?',(public,));change("UPDATE circles SET name='=FORMULA-SENTINEL' WHERE id=?",(public,));data=report();check('Circle: =FORMULA-SENTINEL' in detail.csv_report(data),'CSV uses safe prefixed public label')
+# Calendar boundaries and previous-period comparison, with UTC-hour bucketing.
+reset();noon=datetime.combine(today,datetime.min.time(),timezone.utc)+timedelta(hours=12)
+detail.write(path,[('page','guide','')]*3,'guest',noon);detail.write(path,[('page','home','')]*2,'guest',noon-timedelta(days=1));detail.write(path,[('signup','created_queued','')],'guest',noon)
+data=report(days='custom',start=day,end=day);check(data['totals']['views']==3 and data['previous']['views']==2,'Custom date and equal previous period');check(data['hours'][12]['count']==3,'UTC hour exact');check(data['comparison'][0]['change']==50.0,'Comparison arithmetic');check(data['attempt_ratio']==100.0,'Attempt ratio counts registrations separately')
+old=(today-timedelta(days=90)).isoformat();keep=(today-timedelta(days=89)).isoformat()
+with sqlite3.connect(path) as db:
+ db.execute('INSERT INTO counters VALUES (?,?,?,?,?)',(old,'page','home','',2));db.execute('INSERT INTO counters VALUES (?,?,?,?,?)',(keep,'page','home','',2));db.execute('INSERT INTO hourly_counters VALUES (?,?,?,?,?,?)',(old+'T12','guest','page','home','',2));db.execute('INSERT INTO hourly_counters VALUES (?,?,?,?,?,?)',(keep+'T12','guest','page','home','',2))
+detail.write(path,[('page','home','')],'guest');check(not any(r[0].startswith(old) for r in raw()) and any(r[0].startswith(keep) for r in raw()),'New counter retention boundary');check(report(days='90')['legacy_views']==2,'Legacy retention boundary')
+original_capacity=detail.MAX_ROWS;detail.MAX_ROWS=len(raw())+1;detail.write(path,[('page','home',''),('browser','other',''),('device','unknown',''),('source','external','')],'guest');check(len(raw())<=detail.MAX_ROWS and report()['storage']['skips']>=1,'Global row budget enforced');detail.MAX_ROWS=original_capacity
+reset();core.validate_email=lambda e:None;verification.send_verification=lambda *args:'queued'
+form={'consent':'on','actual_name':'Fictional Stats Person','email':'detail-one@example.invalid','handle':'DetailFixtureOne','password':'Fictional-Only-Password-4682','dob':'1990-01-01','timezone':'UTC','theme_csrf_token':token}
+network=0
+def signup(data,extra=None):
+ global network
+ network+=1;c=app.test_client()
+ with c.session_transaction() as s:s['theme_csrf_token']=token
+ return c.post('/signup',data=data,headers={**headers,**(extra or {})},environ_overrides={**env,'REMOTE_ADDR':'192.0.2.'+str(network)})
+for patch,outcome in [({'consent':''},'agreement'),({'actual_name':''},'name'),({'password':'short'},'password'),({'dob':'2018-01-01'},'eligibility'),({'timezone':'Invalid/Zone'},'timezone')]:
+ r=signup({**form,**patch});check(r.status_code in (400,403) and count('signup',outcome)==1,'Specific rejection '+outcome+' '+str(r.status_code))
+r=signup({k:v for k,v in form.items() if k!='email'});check(r.status_code==400 and count('signup','fields')==1,'Required fields diagnostic')
+r=signup(form,{'Origin':'https://other.example'});check(r.status_code==403 and count('signup','security')==1,'Security rejection diagnostic')
+r=signup(form);check(r.status_code==302 and count('signup','created_queued')==1,'Actual signup queued');r=signup(form);check(r.status_code==302 and count('signup','unavailable')==1,'Availability diagnostic')
+verification.send_verification=lambda *args:False;r=signup({**form,'email':'detail-two@example.invalid','handle':'DetailFixtureTwo'});check(r.status_code==302 and count('signup','created_mail_problem')==1,'Created account delivery problem')
+verification.send_verification=lambda *args:True;r=signup({**form,'email':'detail-three@example.invalid','handle':'DetailFixtureThree'});check(r.status_code==302 and count('signup','created_sent')==1,'Created account mail accepted')
+def invalid_email(e):raise ValueError('Fictional bad format')
+core.validate_email=invalid_email;r=signup({**form,'email':'detail-four@example.invalid','handle':'DetailFixtureFour'});check(r.status_code==302 and count('signup','invalid_email')==1,'Invalid email format')
+with app.app_context():raw_token=verification.issue_token(core.get_db(),'detail-one@example.invalid')
+r=visit('/verify_email/'+raw_token);check(r.status_code==200 and count('signup','verified')==1,'Verification success');r=visit('/verify_email/'+raw_token);check(r.status_code==400 and count('signup','verified')==1 and count('signup','verification_invalid')==1,'Verification reuse not success')
+original_view=app.view_functions['signup']
+from flask import abort
+app.view_functions['signup']=lambda:abort(500)
 try:
- stats.register(fake,core);check(fake.config['SITE_STATISTICS_ENABLED'] is False,'Unavailable metrics storage does not prevent app startup')
-finally:stats.initialize=original_initialize
-print(json.dumps({'package':package,'checks':checks,'rows':len(raw()),'instance_is_temporary':str(path).startswith(str(w))}))
+ r=signup(form);check(r.status_code==500 and count('signup','error')==1,'Server error diagnostic without error contents')
+finally:app.view_functions['signup']=original_view
+c=app.test_client()
+with c.session_transaction() as s:s['theme_csrf_token']=token
+for i in range(5):r=c.post('/signup',data=form,headers=headers,environ_overrides={**env,'REMOTE_ADDR':'198.51.100.100'})
+check(r.status_code==429 and count('signup','limited')==1,'Actual signup rate limit diagnostic')
+check(not any(any(x in str(r) for x in ['detail-one','DetailFixture','192.0.2','1990-01-01',raw_token]) for r in raw()),'No signup identities secrets DOB or network retained')
+with app.test_request_context('/'):
+ db=core.get_db();db.execute("UPDATE users SET bio='UNCOMMITTED-DETAIL-SENTINEL' WHERE id=?",(users['Regular'],));detail.write(path,[('page','home','')],'guest');db.rollback()
+check(query('SELECT bio FROM users WHERE id=?',(users['Regular'],))[0][0]!='UNCOMMITTED-DETAIL-SENTINEL','Metrics do not commit account transactions')
+lock=sqlite3.connect(path);lock.execute('BEGIN EXCLUSIVE');r=visit('/guide');check(r.status_code==200,'Storage contention fails open');lock.rollback();lock.close()
+before=raw();app.config['SITE_STATISTICS_ENABLED']=False;visit('/');check(raw()==before,'Collection disable switch');app.config['SITE_STATISTICS_ENABLED']=True
+r=get('Owner','/manage/statistics',traffic='all');check(r.status_code==200 and ('href="'+mount+'/manage/statistics.csv') .encode() in r.data,'Export preserves environment');check(b'Period' in r.data and b'UTC' in r.data,'Filter and timezone instructions');r=get('Owner','/manage/statistics.csv',traffic='all');check(r.status_code==200 and b'UTC period / day / hour' in r.data,'Filtered CSV renders')
+check(b'Expanded statistics' in visit('/dev').data and b'public community ids' in visit('/privacy').data.lower(),'Dev log and privacy disclosures updated')
+reset();detail.write(path,[('page','home','')]*18+[('page','guide','')]*7+[('flow','home','guide')]*5+[('source','social','')]*12+[('device','mobile','')]*16+[('browser','safari','')]*16+[('signup','created_queued','')]*3+[('signup','password','')]+[('signup','verified','')]*2,'guest',noon);detail.write(path,[('page','guide','')]*4,'staff',noon-timedelta(hours=2))
+r=get('Owner','/manage/statistics',traffic='all');check(r.status_code==200,'Fictional final preview');(stage.parent.parent/('preview-'+package+'.html')).write_text(r.data.decode())
+print(json.dumps({'package':package,'checks':checks,'counter_rows':len(raw()),'temporary_statistics':str(path).startswith(str(w))}))

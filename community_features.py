@@ -490,6 +490,7 @@ def register(app, core):
             if request.endpoint in ('create_post','create_comment','edit_post','edit_comment','delete_post','delete_comment','signup','account','login','update_mood','update_haunts','update_bio','friends.follow','friends.unfollow','react_to_post'):
                 csrf()
             if request.endpoint=='signup' and not 12<=len(request.form.get('password',''))<=128:
+                g.statistics_signup_outcome='password'
                 abort(400,description='Use a password between 12 and 128 characters.')
             if request.endpoint=='account' and 'new_password' in request.form:
                 if not fresh():
