@@ -172,7 +172,7 @@ def register(app,core):
         return {'can_view_statistics':lambda:permitted(core)}
     @app.before_request
     def statistics_guard():
-        if request.endpoint not in ('site_statistics','site_statistics_csv'):
+        if request.endpoint not in ('site_statistics','site_statistics_csv','statistics_search_import'):
             return
         if not permitted(core):
             abort(403)
@@ -231,6 +231,8 @@ def register(app,core):
             data=build_report(core,path,options())
             from .statistics_suite import report as suite_report
             data['suite']=suite_report(path,data['opts'])
+            from .statistics_insights import report as insights_report
+            data['insights']=insights_report(path,data['opts'])
             extension=app.extensions.get('network_security',{})
             data['network_errors']={'rows':[],'started':'Unavailable','skips':0}
             if extension.get('available'):
@@ -239,6 +241,8 @@ def register(app,core):
                 except sqlite3.Error:pass
         except sqlite3.Error:
             abort(503,description='Statistics storage is busy. Try again shortly.')
+        import secrets
+        session.setdefault('theme_csrf_token',secrets.token_urlsafe(32))
         response=make_response(render_template('site_statistics.html',**data))
         response.headers['Cache-Control']='private, no-store'
         return response
@@ -251,6 +255,8 @@ def register(app,core):
             data=build_report(core,path,options())
             from .statistics_suite import report as suite_report
             data['suite']=suite_report(path,data['opts'])
+            from .statistics_insights import report as insights_report
+            data['insights']=insights_report(path,data['opts'])
             extension=app.extensions.get('network_security',{})
             data['network_errors']={'rows':[],'started':'Unavailable','skips':0}
             if extension.get('available'):
