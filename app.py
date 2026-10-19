@@ -698,13 +698,7 @@ def user_page_test(user_id):
     # -- Now Playing --
     now_playing_text = None
     now_playing_url = None
-    if user and user['lastfm_username']:
-        try:
-            now = get_now_playing(user['lastfm_username'])
-            now_playing_text = now.get('track')
-            now_playing_url = now.get('url')
-        except Exception as e:
-            app.logger.warning(f"[Last.fm] Error: {e}")
+    # Music is fetched after the profile renders; never wait for Last.fm here.
 
     if not user:
         flash('User not found.', 'error')
