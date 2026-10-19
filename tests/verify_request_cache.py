@@ -78,6 +78,15 @@ class LookupTests(unittest.TestCase):
             self.assertEqual(self.read(self.db), 0)
             self.assertEqual(self.calls, 1)
 
+    def test_reused_app_context_does_not_share_requests(self):
+        with self.app.app_context():
+            with self.app.test_request_context('/'):
+                self.read(self.db); self.read(self.db)
+                self.assertEqual(self.calls, 1)
+            with self.app.test_request_context('/'):
+                self.read(self.db)
+                self.assertEqual(self.calls, 2)
+
 
 if __name__ == '__main__':
     unittest.main()
