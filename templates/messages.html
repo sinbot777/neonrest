@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% block title %}Messages · Neonrest{% endblock %}
 {% block content %}
-<link rel="stylesheet" href="{{ url_for('static',filename='css/messaging.css',v='20261019-1') }}">
+<link rel="stylesheet" href="{{ url_for('static',filename='css/messaging.css',v='20261019-2') }}">
 <main class="dm-app" id="dm-app" data-csrf="{{ community_token() }}" data-presence-url="{{ url_for('messaging_presence') }}" data-overview-url="{{ url_for('messaging_overview') }}" {% if thread %}data-state="{{ thread.state }}" data-peer="{{ thread.peer }}" data-history="{{ 'yes' if request.args.get('before') else 'no' }}" data-updates-url="{{ url_for('messaging_updates',thread_id=thread.token) }}" data-read-url="{{ url_for('messaging_read',thread_id=thread.token) }}"{% endif %}>
 <header class="dm-app-heading"><div><p class="dm-eyebrow">NEONREST INSTANT MESSENGER</p><h1>Messages</h1><p>A quieter corner for one-to-one conversations.</p></div><a href="{{ url_for('feed') }}">Back to feed</a></header>
 <p class="dm-disclosure">Messages are stored on Neonrest and are not end-to-end encrypted. Only participants can open a conversation here. Reporting shares the selected message and your explanation with authorized staff.</p>
@@ -46,5 +46,5 @@
 </section></div>
 <footer class="dm-footer"><p>You control your availability. No sounds or desktop notifications are enabled. <a href="{{ url_for('community_notifications') }}">Notification preferences</a> · <a href="{{ url_for('community_data') }}">Your data</a></p></footer>
 </main>
-<script src="{{ url_for('static',filename='js/messaging.js',v='20261019-1') }}" defer></script>
+<script src="{{ url_for('static',filename='js/messaging.js',v='20261019-2') }}" defer></script>
 {% endblock %}

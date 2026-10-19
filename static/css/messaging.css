@@ -4,3 +4,5 @@
 @media(max-width:760px){.dm-app{width:calc(100% - 1rem);padding:.8rem;margin:1rem auto}.dm-layout{grid-template-columns:minmax(0,1fr)}.dm-sidebar{display:grid;grid-template-columns:1fr 1fr;gap:.7rem;align-items:start}.dm-sidebar>.dm-window{margin:0}.dm-preferences{grid-column:1/-1}.dm-buddies{max-height:190px;overflow:auto}.dm-threads{max-height:225px;overflow:auto}.dm-message.dm-mine{margin-left:.4rem}.dm-log{height:52vh;min-height:270px}.dm-app-heading{gap:.5rem}.dm-app-heading>a{font-size:.8rem}}
 @media(max-width:450px){.dm-sidebar{grid-template-columns:minmax(0,1fr)}.dm-preferences{grid-column:auto}.dm-log{padding:.5rem}.dm-message{padding:.55rem}.dm-compose-footer{align-items:start}.dm-compose-footer button{width:100%}}
 @media(prefers-reduced-motion:reduce){.dm-app *{scroll-behavior:auto!important}}
+
+.dm-buddies{max-height:320px;overflow-y:auto;scrollbar-color:#7994af #18243b}.dm-app .dm-buddies .dm-buddy{justify-content:flex-start}.dm-threads{max-height:300px;overflow-y:auto}
