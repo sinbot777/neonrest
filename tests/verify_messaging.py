@@ -101,7 +101,7 @@ for route in ['/messages','/messages/overview','/messages/AbCdEfGh12345678']:
 for who in ['Regular','Writer','Owner','NoFactor']:
  r=get(who,'/messages');check(r.status_code==200,'Eligible inbox '+who)
  check(b'not end-to-end encrypted' in r.data and b'Invisible' in r.data,'Disclosure and private defaults '+who)
- check(r.headers.get('X-Robots-Tag')=='noindex, nofollow' and r.headers.get('Referrer-Policy')=='no-referrer' and r.headers.get('X-Frame-Options')=='DENY','Private headers '+who)
+ check(r.headers.get('X-Robots-Tag')=='noindex, nofollow' and r.headers.get('Referrer-Policy')=='same-origin' and r.headers.get('X-Frame-Options')=='DENY','Private headers '+who)
  check(('href="'+mount+'/messages').encode() in r.data,'Environment navigation '+who)
 with clients['Owner'].session_transaction() as s:s.update(fresh_at=0,factor_at=0)
 check(get('Owner','/messages').status_code==200,'Ordinary messaging needs no repeated 2FA')

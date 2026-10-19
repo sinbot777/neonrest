@@ -244,7 +244,7 @@ def register(app,core):
     @app.after_request
     def messaging_headers(response):
         if request.path.startswith(('/messages','/manage/messages')):
-            response.headers.update({'Cache-Control':'private, no-store','Referrer-Policy':'no-referrer','X-Content-Type-Options':'nosniff','X-Robots-Tag':'noindex, nofollow','X-Frame-Options':'DENY'})
+            response.headers.update({'Cache-Control':'private, no-store','Referrer-Policy':'same-origin','X-Content-Type-Options':'nosniff','X-Robots-Tag':'noindex, nofollow','X-Frame-Options':'DENY'})
         return response
     @app.get('/messages')
     @protected
