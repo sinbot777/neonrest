@@ -2663,6 +2663,8 @@ from neonrest.community_features import register as register_community
 register_community(app, sys.modules[__name__])
 from neonrest.sharing import register as register_sharing
 register_sharing(app, sys.modules[__name__])
+from neonrest.social_previews import register as register_social_previews
+register_social_previews(app, sys.modules[__name__])
 from neonrest.email_verification import register as register_verification
 register_verification(app, sys.modules[__name__])
 from neonrest.retention import initialize as initialize_retention

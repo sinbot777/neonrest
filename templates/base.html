@@ -6,6 +6,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/vibe-artwork.css', v='20261018-art1') }}">
   <title>{% block title %}Neonrest{% endblock %}</title>
+{% if social_preview %}
+<meta property="og:site_name" content="Neonrest">
+<meta property="og:type" content="{{ social_preview.type }}">
+<meta property="og:title" content="{{ social_preview.title }}">
+<meta property="og:description" content="{{ social_preview.description }}">
+<meta property="og:url" content="{{ social_preview.url }}">
+<meta property="og:image" content="{{ social_preview.image }}">
+<meta property="og:image:secure_url" content="{{ social_preview.image }}">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="{{ social_preview.alt }}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ social_preview.title }}">
+<meta name="twitter:description" content="{{ social_preview.description }}">
+<meta name="twitter:image" content="{{ social_preview.image }}">
+<meta name="twitter:image:alt" content="{{ social_preview.alt }}">
+{% endif %}
 
 <!-- font stack -->
 {% set fallback_font = "Roboto" %}
