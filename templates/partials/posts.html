@@ -57,6 +57,7 @@
 {%- endmacro -%}
 
 {% for post in posts %}
+{% set can_participate = viewer_id and circle_can_participate(post.id) %}
 {% if circle is defined and circle.pinned_post_id == post.id %}<p class="circle-badge">Pinned welcome post</p>{% endif %}
 <div id="post-{{ public_post_id(post.id) }}" class="post-preview{% if post.is_guestbook_outbound %} guestbook-outbound{% endif %}">
   <div class="post-header">
@@ -109,7 +110,7 @@
   {% if repost_enabled is not defined or repost_enabled(post.id) %}<div class="neon-share-row">{% set share_label='Share' %}{% set share_kind='post' %}{% set share_ref=public_post_id(post.id) %}{% set share_url=url_for('post_detail',post_id=post.id) %}{% set share_notice='Public Circle post. Anyone eligible can read it; membership is required to reply.' if circle_post_public(post.id) else 'Only members with access to this Circle can open this post. Sharing does not invite or admit anyone.' if private_circle else 'Readers still need permission to view the original post. Sharing does not change its audience.' %}{% include 'partials/share_button.html' %}</div>{% else %}<p class="shared-post-notice">Sharing outside this Circle is off.{% if viewer_id==post.user_id %} <a href="{{ url_for('edit_post',post_id=post.id) }}">Edit sharing</a>{% endif %}</p>{% endif %}
   <div class="post-reactions-box react-form" data-post-id="{{ public_post_id(post.id) }}" data-csrf-token="{{ community_token() }}">
     {% for emoji in VALID_REACTS %}
-      <button type="button" data-reaction-url="{{ url_for('react_to_post',post_id=post.id) }}"{% if not viewer_id or not circle_can_participate(post.id) %} disabled title="Sign in and join this Circle to react"{% endif %} class="react-btn{% if post.reaction_counts.get(emoji) %} active{% endif %}" data-emoji="{{ emoji }}" data-post-id="{{ public_post_id(post.id) }}">
+      <button type="button" data-reaction-url="{{ url_for('react_to_post',post_id=post.id) }}"{% if not can_participate %} disabled title="Sign in and join this Circle to react"{% endif %} class="react-btn{% if post.reaction_counts.get(emoji) %} active{% endif %}" data-emoji="{{ emoji }}" data-post-id="{{ public_post_id(post.id) }}">
         {{ emoji }}{% if post.reaction_counts.get(emoji) %}<sub>{{ post.reaction_counts.get(emoji) }}</sub>{% endif %}
       </button>
     {% endfor %}
@@ -124,7 +125,7 @@
   </div>
   {% endif %}
 
-  {% if viewer_id and circle_can_participate(post.id) %}
+  {% if can_participate %}
   <div class="comment-form">
     <form id="comment-form-{{ public_post_id(post.id) }}" method="POST" action="/create_comment" data-post-id="{{ public_post_id(post.id) }}"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
       <input type="hidden" name="post_id" value="{{ public_post_id(post.id) }}">
