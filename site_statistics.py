@@ -179,7 +179,7 @@ def register(app,core):
         safety=core.get_db().execute('SELECT totp_secret FROM account_safety WHERE user_id=?',(session['user_id'],)).fetchone()
         if not safety or not safety['totp_secret']:
             return redirect(url_for('community_security'))
-        if not app.extensions['community_auth_helpers']['fresh']():
+        if request.endpoint=='statistics_search_import' and not app.extensions['community_auth_helpers']['fresh']():
             return redirect(url_for('community_reauth',next=url_for('site_statistics')))
     @app.after_request
     def measure(response):
