@@ -113,7 +113,9 @@ def report(path,opts):
     feature={};performance={}
     for r in counters:
         if r['kind']=='feature_result':feature.setdefault(r['label'],Counter())[r['detail']]+=r['n']
-        else:performance.setdefault(r['label'],Counter())[r['detail']]+=r['n']
+        else:
+            from .statistics_suite import reportable_route
+            if reportable_route(r['label'].partition(' ')[2]):performance.setdefault(r['label'],Counter())[r['detail']]+=r['n']
     features=[]
     from .statistics_suite import FEATURES
     for key,counts in feature.items():
@@ -157,7 +159,7 @@ def register(app,core,path):
     def insights_start():g.statistics_started=time.perf_counter()
     @app.after_request
     def insights_measure(response):
-        from .statistics_suite import signal,bot_name,route_name,FEATURES
+        from .statistics_suite import signal,bot_name,route_name,FEATURES,feature_name
         if not app.config.get('SITE_STATISTICS_ENABLED') or signal() or bot_name():return response
         try:
             counts=[];route=route_name()
@@ -165,11 +167,11 @@ def register(app,core,path):
                 elapsed=max(0,(time.perf_counter()-getattr(g,'statistics_started',time.perf_counter()))*1000)
                 bound=next((str(n) for n in LATENCY if elapsed<=n),'over')
                 counts.append(('latency',request.method+' '+route,bound))
-            feature=request.endpoint if request.method=='POST' and request.endpoint in FEATURES else 'search' if request.endpoint=='search' and request.method=='GET' and response.status_code==200 and request.args.get('q','').strip() else None
+            feature=feature_name(response)
             if feature:counts.append(('feature_result',feature,'5xx' if response.status_code>=500 else '4xx' if response.status_code>=400 else '2xx / 3xx'))
             if counts:detail.write(path,counts,detail.traffic_segment(core))
             # Pruning uses the existing measurement cadence; never stores raw files.
-            with sqlite3.connect(path,timeout=.05) as db:prune_search(db)
+            with sqlite3.connect(path,timeout=.25) as db:prune_search(db)
         except Exception:app.logger.warning('Optional statistics insights write skipped')
         return response
     @app.post('/manage/statistics/search-import')
