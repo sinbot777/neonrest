@@ -128,8 +128,8 @@
       }
       compose.querySelector('[name="body"]').value = '';
       compose.querySelector('[name="nonce"]').value = crypto.randomUUID().replaceAll('-', '');
-      await poll();
       say('Message sent.');
+      void poll();
     } catch (_) { say('Delivery is unconfirmed. Your text is still here; retrying will not send a duplicate.'); }
     finally { sending = false; button.disabled = false; }
   });
@@ -140,7 +140,7 @@
   }
   document.addEventListener('visibilitychange', () => { if (visible()) { poll(); heartbeat(); markRead(); overview(); } });
   heartbeat();
-  setInterval(poll, 15000);
+  setInterval(poll, 3000);
   setInterval(heartbeat, 60000);
   setInterval(overview, 30000);
 })();

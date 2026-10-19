@@ -330,14 +330,14 @@ def register(app,core):
     @app.get('/messages/overview')
     @protected
     def messaging_overview():
-        limit=limited('poll',1200)
+        limit=limited('poll',3600)
         if limit is not None:return limit
         uid=current_user();db=core.get_db()
         return jsonify(buddies=buddy_data(db,uid),unread=min(unread_threads(db,uid),100))
     @app.get('/messages/<thread_id>/updates')
     @protected
     def messaging_updates(thread_id):
-        limit=limited('poll',1200)
+        limit=limited('poll',3600)
         if limit is not None:return limit
         uid=current_user();db=core.get_db();thread=thread_for(db,thread_id,uid);after=request.args.get('after');bound=0
         if after:
