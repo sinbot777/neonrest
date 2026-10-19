@@ -6,7 +6,7 @@ import secrets
 import sqlite3
 import time
 from functools import wraps
-from flask import abort, current_app, flash, g, jsonify, make_response, redirect, render_template, request, session, url_for
+from flask import abort, current_app, flash, g, jsonify, make_response, redirect, render_template, request, session, url_for, has_request_context
 from . import age_policy as ages, community_features as community, public_ids
 
 TOKEN=public_ids.TOKEN
@@ -152,6 +152,10 @@ def register(app,core):
     enabled=os.environ.get('NEONREST_MESSAGING_ENABLED', '1' if 'sandbox' in app.import_name else '0')=='1'
     app.config['MESSAGING_ENABLED']=enabled
     if not enabled:return
+    @app.url_defaults
+    def messaging_window_urls(endpoint,values):
+        if endpoint.startswith('messaging_') and endpoint!='messaging_reports' and has_request_context() and request.args.get('window')=='1':
+            values.setdefault('window','1')
     app.config.setdefault('MESSAGING_MESSAGE_CAP',10000)
     with app.app_context():initialize(core.get_db())
     if 'messages' not in community.KINDS:community.KINDS+=('messages',)

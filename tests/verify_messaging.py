@@ -277,4 +277,11 @@ thread_after=query('SELECT * FROM dm_threads WHERE id=?',(thread['id'],))[0]
 check(thread_after['low_user'] is None or thread_after['high_user'] is None,'Deleted account unlinked')
 r=get('OtherManager','/messages/'+key);check(r.status_code==200 and b'Deleted account' in r.data and b'CONTEXT-MUST-NOT-BE-REPORTED' not in r.data,'Survivor retains only own messages without deleted identity')
 check(app.config['RETENTION_ENABLED'] is False,'No automatic erasure activation')
+
+r=get('Owner','/messages',window='1');check(r.status_code==200 and b'dm-buddy-mode' in r.data and b'Neonrest Logo' not in r.data,'Standalone buddy window without site chrome')
+r=get('Owner','/messages',window='1',compose='1',to='@PRACTICE-ONLY');check(r.status_code==200 and b'dm-compose-mode' in r.data and b'value="@PRACTICE-ONLY"' in r.data,'Compact compose prefill')
+check(b'/messages/start?window=1' in r.data,'Compact form retains window mode')
+r=get('Owner','/messages/'+selfchat['public_id'],window='1');check(r.status_code==200 and b'dm-chat-mode' in r.data and b'window=0' in r.data,'Standalone chat and full page escape')
+r=post('Owner','/messages/settings?window=1',inbox='friends',presence='invisible',away='');check(r.status_code==303 and 'window=1' in r.headers['Location'],'Settings retain compact mode')
+
 print(json.dumps({'package':package,'checks':checks,'passed':True,'fictional_only':True}))

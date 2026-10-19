@@ -107,11 +107,27 @@
         const dot = button.querySelector('.dm-status'); const text = button.querySelector('small');
         const presence = buddy?.presence || {status: 'offline', label: 'Offline', away: ''};
         if (dot) dot.className = `dm-status dm-status-${presence.status}`;
-        if (text) text.textContent = presence.label + (presence.away ? ` · ${presence.away}` : '');
+        if (text) text.textContent = presence.label + (presence.away ? ' · ' + presence.away : '');
       });
     } catch (_) { /* Refresh remains available; no presence history is synthesized. */ }
   }
+  function openMessenger(url, chat = false) {
+    const target = new URL(url, location.origin);
+    if (target.origin !== location.origin) return;
+    const name = chat ? 'neonrest-chat-' + target.pathname.split('/').pop().replace(/[^a-zA-Z0-9_-]/g, '') : 'neonrest-buddies';
+    const popup = window.open(target.href, name, `popup,width=${chat ? 420 : 280},height=${chat ? 480 : 450},resizable=yes,scrollbars=yes`);
+    if (popup) { popup.opener = null; popup.focus(); }
+    else location.assign(target.href);
+  }
+  document.querySelectorAll('[data-messenger-popup],[data-chat-popup]').forEach(link => link.addEventListener('click', event => {
+    if (event.button || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    event.preventDefault(); openMessenger(link.href, link.hasAttribute('data-chat-popup'));
+  }));
   document.querySelectorAll('[data-buddy]').forEach(button => button.addEventListener('click', () => {
+    if (app.dataset.compact === 'yes') {
+      const url = new URL(app.dataset.composeUrl, location.origin); url.searchParams.set('to', button.dataset.buddy);
+      openMessenger(url.href, true); return;
+    }
     const recipient = document.getElementById('dm-recipient'); recipient.value = button.dataset.buddy;
     document.getElementById('dm-start').scrollIntoView({behavior: 'smooth', block: 'center'}); recipient.focus();
   }));
