@@ -21,7 +21,11 @@ def request_lookup(function):
             hash(key)
         except TypeError:
             return function(db, *args, **kwargs)
-        stores = g.setdefault('_render_lookup_stores', {})
+        current_request = request._get_current_object()
+        if g.get('_render_lookup_request') is not current_request:
+            g._render_lookup_request = current_request
+            g._render_lookup_stores = {}
+        stores = g._render_lookup_stores
         generation = db.total_changes
         state = stores.get(db)
         if state is None or state[0] != generation:
