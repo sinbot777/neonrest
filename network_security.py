@@ -18,7 +18,7 @@ AUDIT_CAP=5000
 BAN_CAP=1000
 RETENTION=30*86400
 SENSITIVE=re.compile(r'password|recover|reset|token|verif|document|submission|invitation|export|oauth|callback|secret|reauth|factor|consent|guardian',re.I)
-SCAN=re.compile(r'^/(?:wp-admin(?:/|$)|wp-content(?:/|$)|wp-includes(?:/|$)|wordpress(?:/|$)|xmlrpc\.php$|\.env(?:\.|$)|\.git(?:/|$)|phpmyadmin(?:/|$))',re.I)
+SCAN=re.compile(r'(?:^|/)(?:wp-admin(?:/|$)|wp-content(?:/|$)|wp-includes(?:/|$)|wordpress(?:/|$)|xmlrpc\.php(?:/|$)|\.env(?:\.|/|$)|\.git(?:/|$)|phpmyadmin(?:/|$))',re.I)
 
 def canonical(value):
     try:
@@ -90,7 +90,7 @@ def safe_referrer(core):
     except ValueError:return ''
 
 def classification():
-    if SCAN.search(request.path):return 'Suspected scanning'
+    if SCAN.search(unquote(request.path)):return 'Suspected scanning'
     if statistics.BOT.search(request.headers.get('User-Agent','')[:512]):return 'Advertised automation'
     return 'Unclassified'
 
@@ -166,6 +166,8 @@ def errors_report(path,opts):
     with connect(path) as db:
         rows=[dict(r) for r in db.execute('SELECT method,path,status,referrer,classification,MIN(first_seen) AS first_seen,MAX(last_seen) AS last_seen,SUM(count) AS count FROM error_details WHERE day BETWEEN ? AND ? AND segment IN ('+marks+') GROUP BY method,path,status,referrer,classification ORDER BY last_seen DESC LIMIT 200',(start,end,*segments))]
         meta=dict(db.execute('SELECT * FROM metadata'))
+    for row in rows:
+        if SCAN.search(unquote(row['path'])):row['classification']='Suspected scanning'
     return {'rows':rows,'started':stamp(int(meta.get('started_at','0'))),'skips':int(meta.get('capacity_skips','0'))}
 
 def stamp(value):return datetime.fromtimestamp(value,timezone.utc).strftime('%Y-%m-%d %H:%M UTC') if value else '—'

@@ -70,7 +70,7 @@ def add_counts(path, counts, day=None):
     """Separate connection: never commit or roll back a user's application transaction."""
     today = datetime.now(timezone.utc).date()
     cutoff = (today-timedelta(days=RETENTION_DAYS-1)).isoformat()
-    with sqlite3.connect(path, timeout=0.05) as db:
+    with sqlite3.connect(path, timeout=.25) as db:
         db.execute('DELETE FROM counters WHERE day<?', (cutoff,))
         for kind, label, detail in counts:
             db.execute('''INSERT INTO counters VALUES (?,?,?,?,1)

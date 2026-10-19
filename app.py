@@ -2693,6 +2693,9 @@ from neonrest.site_statistics import register as register_site_statistics
 app.config['SITE_STATISTICS_DATABASE'] = os.environ.get('NEONREST_PRODUCTION_STATISTICS_DATABASE', '/home/sinbot/private/neonrest_production/site-statistics.sqlite')
 register_site_statistics(app,sys.modules[__name__])
 
+from neonrest.site_discovery import register as register_site_discovery
+register_site_discovery(app,sys.modules[__name__])
+
 @app.errorhandler(404)
 def unavailable_page(error):
     response = app.make_response((render_template('unavailable.html'), 404))

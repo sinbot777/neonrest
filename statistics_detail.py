@@ -82,7 +82,7 @@ def write(path,counts,segment,when=None):
     """Finite independent dimensions; capacity limit prevents unbounded disk growth."""
     now=when or datetime.now(timezone.utc);bucket=now.astimezone(timezone.utc).strftime('%Y-%m-%dT%H')
     cutoff=(datetime.now(timezone.utc).date()-timedelta(days=RETENTION_DAYS-1)).isoformat()
-    with sqlite3.connect(path,timeout=0.05) as db:
+    with sqlite3.connect(path,timeout=.25) as db:
         db.execute('DELETE FROM hourly_counters WHERE bucket<?',(cutoff,))
         db.execute('DELETE FROM counters WHERE day<?',(cutoff,))
         size=db.execute('SELECT COUNT(*) FROM hourly_counters').fetchone()[0];skipped=0

@@ -40,12 +40,23 @@ def external_host():
         return host
     except ValueError:return None
 
-def route_name():
-    # Route definitions contain placeholders, never actual values or query strings.
+def reportable_route(rule,crawler=False):
+    private=('/manage','/staff','/account','/verify','/reset','/password-reset','/recover','/support','/family','/document','/submission','/privacy/submit','/analytics/','/ad/')
+    assets=('/static','/shared-media','/uploads','/media/','/media-file','/social-preview','/favicon.ico','/robots.txt','/sitemap')
+    from .network_security import SENSITIVE
+    return bool(rule) and not SENSITIVE.search(rule) and not rule.startswith(private) and (crawler or not rule.startswith(assets))
+
+def route_name(crawler=False):
+    # Definitions contain placeholders, never values or query strings.
     rule=request.url_rule.rule if request.url_rule else None
-    if rule and not rule.startswith(('/static','/shared-media','/uploads','/media/','/manage','/staff','/account','/verify','/reset','/recover','/support','/family','/document','/ad/')):
-        return rule[:160]
-    if not rule:return request.path if request.path in ('/robots.txt','/sitemap.xml') else 'Unmatched route'
+    from .network_security import classification
+    if not crawler and classification()=='Suspected scanning':return None
+    if rule:return rule[:160] if reportable_route(rule,crawler) else None
+    return request.path if crawler and request.path in ('/robots.txt','/sitemap.xml') else 'Unmatched route'
+
+def feature_name(response):
+    if request.method=='POST' and request.endpoint in FEATURES:return request.endpoint
+    if request.endpoint in ('search','site_search') and request.method=='GET' and response.status_code==200 and request.args.get('q','').strip():return 'search'
     return None
 
 def bot_name():
@@ -77,6 +88,7 @@ def report(path,opts):
     tables={k:Counter() for k in ('feature','referrer','measurement','request')};errors=Counter();responses=Counter()
     for r in rows:
         if r['kind']=='request':
+            if not reportable_route(r['label']):continue
             code=int(r['detail']);responses[str(code)]+=r['n']
             if code>=400:errors[r['label']+' · HTTP '+str(code)]+=r['n']
         else:tables[r['kind']][r['label']]+=r['n']
@@ -119,6 +131,15 @@ def register(app,core,path):
         try:return serializer.loads(request.cookies.get(names()+kind,''),max_age=age)
         except (BadSignature,TypeError,ValueError):return None
     def choice():return read('choice',90*86400)
+    def valid_id(value):return isinstance(value,str) and bool(re.fullmatch(r'[A-Za-z0-9_-]{32}',value))
+    def identities():
+        visitor=read('visitor',30*86400);sid=read('session',1800)
+        if not valid_id(visitor):return secrets.token_urlsafe(24),secrets.token_urlsafe(24)
+        if not valid_id(sid):
+            # Parallel first requests after cookie expiry share one 30-minute bootstrap.
+            sid=digest(visitor+':bootstrap:'+str(int(time.time())//1800))[:32]
+        return visitor,sid
+
     def cookie(response,kind,value,age):response.set_cookie(names()+kind,serializer.dumps(value),max_age=age,secure=True,httponly=True,samesite='Lax',path=request.script_root or '/')
     def clear(response):
         for kind in ('visitor','session'):response.delete_cookie(names()+kind,path=request.script_root or '/',secure=True,httponly=True,samesite='Lax')
@@ -136,26 +157,29 @@ def register(app,core,path):
         value=request.form.get('choice')
         if value not in ('yes','no'):abort(400)
         response=redirect(url_for('privacy')+'#analytics');cookie(response,'choice',value,90*86400)
-        if value=='no' or signal():clear(response)
+        if value=='no' or signal() or not app.config.get('SITE_STATISTICS_ENABLED'):clear(response)
+        else:
+            visitor,sid=identities();cookie(response,'visitor',visitor,30*86400);cookie(response,'session',sid,1800)
         response.headers['Cache-Control']='private, no-store';return response
     @app.after_request
     def suite_measure(response):
         if response.mimetype=='text/html' and basic.category(request.path):response.headers['Cache-Control']='private, no-store'
         if signal():clear(response);return response
+        if request.endpoint=='analytics_preference':return response
         if not app.config.get('SITE_STATISTICS_ENABLED'):return response
         try:
-            route=route_name();bot=bot_name();now=int(time.time());day=datetime.fromtimestamp(now,timezone.utc).date().isoformat();cutoff=datetime.fromtimestamp(now-89*86400,timezone.utc).date().isoformat()
-            with sqlite3.connect(path,timeout=.05) as db:
+            bot=bot_name();route=route_name(crawler=bool(bot));now=int(time.time());day=datetime.fromtimestamp(now,timezone.utc).date().isoformat();cutoff=datetime.fromtimestamp(now-89*86400,timezone.utc).date().isoformat()
+            with sqlite3.connect(path,timeout=.25) as db:
                 db.execute('DELETE FROM visitor_days WHERE day<?',(cutoff,));db.execute('DELETE FROM browser_sessions WHERE started<?',(now-90*86400,));db.execute('DELETE FROM crawler_counters WHERE day<?',(cutoff,))
             if bot:
                 if route:
-                    with sqlite3.connect(path,timeout=.05) as db:
+                    with sqlite3.connect(path,timeout=.25) as db:
                         db.execute('DELETE FROM crawler_counters WHERE day<?',(cutoff,))
                         changed=db.execute('UPDATE crawler_counters SET value=min(value+1,2147483647) WHERE day=? AND bot=? AND route=? AND status=?',(day,bot,route,response.status_code))
                         if not changed.rowcount:increment(db,'crawler_counters',(day,bot,route,response.status_code,1))
                 return response
             page=basic.category(request.path) if request.method=='GET' and response.status_code==200 and response.mimetype=='text/html' else None
-            feature=request.endpoint if request.method=='POST' and request.endpoint in FEATURES else 'search' if request.endpoint=='search' and request.method=='GET' and response.status_code==200 and request.args.get('q','').strip() else None
+            feature=feature_name(response)
             counts=[];segment=detail.traffic_segment(core)
             if route:counts.append(('request',route,str(response.status_code)))
             if feature:counts.append(('feature',feature,''))
@@ -169,14 +193,14 @@ def register(app,core,path):
             if not page and not feature:
                 if counts:detail.write(path,counts,segment)
                 return response
-            visitor=read('visitor',30*86400);sid=read('session',1800)
-            if not isinstance(visitor,str) or not re.fullmatch(r'[A-Za-z0-9_-]{32}',visitor):visitor=secrets.token_urlsafe(24);sid=None
-            if not isinstance(sid,str) or not re.fullmatch(r'[A-Za-z0-9_-]{32}',sid):sid=secrets.token_urlsafe(24)
+            visitor,sid=identities()
             vk=digest(visitor);sk=digest(sid)
-            with sqlite3.connect(path,timeout=.05) as db:
+            with sqlite3.connect(path,timeout=.25) as db:
                 db.execute('DELETE FROM visitor_days WHERE day<?',(cutoff,));db.execute('DELETE FROM browser_sessions WHERE started<?',(now-90*86400,))
                 row=db.execute('SELECT last_seen FROM browser_sessions WHERE key=?',(sk,)).fetchone()
-                if row and row[0]<now-1800:sid=secrets.token_urlsafe(24);sk=digest(sid);row=None
+                if row and row[0]<now-1800:
+                    sid=digest(visitor+':renew:'+sk+':'+str(row[0]))[:32];sk=digest(sid)
+                    row=db.execute('SELECT last_seen FROM browser_sessions WHERE key=?',(sk,)).fetchone()
                 outcome=getattr(__import__('flask').g,'statistics_signup_outcome','');registered=int(str(outcome).startswith('created_'))
                 if not row:
                     if not increment(db,'browser_sessions',(sk,vk,now,now,segment,int(bool(page)),int(bool(feature)),page or 'interaction',page or 'interaction',int(page=='signup' or feature=='signup'),int(feature=='signup'),registered,detail.source_category())):return response
