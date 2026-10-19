@@ -8,7 +8,7 @@
     <div class="workspace-navigation-groups">
       <section class="workspace-navigation-group" aria-label="Settings">
         <h2>Settings</h2><div class="workspace-links">
-          {% for endpoint,label in [('account','Account'),('community_security','Account safety'),('community_privacy','Privacy'),('community_notifications','Notifications'),('community_data','Your data'),('media_settings','Media settings')] %}{{ workspace_link(endpoint,label) }}{% endfor %}
+          {% for endpoint,label in [('account','Account'),('community_security','Account safety'),('community_privacy','Privacy'),('community_notifications','Notifications'),('community_data','Your data'),('media_settings','Media settings')] %}{{ workspace_link(endpoint,label) }}{% endfor %}{% if messaging_enabled|default(false) %}{{ workspace_link('messaging_home','Messages') }}{% endif %}
         </div>
       </section>
       <section class="workspace-navigation-group" aria-label="Age and family">

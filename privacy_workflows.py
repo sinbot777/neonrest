@@ -113,6 +113,8 @@ def blockers(db, uid):
             if kind=='comment' and 'comments' in ts:
                 involved |= bool(db.execute('SELECT 1 FROM comments WHERE id=? AND user_id=?',(target,uid)).fetchone())
             if involved: result.append('Open content report')
+    if 'dm_reports' in ts and db.execute("SELECT 1 FROM dm_reports WHERE status='open' AND (reporter_id=? OR author_id=?)",(uid,uid)).fetchone():
+        result.append('Open private message report')
     if 'circle_reports' in ts:
         for report in db.execute("SELECT reporter_id,author_id,post_owner_id FROM circle_reports WHERE status='open'"):
             involved=uid in report
@@ -148,6 +150,9 @@ def erasure_blockers(db, uid):
         if table not in ts or not set(cols)<=ts[table]:continue
         for row in db.execute('SELECT '+','.join(cols)+' FROM '+table+' WHERE '+' OR '.join(c+'=?' for c in cols),(uid,)*len(cols)):
             related.update(v for v in row if v)
+    if 'dm_threads' in ts:
+        for pair in db.execute('SELECT low_user,high_user FROM dm_threads WHERE low_user=? OR high_user=?',(uid,uid)):
+            related.update(v for v in pair if v)
     for other in related-{uid}:
         if blockers(db,other):result.append('Deletion would alter preserved data shared with account #'+str(other))
     return sorted(set(result))

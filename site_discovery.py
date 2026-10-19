@@ -29,7 +29,7 @@ def register(app,core):
     def site_robots():
         if sandbox or request.script_root.rstrip('/')=='/sandbox':body='User-agent: *\nDisallow: /\n'
         else:
-            private=('/sandbox','/account','/manage','/staff','/login','/logout','/signup','/password-reset','/verify','/recover','/family','/document','/privacy/submit','/analytics','/create_post','/edit_post','/delete_post')
+            private=('/sandbox','/account','/manage','/staff','/login','/logout','/signup','/password-reset','/verify','/recover','/family','/document','/privacy/submit','/analytics','/messages','/create_post','/edit_post','/delete_post')
             body='User-agent: *\n'+''.join('Disallow: '+p+'\n' for p in private)+'Sitemap: '+ORIGIN+'/sitemap.xml\n'
         response=make_response(body)
         response.headers.update({'Content-Type':'text/plain; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'})
