@@ -67,7 +67,7 @@ for who in ['Moderator','SiteManager','Manager','OtherManager','Regular','Teen']
  check(get(who,'/manage/statistics').status_code==403,'Unauthorized dashboard '+who);check(get(who,'/manage/statistics.csv').status_code==403,'Unauthorized export '+who)
 check(visit('/manage/statistics').status_code==403,'Guest dashboard blocked');check(visit('/manage/statistics.csv').status_code==403,'Guest CSV blocked')
 with clients['Owner'].session_transaction() as s:s['fresh_at']=0
-r=get('Owner','/manage/statistics');check(r.status_code==302 and 'reauth' in r.location,'Fresh authentication required')
+r=get('Owner','/manage/statistics');check(r.status_code==200,'Valid signed-in staff may read statistics without fresh authentication')
 with clients['Owner'].session_transaction() as s:s['fresh_at']=now
 change('UPDATE account_safety SET totp_secret=NULL WHERE user_id=?',(users['Admin'],));r=get('Admin','/manage/statistics');check(r.status_code==302 and '/account/security' in r.location,'2FA required');change('UPDATE account_safety SET totp_secret=? WHERE user_id=?',('JBSWY3DPEHPK3PXP',users['Admin']))
 for opts in [{'days':'999'},{'traffic':'injection'},{'days':'custom','start':'bad','end':day},{'days':'custom','start':day,'end':(today-timedelta(days=1)).isoformat()},{'days':'custom','start':(today-timedelta(days=91)).isoformat(),'end':day},{'days':'custom','start':day,'end':(today+timedelta(days=1)).isoformat()}]:

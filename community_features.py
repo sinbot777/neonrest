@@ -507,12 +507,13 @@ def register(app, core):
         if request.endpoint=='post_edit_history':
             history_owner=db.execute('SELECT user_id FROM posts WHERE id=?',(request.view_args.get('post_id'),)).fetchone()
             if history_owner and welcome.personal_hidden(db,history_owner['user_id'],uid): abort(404)
+        statistics_read=request.method in ('GET','HEAD') and request.endpoint in ('site_statistics','site_statistics_csv')
         staff_surface=request.path.startswith(('/manage','/staff')) or request.endpoint=='edit_theme'
         if staff_surface and uid and (core.staff_permissions(db,uid) or core.management_scope() is not None):
             if not second_factor(uid):
                 flash('Set up two-factor authentication before opening staff tools.','info')
                 return redirect(url_for('community_security'))
-            if not fresh():
+            if not statistics_read and not fresh():
                 return redirect(url_for('community_reauth',next=request.path))
         sensitive=request.method=='POST' and (request.endpoint=='assign_staff_role' or
             request.endpoint=='review_appeal' and request.form.get('decision')=='overturned' or
