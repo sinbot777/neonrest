@@ -1,0 +1,12 @@
+{% for video in youtube_links(post.content) %}
+<section class="neon-video-card" data-youtube-id="{{ video.id }}" data-video-start="{{ video.start }}" aria-label="YouTube video">
+  <div class="neon-video-player"></div>
+  <p class="neon-video-notice">YouTube video. Loading connects to YouTube.</p>
+  <div class="neon-video-actions">
+    <button type="button" class="neon-video-load">Load YouTube video</button>
+    <button type="button" class="neon-video-close" hidden>Close player</button>
+    <a href="{{ video.url }}" target="_blank" rel="noopener noreferrer">Open on YouTube</a>
+  </div>
+  <noscript>Use “Open on YouTube” to watch this video.</noscript>
+</section>
+{% endfor %}

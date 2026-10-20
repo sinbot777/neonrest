@@ -104,6 +104,7 @@
   {% if viewer_id and viewer_id != post.user_id %}<div class="post-actions"><button type="button" class="icon-button" aria-label="Post options" aria-expanded="false" onclick="togglePostMenu(this)">⋮</button><div class="post-dropdown" style="display:none;"><a href="{{ url_for('report_content', kind='post', target_id=post.id) }}">Report post to site staff</a>{% set report_circle=circle_for_post(post.raw_id if post.raw_id is defined else post.id) %}{% if report_circle %}<a href="{{ url_for('circle_report',circle_id=report_circle.id,kind='post',target_id=public_post_id(post.id)) }}">Report to Circle managers</a>{% endif %}<a href="{{ url_for('post_edit_history', post_id=post.id) }}" class="link-button">Edit history</a></div></div>{% endif %}
       {% if staff_announcement(post.id) %}<p class="vibe-pill">Staff announcement</p>{% endif %}
 <div class="post-content">{{ post.html_content | safe }}</div>
+{% include 'partials/video_embeds.html' %}
   {% include 'partials/shared_post_card.html' %}
   {% include "post_media.html" %}
 
