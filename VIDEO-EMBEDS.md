@@ -1,11 +1,17 @@
-# Linked video playback
+# Linked media playback
 
-YouTube watch, youtu.be, Shorts, live and embed links become click-to-load cards in the shared post renderer (profile, feed, Vibe and individual post views). Original post text stays intact. Existing posts work without a migration. Up to three distinct videos are recognized per post; fenced/inline code is skipped. Start timestamps are supported and bounded to 24 hours.
+The shared post renderer recognizes YouTube, Facebook video and Instagram post/Reel links locally. Existing posts work without migrations. A post gets at most three distinct cards across all providers, preserving URL order and skipping inline/fenced code. No metadata requests, redirects, provider scripts, thumbnails, iframes or preconnects are made before the reader clicks Load. The server never fetches user-supplied URLs.
 
-Recognition is local and performs no network fetches. Only exact recognized hostnames and 11-character IDs are accepted; user-info URLs and unexpected ports are rejected. Canonical fallback URLs contain only the validated ID and timestamp. No user-supplied HTML is inserted. Before a click, there are no provider images, scripts, frames, preconnects or metadata calls.
+Exact provider host allowlists, validated IDs/path shapes and canonical URLs strip tracking queries and reject user-info URLs and unexpected ports. JavaScript independently validates Meta URLs before constructing a fixed provider iframe URL. Untrusted HTML is never inserted. strict-origin referrers send the site origin without private post paths or query strings. Close removes the iframe and returns focus to Load. Original links remain available without JavaScript and when providers refuse embedding.
 
-Clicking Load uses the YouTube privacy-enhanced iframe host with autoplay disabled. strict-origin referrers supply the site origin required by YouTube without sending private post paths or query strings. Close removes the iframe and returns focus to Load. Provider playback restrictions can still apply. The original-video link remains available without JavaScript and when embedding fails. Facebook/Instagram links remain ordinary links pending a separately verified integration.
+YouTube watch/youtu.be/Shorts/live/embed links retain bounded start timestamps. Facebook watch, numeric page/video and Reel links use the official video plugin with autoplay disabled. Facebook fb.watch and share/v/share/r links are passed to the same plugin; if a short/share link is not accepted by Meta, use its full original video URL. Instagram p/reel/reels/tv links use the same canonical /embed/ URL pattern constructed by Instagram's official embed.js, inside a cross-origin iframe, without loading that script into Neonrest's parent document. Instagram frames retain a fixed readable height and can scroll. Private content, disabled embeds, removed posts and provider sign-in restrictions remain controlled by the provider.
 
-The public, noindex /static/video-demo.html page uses the same card markup and player assets for a demonstration without creating user posts. Full-app fixture checks cover URL handling, hidden posts, profiles and individual post pages.
+YouTube remains privacy-enhanced and does not request autoplay. No video files, metadata caches, new account credentials or API tokens are stored by Neonrest. Existing Circle, age and moderation visibility checks run before rendering any cards.
 
-References: https://developers.google.com/youtube/player_parameters and https://support.google.com/youtube/answer/171780 .
+Noindex demos: /static/video-demo.html and /static/meta-video-demo.html. Meta examples use the official developer video and NASA/JPL's public Reel; demos do not create user posts. Browser preview verified Facebook playback through the end and Instagram decoded, active playback, plus lazy creation and Close cleanup.
+
+References:
+- https://developers.google.com/youtube/player_parameters
+- https://developers.facebook.com/docs/plugins/embedded-video-player/
+- https://developers.facebook.com/documentation/instagram-platform/oembed
+- https://www.instagram.com/embed.js (official URL construction inspected during implementation)

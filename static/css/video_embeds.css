@@ -14,3 +14,7 @@
 .neon-video-notice{font-size:.9rem}
 @media(prefers-reduced-motion:reduce){.neon-video-actions button,.neon-video-actions a{transition:none}}
 @media(max-width:420px){.neon-video-actions{align-items:stretch}.neon-video-actions button,.neon-video-actions a{flex:1 1 auto}}
+
+.neon-video-player iframe[data-provider="instagram"]{aspect-ratio:auto;height:750px;max-width:540px;margin-inline:auto;background:#fff}
+.neon-video-player iframe.neon-video-portrait{aspect-ratio:9/16;max-width:500px;margin-inline:auto}
+.neon-video-note{font-size:.8rem;line-height:1.45;margin:.8rem 0 0;opacity:.9}
