@@ -7,6 +7,7 @@
   const compose = document.getElementById('dm-compose');
   const csrf = app.dataset.csrf;
   let polling = false;
+  let overviewPolling = false;
   let sending = false;
   let lastRead = '';
   let lastPresence = 0;
@@ -92,12 +93,13 @@
     finally { polling = false; }
   }
   async function heartbeat() {
-    if (!visible() || Date.now() - lastPresence < 55000) return;
+    if (!visible() || app.dataset.presence === 'invisible' || Date.now() - lastPresence < 55000) return;
     lastPresence = Date.now();
     try { await post(app.dataset.presenceUrl, new URLSearchParams()); } catch (_) { /* Presence expires automatically. */ }
   }
   async function overview() {
-    if (!visible()) return;
+    if (!visible() || overviewPolling || app.dataset.sidebar === 'no') return;
+    overviewPolling = true;
     try {
       const response = await fetch(app.dataset.overviewUrl, {credentials: 'same-origin', cache: 'no-store', headers: {'Accept': 'application/json'}});
       if (!response.ok || response.redirected || !response.headers.get('Content-Type')?.includes('application/json')) return;
@@ -110,11 +112,12 @@
         if (text) text.textContent = presence.label + (presence.away ? ' · ' + presence.away : '');
       });
     } catch (_) { /* Refresh remains available; no presence history is synthesized. */ }
+    finally { overviewPolling = false; }
   }
   function openMessenger(url, chat = false) {
     const target = new URL(url, location.origin);
     if (target.origin !== location.origin) return;
-    const name = chat ? 'neonrest-chat-' + target.pathname.split('/').pop().replace(/[^a-zA-Z0-9_-]/g, '') : 'neonrest-buddies';
+    const name = chat ? 'afterglow-chat-' + target.pathname.split('/').pop().replace(/[^a-zA-Z0-9_-]/g, '') : 'afterglow-buddies';
     const popup = window.open(target.href, name, `popup,width=${chat ? 420 : 280},height=${chat ? 480 : 450},resizable=yes,scrollbars=yes`);
     if (popup) { popup.opener = null; popup.focus(); }
     else location.assign(target.href);

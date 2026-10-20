@@ -7,6 +7,7 @@ import sqlite3
 import time
 from functools import wraps
 from flask import abort, current_app, flash, g, jsonify, make_response, redirect, render_template, request, session, url_for, has_request_context
+from .request_cache import request_lookup
 from . import age_policy as ages, community_features as community, public_ids
 
 TOKEN=public_ids.TOKEN
@@ -47,6 +48,7 @@ def initialize(db):
     db.commit()
 
 
+@request_lookup
 def usable(db,uid):
     if not uid or not ages.ready(db,uid):return False
     row=db.execute('SELECT verified FROM users WHERE id=?',(uid,)).fetchone()
@@ -56,6 +58,7 @@ def usable(db,uid):
       or db.execute('SELECT 1 FROM user_moderation WHERE user_id=? AND banned=1',(uid,)).fetchone())
 
 
+@request_lookup
 def prefs(db,uid):
     row=db.execute('SELECT * FROM dm_settings WHERE user_id=?',(uid,)).fetchone()
     return dict(row) if row else dict(inbox='friends',presence='invisible',away='',active_at=0)
@@ -65,6 +68,7 @@ def peer_id(thread,uid):
     return thread['high_user'] if thread['low_user']==uid else thread['low_user']
 
 
+@request_lookup
 def history_allowed(db,thread,uid):
     if not usable(db,uid):return False
     peer=peer_id(thread,uid)
@@ -81,6 +85,7 @@ def thread_for(db,value,uid):
     return row
 
 
+@request_lookup
 def send_allowed(db,thread,uid):
     peer=peer_id(thread,uid)
     if not peer or thread['state']!='accepted' or not usable(db,uid) or not usable(db,peer):return False
@@ -109,6 +114,7 @@ def notice(db,thread,uid,actor):
     community.notify(db,uid,'messages','New message request.' if thread['state']=='pending' else 'New private message.',path,actor=actor)
 
 
+@request_lookup
 def unread_threads(db,uid):
     if not usable(db,uid):return 0
     rows=db.execute('''SELECT t.* FROM dm_threads t JOIN dm_members m ON m.thread_id=t.id
@@ -118,6 +124,7 @@ def unread_threads(db,uid):
     return sum(history_allowed(db,t,uid) and not community.blocked(db,uid,peer_id(t,uid)) for t in rows)
 
 
+@request_lookup
 def presence_for(db,peer,viewer):
     if not usable(db,viewer) or not usable(db,peer) or not community.friends(db,viewer,peer) or community.blocked(db,viewer,peer) or not ages.contact(db,viewer,peer):return dict(status='offline',label='Offline',away='')
     settings=prefs(db,peer)
@@ -212,7 +219,8 @@ def register(app,core):
             if not history_allowed(db,t,uid):continue
             incoming=t['state']=='pending' and t['requested_by']!=uid
             if (box=='requests')!=incoming:continue
-            item=thread_details(db,t,uid);item['unread']=bool(t['state']!='declined' and not item['blocked'] and not t['paused'] and db.execute('SELECT 1 FROM dm_messages WHERE thread_id=? AND id>? AND sender_id!=? LIMIT 1',(t['id'],t['read_id'],uid)).fetchone());items.append(item)
+            peer=peer_id(t,uid);user=db.execute('SELECT handle FROM users WHERE id=?',(peer,)).fetchone() if peer else None
+            item=dict(token=t['public_id'],peer=user['handle'] if user else 'Deleted account',state=t['state'],incoming=t['requested_by']!=uid,blocked=bool(peer and community.blocked(db,uid,peer)),paused=bool(t['paused']),muted=bool(t['muted']));item['unread']=bool(t['state']!='declined' and not item['blocked'] and not t['paused'] and db.execute('SELECT 1 FROM dm_messages WHERE thread_id=? AND id>? AND sender_id!=? LIMIT 1',(t['id'],t['read_id'],uid)).fetchone());items.append(item)
         return items,buddy_data(db,uid),len(rows)>50
     def buddy_data(db,uid):
         peers=db.execute("SELECT DISTINCT CASE WHEN sender_id=? THEN receiver_id ELSE sender_id END AS peer FROM friend_requests WHERE status='accepted' AND (sender_id=? OR receiver_id=?) LIMIT 100",(uid,uid,uid)).fetchall()
@@ -227,7 +235,8 @@ def register(app,core):
     def render_page(thread=None):
         uid=current_user();db=core.get_db();box=request.args.get('box','chats');page=request.args.get('page','0')
         if box not in ('chats','requests') or not page.isascii() or not page.isdecimal() or len(page)>4:abort(400)
-        page=int(page);items,buddies,more=list_data(db,uid,box,page)
+        page=int(page);sidebar=request.args.get('window')!='1' or (thread is None and request.args.get('compose')!='1')
+        items,buddies,more=list_data(db,uid,box,page) if sidebar else ([],[],False)
         detail=None;messages=[];older=None
         if thread:
             detail=thread_details(db,thread,uid);before=request.args.get('before')

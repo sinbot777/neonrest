@@ -1,0 +1,32 @@
+from pathlib import Path
+import sys
+stage=Path(sys.argv[2])
+source=(stage/'tests/verify_messaging.py').read_text()
+exec(compile(source.split("for route in ['/messages'")[0],str(stage/'tests/verify_messaging.py'),'exec'))
+friends('Regular','Writer');assert start('Regular','Writer').status_code==200
+thread=chat('Regular','Writer');key=thread['public_id']
+r=get('Regular','/messages/'+key,window='1')
+check(r.status_code==200,'Compact conversation loads')
+check(b'Afterglow' in r.data,'Afterglow title')
+check(b'<aside class="dm-sidebar"' not in r.data,'Hidden sidebar omitted from chat HTML')
+check(b'id="dm-start"' not in r.data,'Hidden introduction form omitted from chat')
+check(b'data-sidebar="no"' in r.data,'Chat disables buddy refresh')
+check(b'<img' not in r.data.lower(),'Compact chat has no image elements')
+r=get('Regular','/messages',window='1',compose='1')
+check(b'<aside class="dm-sidebar"' not in r.data and b'id="dm-start"' in r.data,'Compose view keeps introduction without sidebar')
+r=get('Regular','/messages',window='1')
+check(b'<aside class="dm-sidebar"' in r.data and b'data-buddy=' in r.data,'Buddy window retains friend list')
+check(b'data-presence="invisible"' in r.data,'Invisible heartbeat preference reaches client')
+check(b'<img' not in r.data.lower(),'Buddy view has no image elements')
+r=get('Regular','/messages/'+key)
+check(b'<aside class="dm-sidebar"' in r.data and b'id="dm-start"' in r.data,'Full view retains sidebar and introduction')
+check(b'>Afterglow <span data-message-badge' in r.data,'Navigation is rebranded')
+change('INSERT INTO user_blocks(user_id,target_id) VALUES (?,?)',(users['Regular'],users['Writer']))
+r=get('Regular','/messages/'+key+'/updates')
+check(not r.json['can_send'],'New request observes block immediately')
+change('DELETE FROM user_blocks')
+change("UPDATE account_disables SET disabled=1 WHERE user_id=?",(users['Writer'],))
+if not query('SELECT 1 FROM account_disables WHERE user_id=?',(users['Writer'],)):
+ change("INSERT INTO account_disables(user_id,disabled,reason,updated_by) VALUES (?,1,'Fictional test',?)",(users['Writer'],users['Owner']))
+check(get('Regular','/messages/'+key).status_code==404,'New request observes disabled peer')
+print('AFTERGLOW FOCUSED PASS',checks,flush=True)
