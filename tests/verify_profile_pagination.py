@@ -64,4 +64,21 @@ with app.app_context():
     db=core.get_db();db.execute("INSERT INTO posts(user_id,content,circle,created_at) VALUES (?,?,'public','2027-01-01')",(uid,'INSERTED AFTER PAGE ONE'));db.commit()
 repeat,_=get(link(first,'profile_older'))
 check([p['id'] for p in repeat['posts']]==[p['id'] for p in second['posts']],'new insertion does not shift older page')
+# Cursors keep a boundary even if that boundary post is deleted.
+with app.app_context():
+ db=core.get_db();db.execute('DELETE FROM posts WHERE id=?',(first['posts'][-1]['id'],));db.commit()
+repeat,_=get(link(first,'profile_older'))
+check([p['id'] for p in repeat['posts']]==[p['id'] for p in second['posts']],'deleted cursor boundary still works')
+with app.app_context():
+ db=core.get_db();db.execute('DELETE FROM posts WHERE user_id=? OR target_user_id=?',(uid,uid));db.commit()
+empty,r=get(link(first,'profile_older'));check(not empty['posts'],'empty history after deletion');check('Latest posts' in r.get_data(as_text=True),'empty page has recovery link')
+# Same signed cursor is validated again on every request and cannot be modified.
+from urllib.parse import urlencode
+from importlib import import_module
+pager=import_module('neonrest.profile_pagination')
+with app.app_context():
+ malformed=pager.serializer().dumps([uid,'2026-01-01','invalid','older'])
+check(client.get(base+'?'+urlencode({'posts_cursor':malformed})).status_code==400,'malformed signed payload rejected')
+check(client.get(base+'?'+urlencode({'posts_cursor':'x'*1025})).status_code==400,'oversized cursor rejected')
 print('PROFILE PAGINATION CHECKS',checks)
+
