@@ -93,7 +93,8 @@
             <a href="{{ url_for('post_edit_history', post_id=post.id) }}" class="link-button">Edit history</a>
             <a href="{{ url_for('edit_post',post_id=post.id) }}" class="link-button">Edit</a>
             <form method="POST" action="{{ url_for('delete_post',post_id=post.id) }}" style="display:inline;" onsubmit="return confirm('Delete this post?');"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
-              <button type="submit" class="link-button">Delete</button>
+              <input type="hidden" name="return_to" value="{{ request.script_root ~ request.full_path }}">
+<button type="submit" class="link-button">Delete</button>
             </form>
           </div>
         </div>

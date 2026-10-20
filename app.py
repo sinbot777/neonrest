@@ -1502,7 +1502,8 @@ def delete_post(post_id):
     db.execute('DELETE FROM posts WHERE id = ?', (post_id,))
     db.commit()
     flash("Post deleted successfully.", "success")
-    return redirect('/feed')
+    from .post_navigation import after_delete
+    return redirect(after_delete())
 
 @app.route('/vibe/<vibe_name>')
 def vibe_page(vibe_name):
