@@ -839,18 +839,8 @@ def user_page_test(user_id):
             post_reactors.setdefault(b62, {}).setdefault(r['emoji'], []).append(r['handle'])
 
     # -- Comments threaded --
-    comments_raw = []
-    if post_ids:
-        placeholders = ','.join(['?'] * len(post_ids))
-        comments_raw = db.execute(f'''
-            SELECT c.id, c.post_id, c.user_id, c.content, c.parent_comment_id,
-                   c.last_edited, u.handle, u.avatar_path
-            FROM comments c
-            JOIN users u ON u.id = c.user_id
-            WHERE c.post_id IN ({placeholders})
-              AND NOT EXISTS (SELECT 1 FROM moderated_comments mc WHERE mc.comment_id=c.id) AND community_member_visible(c.user_id)=1 AND age_comment_visible(c.id)=1
-            ORDER BY c.created_at ASC
-        ''', post_ids).fetchall()
+    from .growth_queries import comment_windows
+    comments_raw, comment_navigation = comment_windows(db,post_ids,identifiers,single=False)
     post_comments = {}
     for c in comments_raw:
         pid, par = c['post_id'], c['parent_comment_id']
@@ -870,6 +860,7 @@ def user_page_test(user_id):
         post_comments.setdefault(comment['post_id'], []).append(comment)
     for post in posts_with_html:
         post['comments'] = build_comment_tree(post_comments.get(post['base62_id'], []))
+        post['comment_navigation'] = comment_navigation.get(post['base62_id'], {})
 
     # ——— Load vibe theme metadata ———
     vibe_rows = db.execute('''
@@ -1266,27 +1257,9 @@ def feed(post_id=None, circle_context=None):
     circle_query = request.args.get('q', '').strip()[:200] if circle_context else ''
     circle_pattern = '%' + circle_query.replace('!', '!!').replace('%', '!%').replace('_', '!_') + '%'
     pinned_id = circle_context['circle']['pinned_post_id'] if circle_context else None
-    total_posts = db.execute('SELECT COUNT(*) FROM posts p WHERE NOT EXISTS (SELECT 1 FROM moderated_posts mp WHERE mp.post_id=p.id) AND community_post_visible(p.id)=1 AND (? IS NULL OR p.id IN (SELECT post_id FROM circle_posts WHERE circle_id=?)) AND (?=\'\' OR p.content LIKE ? ESCAPE \'!\')', (cid,cid,circle_query,circle_pattern)).fetchone()[0]
-    total_pages = 1 if post_id is not None else max(1,(total_posts+19)//20)
-    if page > total_pages:
-        abort(404)
-    # --- Fetch posts ---
-    rows = db.execute(''' 
-        SELECT posts.id, posts.user_id, posts.content, posts.circle,
-               posts.created_at, posts.last_edited,
-               users.handle      AS author_handle,
-               users.codename    AS author_codename,
-               users.avatar_path,
-               GROUP_CONCAT(vibes.name, ', ') AS vibes
-        FROM posts
-        JOIN users ON users.id = posts.user_id
-        LEFT JOIN post_vibes ON posts.id = post_vibes.post_id
-        LEFT JOIN vibes      ON post_vibes.vibe_id = vibes.id
-        WHERE NOT EXISTS (SELECT 1 FROM moderated_posts mp WHERE mp.post_id = posts.id) AND community_post_visible(posts.id)=1 AND (? IS NULL OR posts.id=?) AND (? IS NULL OR posts.id IN (SELECT post_id FROM circle_posts WHERE circle_id=?))
-        AND (?='' OR posts.content LIKE ? ESCAPE '!')
-        GROUP BY posts.id
-        ORDER BY (posts.id=COALESCE(?,-1)) DESC, posts.created_at DESC, posts.id DESC LIMIT 20 OFFSET ?
-    ''', (post_id,post_id,cid,cid,circle_query,circle_pattern,pinned_id,(page-1)*20)).fetchall()
+    from .growth_queries import timeline_rows
+    rows, has_more = timeline_rows(db,page,post_id,cid,circle_query,pinned_id)
+    total_pages = page + int(has_more)
     if post_id is not None and not rows:
         abort(404)
 
@@ -1338,18 +1311,8 @@ def feed(post_id=None, circle_context=None):
                          .append(r['handle'])
 
     # -- Comments threaded --
-    comments_raw = []
-    if post_ids:
-        placeholders = ','.join(['?'] * len(post_ids))
-        comments_raw = db.execute(f'''
-            SELECT c.id, c.post_id, c.user_id, c.content, c.parent_comment_id,
-                   c.last_edited, u.handle, u.avatar_path
-            FROM comments c
-            JOIN users u ON u.id = c.user_id
-            WHERE c.post_id IN ({placeholders})
-              AND NOT EXISTS (SELECT 1 FROM moderated_comments mc WHERE mc.comment_id=c.id) AND community_member_visible(c.user_id)=1 AND age_comment_visible(c.id)=1
-            ORDER BY c.created_at ASC
-        ''', post_ids).fetchall()
+    from .growth_queries import comment_windows
+    comments_raw, comment_navigation = comment_windows(db,post_ids,identifiers,single=(post_id is not None))
     post_comments = {}
     for c in comments_raw:
         pid, par = c['post_id'], c['parent_comment_id']
@@ -1369,6 +1332,7 @@ def feed(post_id=None, circle_context=None):
         post_comments.setdefault(comment['post_id'], []).append(comment)
     for post in posts_with_html:
         post['comments'] = build_comment_tree(post_comments.get(post['base62_id'], []))
+        post['comment_navigation'] = comment_navigation.get(post['base62_id'], {})
 
 
     # --- Load vibe theme metadata ---
@@ -1543,25 +1507,9 @@ def vibe_page(vibe_name):
         vibe_css = None
 
     page = post_page()
-    total_posts = db.execute('''SELECT COUNT(*) FROM post_vibes pv JOIN posts p ON p.id=pv.post_id
-        WHERE pv.vibe_id=? AND NOT EXISTS (SELECT 1 FROM moderated_posts mp WHERE mp.post_id=p.id) AND community_post_visible(p.id)=1''', (vibe['id'],)).fetchone()[0]
-    total_pages = max(1,(total_posts+19)//20)
-    if page > total_pages:
-        abort(404)
-    posts = db.execute('''
-        SELECT posts.id, posts.user_id, posts.content, posts.circle, posts.created_at,
-               posts.last_edited, users.handle, users.avatar_path,
-               GROUP_CONCAT(vibes.name, ', ') AS vibes
-        FROM posts
-        JOIN users ON posts.user_id = users.id
-        LEFT JOIN post_vibes ON posts.id = post_vibes.post_id
-        LEFT JOIN vibes ON post_vibes.vibe_id = vibes.id
-        WHERE posts.id IN (
-            SELECT post_id FROM post_vibes WHERE vibe_id = ?
-        ) AND NOT EXISTS (SELECT 1 FROM moderated_posts mp WHERE mp.post_id = posts.id) AND community_post_visible(posts.id)=1
-        GROUP BY posts.id
-        ORDER BY posts.created_at DESC, posts.id DESC LIMIT 20 OFFSET ?
-    ''', (vibe['id'],(page-1)*20)).fetchall()
+    from .growth_queries import timeline_rows
+    posts, has_more = timeline_rows(db,page,vibe_id=vibe['id'])
+    total_pages = page + int(has_more)
 
     from neonrest.vibe_gallery import build_vibe_gallery
     init_media_tables(db)
@@ -2733,4 +2681,14 @@ with app.app_context():
     init_media_tables(get_db())
     init_profile_styles(get_db())
     get_db().execute("CREATE TABLE IF NOT EXISTS vibe_editors(vibe_id INTEGER NOT NULL,user_id INTEGER NOT NULL,PRIMARY KEY(vibe_id,user_id))")
+    get_db().commit()
+
+# Additive growth indexes, once per application startup.
+with app.app_context():
+    from .growth_queries import install as install_growth_queries
+    install_growth_queries(get_db())
+
+with app.app_context():
+    from .search_index import install as install_search_index
+    install_search_index(get_db())
     get_db().commit()
