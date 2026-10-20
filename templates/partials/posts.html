@@ -3,7 +3,7 @@
 {% set VALID_REACTS = _reacts if _reacts is defined else [] %}
 {% set viewer_id = _viewer_id if _viewer_id is defined else None %}
 
-{%- macro render_comment(comment, post) -%}
+{%- macro render_comment(comment, post, depth=0) -%}
   <div id="comment-{{ comment.id }}"{% if legacy_comment_anchor(comment.raw_id) %} data-legacy-anchor="{{ legacy_comment_anchor(comment.raw_id) }}"{% endif %} class="comment{% if comment.parent_comment_id %} reply-comment{% endif %}" data-comment-id="{{ comment.id }}">
     <div class="comment-header">
       <div class="comment-meta">
@@ -47,9 +47,9 @@
     {% endif %}
 
     {% if comment.replies %}
-      <div class="reply-thread">
+      <div class="reply-thread"{% if depth>=3 %} style="margin-left:0;padding-left:0;border-left:0"{% endif %}>
         {% for reply in comment.replies %}
-          {{ render_comment(reply, post) }}
+          {{ render_comment(reply, post, depth+1) }}
         {% endfor %}
       </div>
     {% endif %}
@@ -119,6 +119,7 @@
     <span class="reaction-status" role="status" aria-live="polite"></span>
 </div>
 
+  <div id="comments-{{ public_post_id(post.id) }}"></div>
   {% if post.comments %}
   <div class="comments-section">
     {% for comment in post.comments %}
@@ -127,6 +128,11 @@
   </div>
   {% endif %}
 
+  {% if post.comment_navigation %}<nav class="comment-pagination" aria-label="Comments">
+    {% if post.comment_navigation.previous %}<a href="{{ post.comment_navigation.previous }}">← Earlier comments</a>{% endif %}
+    {% if post.comment_navigation.more %}<a href="{{ post.comment_navigation.all }}">View all comments →</a>{% endif %}
+    {% if post.comment_navigation.next %}<a href="{{ post.comment_navigation.next }}">More comments →</a>{% endif %}
+  </nav>{% endif %}
   {% if can_participate %}
   <div class="comment-form">
     <form id="comment-form-{{ public_post_id(post.id) }}" method="POST" action="/create_comment" data-post-id="{{ public_post_id(post.id) }}"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
@@ -140,6 +146,9 @@
 </div>
 {% endfor %}
 
+<style>
+.comment-pagination{display:flex;flex-wrap:wrap;gap:.75rem;margin:.8rem 0}.comment-pagination a{display:inline-flex;align-items:center;min-height:44px;padding:.3rem .8rem;border:1px solid currentColor;border-radius:999px;text-decoration:none}.comment-pagination a:focus-visible{outline:2px solid currentColor;outline-offset:3px}
+</style>
 <script>
 function toggleCommentMenu(btn) {
   const menu = btn.nextElementSibling;
@@ -172,7 +181,9 @@ async function submitComment(event, form) {
   try {
     const res = await fetch(form.action, { method: 'POST', body: formData });
     if (!res.ok) throw new Error('Request failed');
-    location.reload();
+    if (!{{ (request.endpoint == 'post_detail') | tojson }}) {location.reload();return;}
+    const created=await res.json();
+    const url=new URL({{ url_for('feed') | tojson }},location.origin);url.pathname=url.pathname.replace(/feed$/, 'posts/'+created.post_id);url.searchParams.set('comment',created.id);url.hash='comment-'+created.id;location.assign(url);
   } catch (err) {
     alert('Error submitting comment'); console.error(err);
   }
@@ -180,6 +191,9 @@ async function submitComment(event, form) {
 
 window.addEventListener('DOMContentLoaded', () => {
   const oldAnchor=location.hash.slice(1);
+  if ({{ (request.endpoint == 'post_detail') | tojson }} && /^comment-[A-Za-z0-9_-]+$/.test(oldAnchor) && !document.getElementById(oldAnchor) && !document.querySelector('[data-legacy-anchor="'+oldAnchor+'"]') && !new URLSearchParams(location.search).has('comment')) {
+    const url=new URL(location.href);url.searchParams.delete('comments_after');url.searchParams.delete('comments_before');url.searchParams.set('comment',oldAnchor.slice(8));location.replace(url);return;
+  }
   if (/^comment-[1-9][0-9]*$/.test(oldAnchor)) {
     const target=document.querySelector(`[data-legacy-anchor="${oldAnchor}"]`);
     if(target){target.scrollIntoView();history.replaceState(null,'',location.pathname+location.search+'#'+target.id);}

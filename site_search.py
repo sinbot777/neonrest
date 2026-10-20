@@ -56,6 +56,7 @@ def register(app, core):
                 return int(owner == uid or audience == 'public' or audience == 'friends' and (community.friends(db, owner, uid) or ages.family(db, owner, uid)))
             db.create_function('search_circle_visible', 1, circle_visible)
             db.create_function('search_location_visible', 1, location_visible)
+            from .search_index import candidates
             offset = (page - 1) * 20
             for kind in SCOPES:
                 if kind not in selected:
@@ -63,14 +64,17 @@ def register(app, core):
                 if kind in ('username', 'city'):
                     field = 'handle' if kind == 'username' else 'location'
                     term = query[1:] if kind == 'username' and query.startswith('@') else query
+                    candidate, match_args = candidates('users',field,term,'u',db)
                     extra = ' AND search_location_visible(u.id)=1' if kind == 'city' else ''
-                    rows = db.execute('SELECT u.id,u.handle' + (',u.location' if kind == 'city' else '') + ' FROM users u WHERE u.'+field+" LIKE ? ESCAPE '!' AND community_profile_visible(u.id)=1 AND community_member_visible(u.id)=1 AND NOT EXISTS(SELECT 1 FROM account_disables ad WHERE ad.user_id=u.id AND ad.disabled=1) AND NOT EXISTS(SELECT 1 FROM account_safety a WHERE a.user_id=u.id AND a.inactive=1)"+extra+' ORDER BY u.handle COLLATE NOCASE,u.id LIMIT 21 OFFSET ?', (pattern(term),offset)).fetchall()
+                    rows = db.execute('SELECT u.id,u.handle' + (',u.location' if kind == 'city' else '') + ' FROM users u WHERE u.'+field+" LIKE ? ESCAPE '!' AND community_profile_visible(u.id)=1 AND community_member_visible(u.id)=1 AND NOT EXISTS(SELECT 1 FROM account_disables ad WHERE ad.user_id=u.id AND ad.disabled=1) AND NOT EXISTS(SELECT 1 FROM account_safety a WHERE a.user_id=u.id AND a.inactive=1)"+extra+candidate+' ORDER BY u.handle COLLATE NOCASE,u.id LIMIT 21 OFFSET ?', [pattern(term)]+match_args+[offset]).fetchall()
                     items = [{'title': row['handle'], 'url': url_for('user_by_handle',handle=row['handle'].lstrip('@')), 'text': row['location'] if kind == 'city' else ''} for row in rows[:20]]
                 elif kind == 'posts':
-                    rows = db.execute("SELECT p.id,p.content,p.created_at,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.content LIKE ? ESCAPE '!' AND community_post_visible(p.id)=1 AND NOT EXISTS(SELECT 1 FROM moderated_posts mp WHERE mp.post_id=p.id) ORDER BY p.created_at DESC,p.id DESC LIMIT 21 OFFSET ?", (pattern(query),offset)).fetchall()
+                    candidate, match_args = candidates('posts','content',query,'p',db)
+                    rows = db.execute("SELECT p.id,p.content,p.created_at,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.content LIKE ? ESCAPE '!' AND community_post_visible(p.id)=1 AND NOT EXISTS(SELECT 1 FROM moderated_posts mp WHERE mp.post_id=p.id)"+candidate+" ORDER BY p.created_at DESC,p.id DESC LIMIT 21 OFFSET ?", [pattern(query)]+match_args+[offset]).fetchall()
                     items = [{'title':'Post by '+row['handle'], 'url':url_for('post_detail',post_id=row['id']), 'text':row['content'][:240]+('…' if len(row['content'])>240 else ''), 'date':row['created_at']} for row in rows[:20]]
                 else:
-                    rows = db.execute("SELECT * FROM circles WHERE (name LIKE ? ESCAPE '!' OR description LIKE ? ESCAPE '!') AND search_circle_visible(id)=1 ORDER BY name COLLATE NOCASE,id LIMIT 21 OFFSET ?", (pattern(query),pattern(query),offset)).fetchall()
+                    candidate, match_args = candidates('circles',None,query,'circles',db)
+                    rows = db.execute("SELECT * FROM circles WHERE (name LIKE ? ESCAPE '!' OR description LIKE ? ESCAPE '!') AND search_circle_visible(id)=1"+candidate+" ORDER BY name COLLATE NOCASE,id LIMIT 21 OFFSET ?", [pattern(query),pattern(query)]+match_args+[offset]).fetchall()
                     items = [{'title':circles.label(row), 'url':url_for('circle_page',circle_id=row['id']), 'text':row['description']} for row in rows[:20]]
                 more = len(rows)>20
                 has_more |= more
