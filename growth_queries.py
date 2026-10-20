@@ -49,7 +49,9 @@ def comment_windows(db, post_ids, identifiers, single=False):
         args=[pid];predicate='';descending=bool(before) or not single
         if boundary:
             try:cid=identifiers.resolve(db,'comment',boundary)
-            except (ValueError,TypeError):abort(404)
+            except (ValueError,TypeError):
+                try:cid=identifiers.resolve(db,'comment',boundary,anchor=True)
+                except (ValueError,TypeError):abort(404)
             row=db.execute('SELECT c.created_at,c.id FROM comments c WHERE c.id=? AND c.post_id=? AND '+visible,(cid,pid)).fetchone()
             if row is None:abort(404)
             predicate=' AND (c.created_at,c.id) '+('<' if before else '>=' if target else '>')+' (?,?)'

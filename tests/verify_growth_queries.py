@@ -23,7 +23,8 @@ class IDs:
  @staticmethod
  def public(db,kind,value):return ('c' if kind=='comment' else 'p')+str(value)
  @staticmethod
- def resolve(db,kind,value):
+ def resolve(db,kind,value,anchor=False):
+  if anchor and value.isdigit():return int(value)
   if value[0]!='c' or not value[1:].isdigit():raise ValueError()
   return int(value[1:])
 ids=IDs()
@@ -51,7 +52,9 @@ with app.test_request_context(previous):
  rows,nav=mod.comment_windows(db,[200],ids,single=True);check([r['id'] for r in rows]==expected[:50],'Backward window matches original first page')
 with app.test_request_context('/posts/p200?comment=c101'):
  rows,nav=mod.comment_windows(db,[200],ids,single=True);check(rows[0]['id']==101,'Target comment opens directly');check(bool(nav['p200']['previous']),'Target retains earlier navigation')
-for query,pid,status in [('comment=c4',200,404),('comment=c5',200,404),('comment=c10',200,404),('comment=c101',1,404),('comment=bad',200,404),('comments_after=c1&comment=c101',200,400)]:
+with app.test_request_context('/posts/p200?comment=101'):
+ rows,nav=mod.comment_windows(db,[200],ids,single=True);check(rows[0]['id']==101,'Legacy numeric anchor resolves through anchor aliases')
+for query,pid,status in [('comment=4',200,404),('comment=c4',200,404),('comment=c5',200,404),('comment=c10',200,404),('comment=c101',1,404),('comment=bad',200,404),('comments_after=c1&comment=c101',200,400)]:
  with app.test_request_context('/posts/p200?'+query):
   try:mod.comment_windows(db,[pid],ids,single=True);raise AssertionError('Expected refusal: '+query)
   except HTTPException as error:check(error.code==status,'Invalid/hidden/cross-post target refused')
