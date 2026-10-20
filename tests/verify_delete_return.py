@@ -16,6 +16,13 @@ for value,expected in [
   check(nav.after_delete()==expected,'safe navigation '+value[:40])
 with app.test_request_context('/delete_post/test',method='POST',data={'return_to':'/sandbox'+profile+'?mode=night'},environ_overrides={'SCRIPT_NAME':'/sandbox'}):
  check(nav.after_delete()=='/sandbox'+profile+'?mode=night#recent-posts','mounted return destination')
+for fields,referer,expected in [
+ ({},'http://localhost'+profile+'?mode=night',profile+'?mode=night#recent-posts'),
+ ({},'https://evil.invalid'+profile,'/feed'),
+ ({},'http://localhost/account','/feed'),
+ ({'return_to':'https://evil.invalid/'},'http://localhost'+profile,'/feed')]:
+ with app.test_request_context('/delete_post/test',method='POST',data=fields,headers={'Referer':referer}):
+  check(nav.after_delete()==expected,'already-open forms use only validated same-origin routes')
 # Create and delete only fictional records in the disposable database.
 from flask import url_for
 pager=importlib.import_module(package+'.profile_pagination')
@@ -31,6 +38,11 @@ for destination in (profile+'?mode=night',return_to,'/feed?page=2','/vibe/VM%20F
  if destination.startswith(profile):
   page=clients['Writer'].get(response.headers['Location'])
   check(page.status_code==200,'profile and cursor remain usable after delete')
+pid,public_id=post_fixture('Fictional already-open profile form')
+response=clients['Writer'].post('/delete_post/'+public_id,data={'theme_csrf_token':token},headers={'Referer':'http://localhost'+profile+'?mode=night'})
+check(response.status_code==302,'older form deletion succeeds')
+check(response.headers['Location']==profile+'?mode=night#recent-posts','already-open profile form returns to profile')
+check(not query('SELECT 1 FROM posts WHERE id=?',(pid,)),'older-form fixture deleted')
 pid,public_id=post_fixture('Fictional forbidden delete')
 response=clients['Regular'].post('/delete_post/'+public_id,data={'theme_csrf_token':token,'return_to':profile})
 check(bool(query('SELECT 1 FROM posts WHERE id=?',(pid,))),'another user cannot delete post')

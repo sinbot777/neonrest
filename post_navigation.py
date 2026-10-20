@@ -9,6 +9,16 @@ PARAMS = {'mode','posts_cursor','page','before'}
 def after_delete():
     fallback = url_for('feed')
     value = request.form.get('return_to','')
+    # Older, already-open forms have no return field. Validate their same-origin
+    # Referer through the exact same route allowlist and URL reconstruction.
+    if not value and request.referrer:
+        try:
+            ref = urlsplit(request.referrer)
+            origin = urlsplit(request.host_url)
+            if (ref.scheme,ref.netloc)==(origin.scheme,origin.netloc):
+                value = ref.path + ('?'+ref.query if ref.query else '')
+        except ValueError:
+            return fallback
     if not value or len(value)>4096 or not value.startswith('/') or value.startswith('//') or '\\' in value or any(ord(c)<32 or ord(c)==127 for c in value):
         return fallback
     try:
