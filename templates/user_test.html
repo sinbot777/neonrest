@@ -226,7 +226,7 @@
     </div>
   {% endif %}
 
-<div class="recent-posts">
+<div class="recent-posts" id="recent-posts">
   {% set track = profile_midi(user.id) %}
   {% if track %}
     <section class="profile-music"><h3>Profile music</h3>
@@ -236,6 +236,11 @@
     </section>
   {% endif %}
   <h3>Recent Posts</h3>
+<nav aria-label="Profile post pages" style="display:flex;flex-wrap:wrap;gap:1rem;margin:1rem 0">
+{% if profile_newer %}<a class="button" rel="prev" href="{{ url_for('user_by_handle', handle=user.handle.lstrip('@'), mode=profile_mode, posts_cursor=profile_newer, _anchor='recent-posts') }}">Newer posts</a>{% endif %}
+{% if profile_older %}<a class="button" rel="next" href="{{ url_for('user_by_handle', handle=user.handle.lstrip('@'), mode=profile_mode, posts_cursor=profile_older, _anchor='recent-posts') }}">Older posts</a>{% endif %}
+{% if request.args.get('posts_cursor') %}<a href="{{ url_for('user_by_handle', handle=user.handle.lstrip('@'), mode=profile_mode, _anchor='recent-posts') }}">Latest posts</a>{% endif %}
+</nav>
   {% if posts %}
     {% set _posts = posts %}
     {% set _reactors = post_reactors %}
@@ -243,8 +248,13 @@
     {% set _viewer_id = viewer_id %}
     {% include 'partials/posts.html' %}
   {% else %}
-    <p>No posts yet.</p>
+    <p>{% if request.args.get('posts_cursor') %}No more posts on this page.{% else %}No posts yet.{% endif %}</p>
   {% endif %}
+<nav aria-label="Profile post pages" style="display:flex;flex-wrap:wrap;gap:1rem;margin:1rem 0">
+{% if profile_newer %}<a class="button" rel="prev" href="{{ url_for('user_by_handle', handle=user.handle.lstrip('@'), mode=profile_mode, posts_cursor=profile_newer, _anchor='recent-posts') }}">Newer posts</a>{% endif %}
+{% if profile_older %}<a class="button" rel="next" href="{{ url_for('user_by_handle', handle=user.handle.lstrip('@'), mode=profile_mode, posts_cursor=profile_older, _anchor='recent-posts') }}">Older posts</a>{% endif %}
+{% if request.args.get('posts_cursor') %}<a href="{{ url_for('user_by_handle', handle=user.handle.lstrip('@'), mode=profile_mode, _anchor='recent-posts') }}">Latest posts</a>{% endif %}
+</nav>
 </div>
 
 

@@ -6,6 +6,8 @@ The regression uses fictional in-memory data: 50,000 posts, 100,000 comments, 50
 
 ## Growth follow-up
 
-Profile history still needs bounded pagination. The feed and Vibe pages cap visible posts, but exact total counts and visibility callbacks can examine many rows. These deserve a separate, permission-tested query/pagination change. Offset pagination and leading-wildcard text search also merit measurement at larger sizes.
+Profile history now uses signed, profile-scoped keyset cursors with 20 posts per page. Visibility is applied before a 21-row lookahead; Vibe joins, Markdown rendering, reactions and comments operate only on that selected page. Newer/Older/Latest links preserve profile appearance mode. No full-history count or OFFSET is used. Deleted posts do not invalidate cursor boundaries. Invalid or cross-profile cursors return 400.
+
+A busy profile can still require examining many candidate rows to evaluate visibility, and an individual post can have many comments. Those costs remain separate follow-ups. The feed and Vibe pages cap visible posts, but exact total counts and visibility callbacks can examine many rows. These deserve a separate, permission-tested query/pagination change. Offset pagination and leading-wildcard text search also merit measurement at larger sizes.
 
 Statistics already expire old measurements on a 90-day window. Security retention respects preservation holds. Content, moderation history and held records must not be treated as disposable logs. Check expiry indexes and housekeeping frequency separately before changing retention behavior. Avoid unnecessary VACUUM operations on small databases with no free pages.

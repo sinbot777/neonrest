@@ -752,9 +752,19 @@ def user_page_test(user_id):
     ).fetchall()
     top_friends = get_top_friends(db, user['id'])
 
-    # -- Fetch posts --
+    # -- Fetch one visible page before loading comments and reactions --
+    from .profile_pagination import selection, finish, PAGE_SIZE
+    page_where, page_args, page_reverse = selection(user_id)
     rows = db.execute(
-        '''
+        f'''
+        WITH profile_page AS (
+        SELECT posts.id FROM posts
+        WHERE (posts.user_id = ? OR posts.target_user_id = ?)
+          AND NOT EXISTS (SELECT 1 FROM moderated_posts mp WHERE mp.post_id = posts.id) AND community_post_visible(posts.id)=1
+        {page_where}
+        ORDER BY posts.created_at {'ASC' if page_reverse else 'DESC'}, posts.id {'ASC' if page_reverse else 'DESC'}
+        LIMIT ?
+        )
         SELECT posts.id, posts.user_id, posts.target_user_id, posts.content,
                posts.circle, posts.created_at, posts.last_edited,
                GROUP_CONCAT(vibes.name, ', ') AS vibes,
@@ -762,18 +772,18 @@ def user_page_test(user_id):
                u.codename     AS author_codename,
                u.avatar_path  AS author_avatar,
                target.handle  AS target_handle
-        FROM posts
+        FROM profile_page
+        JOIN posts ON posts.id = profile_page.id
         JOIN users u ON posts.user_id = u.id
         LEFT JOIN users target ON posts.target_user_id = target.id
         LEFT JOIN post_vibes ON posts.id = post_vibes.post_id
         LEFT JOIN vibes ON post_vibes.vibe_id = vibes.id
-        WHERE (posts.user_id = ? OR posts.target_user_id = ?)
-          AND NOT EXISTS (SELECT 1 FROM moderated_posts mp WHERE mp.post_id = posts.id) AND community_post_visible(posts.id)=1
         GROUP BY posts.id
-        ORDER BY posts.created_at DESC
+        ORDER BY posts.created_at {'ASC' if page_reverse else 'DESC'}, posts.id {'ASC' if page_reverse else 'DESC'}
         ''',
-        (user_id, user_id)
+        (user_id, user_id, *page_args, PAGE_SIZE + 1)
     ).fetchall()
+    rows, profile_older, profile_newer = finish(rows, user_id, page_reverse)
 
     # -- Build posts_with_html & Base62 map --
     posts_with_html = []
@@ -900,7 +910,8 @@ def user_page_test(user_id):
         VALID_REACTS=VALID_REACTS,
         vibe_metadata=vibe_metadata,
         profile_css=profile_css,
-        profile_mode=profile_mode
+        profile_mode=profile_mode,
+        profile_older=profile_older, profile_newer=profile_newer
     )
 
 
