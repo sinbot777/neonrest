@@ -2700,6 +2700,12 @@ def unavailable_page(error):
     response.headers['Cache-Control'] = 'private, no-store'
     return response
 
+# Additive query indexes are checked once at startup, after the table migrations.
+from .query_indexes import install as install_query_indexes
+with app.app_context():
+    install_query_indexes(get_db())
+    get_db().commit()
+
 if __name__ == '__main__':
     app.run(debug=False)
 
