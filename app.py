@@ -2717,6 +2717,9 @@ with app.app_context():
     install_query_indexes(get_db())
     get_db().commit()
 
+from .video_embeds import install as install_video_embeds
+install_video_embeds(app)
+
 if __name__ == '__main__':
     app.run(debug=False)
 
