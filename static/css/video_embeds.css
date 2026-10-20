@@ -1,1 +1,16 @@
-.neon-video-card{border:1px solid currentColor;border-radius:.6rem;padding:1rem;margin:1rem 0;overflow:hidden;max-width:100%;box-sizing:border-box}.neon-video-actions{display:flex;flex-wrap:wrap;align-items:center;gap:.8rem}.neon-video-actions button{font:inherit;padding:.6rem .9rem;cursor:pointer}.neon-video-actions [hidden]{display:none!important}.neon-video-player:empty{display:none}.neon-video-player iframe{display:block;width:100%;aspect-ratio:16/9;border:0;background:#111}.neon-video-notice{font-size:.9rem}.neon-video-actions a{overflow-wrap:anywhere}
+/* Video controls stay readable on both light and dark custom profiles. */
+.neon-video-card{border:1px solid currentColor;border-radius:.75rem;padding:1rem;margin:1rem 0;overflow:hidden;max-width:100%;box-sizing:border-box}
+.neon-video-actions{display:flex;flex-wrap:wrap;align-items:center;gap:.65rem}
+.neon-video-actions button,.neon-video-actions a,.neon-video-actions a:visited{display:inline-flex;align-items:center;justify-content:center;gap:.4rem;box-sizing:border-box;min-height:44px;padding:.65rem 1rem;border:1px solid #bca5ca;border-radius:.55rem;font:inherit;font-size:.9rem;font-weight:600;line-height:1.25;letter-spacing:.01em;color:#ffe4d4;background:#2b2334;text-decoration:none;box-shadow:0 2px 0 #0004;cursor:pointer;overflow-wrap:anywhere;transition:background-color .15s,border-color .15s,box-shadow .15s}
+.neon-video-actions .neon-video-load{color:#251b29;background:#ffd0b8;border-color:#ffd0b8}
+.neon-video-actions a,.neon-video-actions a:visited{color:#dae8ff;border-color:#9db4d5;background:#21283a}
+.neon-video-actions button:hover{background:#44334e;border-color:#ffe4d4;box-shadow:0 0 0 1px #ffe4d466}
+.neon-video-actions .neon-video-load:hover{background:#ffe2d1;border-color:#ffe2d1;box-shadow:0 0 0 1px #ffd0b866}
+.neon-video-actions a:hover{color:#fff;background:#303e57;border-color:#dae8ff;text-decoration:underline;text-underline-offset:.2em}
+.neon-video-actions button:focus-visible,.neon-video-actions a:focus-visible{outline:3px solid #72e4f3;outline-offset:3px;box-shadow:0 0 0 2px #171421}
+.neon-video-actions [hidden]{display:none!important}
+.neon-video-player:empty{display:none}
+.neon-video-player iframe{display:block;width:100%;aspect-ratio:16/9;border:0;background:#111}
+.neon-video-notice{font-size:.9rem}
+@media(prefers-reduced-motion:reduce){.neon-video-actions button,.neon-video-actions a{transition:none}}
+@media(max-width:420px){.neon-video-actions{align-items:stretch}.neon-video-actions button,.neon-video-actions a{flex:1 1 auto}}
