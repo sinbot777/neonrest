@@ -1,12 +1,13 @@
-{% for video in youtube_links(post.content) %}
-<section class="neon-video-card" data-youtube-id="{{ video.id }}" data-video-start="{{ video.start }}" aria-label="YouTube video">
+{% for video in video_links(post.content) %}
+<section class="neon-video-card" data-video-provider="{{ video.provider }}" data-video-id="{{ video.id }}"{% if video.provider=='youtube' %} data-youtube-id="{{ video.id }}"{% endif %} data-video-start="{{ video.start }}" data-video-url="{{ video.url }}" data-video-portrait="{{ 'true' if video.portrait else 'false' }}" aria-label="{{ video.label }} video">
   <div class="neon-video-player"></div>
-  <p class="neon-video-notice">YouTube video. Loading connects to YouTube.</p>
+  <p class="neon-video-notice">{{ video.label }} {% if video.provider=='instagram' %}post or Reel{% else %}video{% endif %}. Loading connects to {{ video.label }}.</p>
   <div class="neon-video-actions">
-    <button type="button" class="neon-video-load">Load YouTube video</button>
+    <button type="button" class="neon-video-load">Load {{ video.label }} {% if video.provider=='instagram' %}post{% else %}video{% endif %}</button>
     <button type="button" class="neon-video-close" hidden>Close player</button>
-    <a href="{{ video.url }}" target="_blank" rel="noopener noreferrer">Open on YouTube</a>
+    <a href="{{ video.url }}" target="_blank" rel="noopener noreferrer">Open on {{ video.label }}</a>
   </div>
-  <noscript>Use “Open on YouTube” to watch this video.</noscript>
+  {% if video.provider!='youtube' %}<p class="neon-video-note">If this content is private, unavailable, or cannot be embedded, use the original link above.</p>{% endif %}
+  <noscript>Use the original link to view this content.</noscript>
 </section>
 {% endfor %}

@@ -45,5 +45,56 @@ def youtube_links(content):
             continue
     return result
 
+def video_links(content):
+    """Canonical, allowlisted provider URLs. No redirects or metadata requests."""
+    tick = chr(96)
+    content = re.sub(tick*3+r'[\s\S]*?'+tick*3+'|'+tick+'[^'+tick+r'\n]*'+tick, '', str(content or ''))
+    result, seen = [], set()
+    for match in URL.finditer(content):
+        raw = match.group().rstrip(').,;!?]}')
+        if len(raw) > 2048:
+            continue
+        try:
+            u = urlsplit(raw)
+            if u.username or u.password or u.port not in (None,80,443):
+                continue
+            found = youtube_links(raw)
+            if found:
+                video = dict(found[0], provider='youtube', label='YouTube', portrait=False)
+            elif u.hostname in ('instagram.com','www.instagram.com','m.instagram.com'):
+                parts=u.path.strip('/').split('/')
+                if len(parts)!=2 or parts[0] not in ('p','reel','reels','tv') or not re.fullmatch(r'[A-Za-z0-9_-]{5,64}',parts[1]):
+                    continue
+                kind='reel' if parts[0]=='reels' else parts[0]
+                canonical='https://www.instagram.com/'+kind+'/'+parts[1]+'/'
+                video={'provider':'instagram','label':'Instagram','id':parts[1],'url':canonical,'start':0,'portrait':True}
+            elif u.hostname in ('facebook.com','www.facebook.com','m.facebook.com','web.facebook.com','fb.watch','www.fb.watch'):
+                parts=u.path.strip('/').split('/')
+                query=parse_qs(u.query,max_num_fields=40)
+                portrait=False
+                if u.hostname in ('fb.watch','www.fb.watch') and len(parts)==1 and re.fullmatch(r'[A-Za-z0-9_-]{3,128}',parts[0]):
+                    key='short:'+parts[0];canonical='https://fb.watch/'+parts[0]+'/'
+                elif u.path.rstrip('/')=='/watch' and re.fullmatch(r'[0-9]{3,30}',query.get('v',[''])[0]):
+                    key=query['v'][0];canonical='https://www.facebook.com/watch/?v='+key
+                elif len(parts)>=2 and parts[-2] in ('videos','reel') and re.fullmatch(r'[0-9]{3,30}',parts[-1]) and len(parts)<=4 and all(re.fullmatch(r'[A-Za-z0-9._-]+',x) for x in parts):
+                    key=parts[-1];portrait=parts[-2]=='reel';canonical='https://www.facebook.com/'+('reel/'+key+'/' if portrait else 'watch/?v='+key)
+                elif len(parts)==3 and parts[:2] in (['share','v'],['share','r']) and re.fullmatch(r'[A-Za-z0-9_-]{3,128}',parts[2]):
+                    key='share:'+parts[2];portrait=parts[1]=='r';canonical='https://www.facebook.com/share/'+parts[1]+'/'+parts[2]+'/'
+                else:
+                    continue
+                video={'provider':'facebook','label':'Facebook','id':key,'url':canonical,'start':0,'portrait':portrait}
+            else:
+                continue
+            key=(video['provider'],video['id'])
+            if key in seen:
+                continue
+            seen.add(key);result.append(video)
+            if len(result)==3:
+                break
+        except (ValueError,UnicodeError):
+            continue
+    return result
+
 def install(app):
     app.jinja_env.globals['youtube_links'] = youtube_links
+    app.jinja_env.globals['video_links'] = video_links
