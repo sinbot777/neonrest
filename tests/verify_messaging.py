@@ -2,7 +2,20 @@ import os
 os.environ['NEONREST_MESSAGING_ENABLED']='1'
 from pathlib import Path
 import os,sys,tempfile,sqlite3,importlib,contextlib,io,time,json
-package=sys.argv[1];stage=Path(sys.argv[2]);_fixture_directory=tempfile.TemporaryDirectory(prefix='neonrest-statistics-test-');w=Path(_fixture_directory.name)
+
+def _close_fixture_connections(directory):
+    import gc, sqlite3
+    gc.collect()
+    for connection in gc.get_objects():
+        if isinstance(connection, sqlite3.Connection):
+            try:
+                connection.close()
+            except sqlite3.Error:
+                pass
+    gc.collect()
+    directory.cleanup()
+
+package=sys.argv[1];stage=Path(sys.argv[2]);_fixture_directory=tempfile.TemporaryDirectory(prefix='neonrest-statistics-test-');w=Path(_fixture_directory.name);import atexit,gc;atexit.register(_close_fixture_connections,_fixture_directory)
 src=sqlite3.connect('file:/home/sinbot/db/'+package+'.db?mode=ro',uri=True);dst=sqlite3.connect(w/'fixture.db');src.backup(dst);src.close();dst.close()
 with sqlite3.connect(w/'fixture.db') as before_db:initial_counts={r[0]:before_db.execute('SELECT COUNT(*) FROM "'+r[0]+'"').fetchone()[0] for r in before_db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
 prefix='NEONREST_PRODUCTION' if package=='neonrest' else 'NEONREST_SANDBOX'
