@@ -17,7 +17,7 @@ ERROR_CAP=10000
 AUDIT_CAP=5000
 BAN_CAP=1000
 RETENTION=30*86400
-SENSITIVE=re.compile(r'password|recover|reset|token|verif|document|submission|invitation|export|oauth|callback|secret|reauth|factor|consent|guardian',re.I)
+SENSITIVE=re.compile(r'password|recover|reset|token|verif|document|submission|invitation|export|oauth|callback|secret|reauth|factor|consent|guardian|(?:^|/)messages(?:/|$)',re.I)
 SCAN=re.compile(r'(?:^|/)(?:wp-admin(?:/|$)|wp-content(?:/|$)|wp-includes(?:/|$)|wordpress(?:/|$)|xmlrpc\.php(?:/|$)|\.env(?:\.|/|$)|\.git(?:/|$)|phpmyadmin(?:/|$))',re.I)
 
 def canonical(value):

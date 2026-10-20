@@ -121,6 +121,9 @@ def erase_account(db,uid,roots):
     if 'approved_payload' in ts.get('family_data_requests',set()):
         db.execute('UPDATE family_data_requests SET approved_payload=NULL,payload_sha256=NULL,authority_version=NULL,expires_at=NULL WHERE parent_id=? OR child_id=?',(uid,uid))
     remove('parent_deletion_requests','child_id',[uid])
+    if 'dm_messages' in ts:
+        from .messaging import erase_user
+        erase_user(db,uid)
     db.execute('DELETE FROM users WHERE id=?',(uid,))
 
 def file_work(db,roots,now):

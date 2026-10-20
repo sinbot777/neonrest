@@ -1,0 +1,2 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>{% block title %}Afterglow · Neonrest{% endblock %}</title></head><body class="dm-popout-page">{% with messages=get_flashed_messages(with_categories=true) %}{% if messages %}<div class="dm-flashes" role="status">{% for category,message in messages %}<p>{{ message }}</p>{% endfor %}</div>{% endif %}{% endwith %}{% block content %}{% endblock %}</body></html>

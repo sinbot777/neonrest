@@ -167,6 +167,9 @@ def notification_visible(db, row, uid):
             or not member_visible(db, actor, uid)
             or not ages.contact(db, uid, actor, invitation=row['kind']=='friends')):
         return False
+    if row['kind']=='messages':
+        from neonrest.messaging import visible_notice
+        return bool(current_app.config.get('MESSAGING_ENABLED') and visible_notice(db,row,uid))
     path = row['path'] or ''
     if path.startswith('/circles/'):
         from neonrest import circles, circle_ids
@@ -924,6 +927,9 @@ def register(app, core):
             if not db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",(table,)).fetchone():
                 continue
             export[table]=[dict(row) for row in db.execute(f'SELECT * FROM {table} WHERE {predicate}',args)]
+        if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='dm_messages'").fetchone():
+            from neonrest.messaging import export_user
+            export['private_messages']=export_user(db,uid)
         core.identifiers.export_ids(db,export)
         # Exclude internal case notes, password hashes, tokens and two-factor secrets.
         return Response(json.dumps(export,ensure_ascii=False,indent=2),mimetype='application/json',headers={'Content-Disposition':'attachment; filename="neonrest-data.json"'})
@@ -980,7 +986,8 @@ def register(app, core):
                 db.execute('UPDATE moderation_cases SET assigned_to=? WHERE id=?',(int(target) if target else None,case_id))
                 db.execute('INSERT INTO case_notes(case_id,actor_id,body) VALUES (?,?,?)',(case_id,actor,'Assignment changed to '+(target or 'unassigned')))
             elif action in ('close','reopen'):
-                if action=='close' and (db.execute("SELECT 1 FROM content_reports r JOIN case_links l ON l.kind='report' AND l.item_id=r.id WHERE l.case_id=? AND r.status='open'",(case_id,)).fetchone() or db.execute("SELECT 1 FROM moderation_appeals a JOIN case_links l ON l.kind='appeal' AND l.item_id=a.id WHERE l.case_id=? AND a.status='open'",(case_id,)).fetchone()):
+                open_messages=bool(db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='dm_reports'").fetchone() and db.execute("SELECT 1 FROM dm_reports WHERE case_id=? AND status='open'",(case_id,)).fetchone())
+                if action=='close' and (open_messages or db.execute("SELECT 1 FROM content_reports r JOIN case_links l ON l.kind='report' AND l.item_id=r.id WHERE l.case_id=? AND r.status='open'",(case_id,)).fetchone() or db.execute("SELECT 1 FROM moderation_appeals a JOIN case_links l ON l.kind='appeal' AND l.item_id=a.id WHERE l.case_id=? AND a.status='open'",(case_id,)).fetchone()):
                     abort(409,description='Review the open reports and appeals before closing this case.')
                 db.execute("UPDATE moderation_cases SET status=?,closed_at=CASE WHEN ?='close' THEN CURRENT_TIMESTAMP ELSE NULL END WHERE id=?",('closed' if action=='close' else 'open',action,case_id))
                 db.execute('INSERT INTO case_notes(case_id,actor_id,body) VALUES (?,?,?)',(case_id,actor,'Case '+action))

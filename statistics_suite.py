@@ -41,7 +41,7 @@ def external_host():
     except ValueError:return None
 
 def reportable_route(rule,crawler=False):
-    private=('/manage','/staff','/account','/verify','/reset','/password-reset','/recover','/support','/family','/document','/submission','/privacy/submit','/analytics/','/ad/')
+    private=('/manage','/staff','/account','/verify','/reset','/password-reset','/recover','/support','/family','/document','/submission','/messages','/privacy/submit','/analytics/','/ad/')
     assets=('/static','/shared-media','/uploads','/media/','/media-file','/social-preview','/favicon.ico','/robots.txt','/sitemap')
     from .network_security import SENSITIVE
     return bool(rule) and not SENSITIVE.search(rule) and not rule.startswith(private) and (crawler or not rule.startswith(assets))

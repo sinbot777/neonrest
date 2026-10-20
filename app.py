@@ -2696,6 +2696,9 @@ register_site_statistics(app,sys.modules[__name__])
 from neonrest.site_discovery import register as register_site_discovery
 register_site_discovery(app,sys.modules[__name__])
 
+from neonrest.messaging import register as register_messaging
+register_messaging(app,sys.modules[__name__])
+
 @app.errorhandler(404)
 def unavailable_page(error):
     response = app.make_response((render_template('unavailable.html'), 404))
