@@ -1801,6 +1801,10 @@ def protect_management_responses(response):
     response.headers.setdefault('X-Content-Type-Options', 'nosniff')
     if request.path.startswith(('/manage', '/themes/edit')):
         response.headers['Cache-Control'] = 'no-store'
+    elif (request.method in ('GET', 'HEAD') and request.endpoint == 'static'
+          and (request.view_args or {}).get('filename') in ('optimized/logo.b7ad6086edc3.webp', 'optimized/bg-cassette-fuzz.975d4bec5a5a.webp', 'optimized/grain.090791c73e86.webp', 'optimized/style.8d336a486db9.css')
+          and response.status_code in (200, 304) and not response.headers.getlist('Set-Cookie')):
+        response.headers['Cache-Control'] = 'public, max-age=31536000, immutable'
     return response
 
 

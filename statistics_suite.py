@@ -142,7 +142,9 @@ def register(app,core,path):
 
     def cookie(response,kind,value,age):response.set_cookie(names()+kind,serializer.dumps(value),max_age=age,secure=True,httponly=True,samesite='Lax',path=request.script_root or '/')
     def clear(response):
-        for kind in ('visitor','session'):response.delete_cookie(names()+kind,path=request.script_root or '/',secure=True,httponly=True,samesite='Lax')
+        for kind in ('visitor','session'):
+            if names()+kind in request.cookies:
+                response.delete_cookie(names()+kind,path=request.script_root or '/',secure=True,httponly=True,samesite='Lax')
     def digest(value):return hmac.new(str(app.secret_key).encode(),('analytics:'+value).encode(),hashlib.sha256).hexdigest()
     @app.context_processor
     def analytics_context():
