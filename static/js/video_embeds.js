@@ -22,7 +22,7 @@
     frame.title = "YouTube video player";
     frame.src = "https://www.youtube-nocookie.com/embed/" + id + "?playsinline=1&autoplay=0&start=" + Math.floor(start);
     frame.referrerPolicy = "strict-origin";
-    frame.allow = "encrypted-media; picture-in-picture; fullscreen";
+    frame.allow = "autoplay; encrypted-media; picture-in-picture; fullscreen";
     frame.allowFullscreen = true;
     player.replaceChildren(frame);
     load.hidden = true;
