@@ -21,7 +21,7 @@
         headers: {'Content-Type': 'application/json', 'X-CSRF-Token': box.dataset.csrfToken},
         body: JSON.stringify({emoji})
       });
-      if (!response.ok) throw new Error('Reaction was not saved');
+      if (!response.ok) {const failure=await response.json().catch(()=>null);throw new Error(failure?.message || 'Could not save the reaction. Check the page before trying again.');}
       const data = await response.json();
       if (data.status !== 'ok') throw new Error('Reaction was not saved');
       document.querySelectorAll('.react-btn[data-reaction-url]').forEach(other => {
@@ -36,8 +36,8 @@
           other.append(count);
         }
       });
-    } catch (_) {
-      if (status) status.textContent = 'Could not save the reaction. Refresh the page and try again.';
+    } catch (error) {
+      if (status) status.textContent = error.message || 'Could not save the reaction. Check the page before trying again.';
     } finally {
       button.disabled = false;
       pending.delete(key);

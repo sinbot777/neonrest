@@ -303,6 +303,7 @@ def register(app, core):
         data = upload.read(5 * 1024 * 1024 + 1)
         if len(data) > 5 * 1024 * 1024:
             abort(413)
+        folder = filename = None
         try:
             with Image.open(io.BytesIO(data)) as image:
                 if image.format not in ('PNG', 'JPEG', 'WEBP') or image.width * image.height > 16000000:
@@ -316,7 +317,10 @@ def register(app, core):
                 filename = secrets.token_hex(24) + '.png'
                 image.save(folder / filename, format='PNG')
                 return filename
-        except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError):
+        except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError) as error:
+            from .resource_errors import discard_files, raise_if_storage_full
+            discard_files(folder / filename if folder is not None and filename else None)
+            raise_if_storage_full(error)
             abort(400, description='Choose a JPEG, PNG or WebP image up to 5 MB and 16 million pixels.')
 
     @app.context_processor
