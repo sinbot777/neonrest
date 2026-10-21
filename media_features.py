@@ -77,6 +77,7 @@ def _save_image(upload, alt, filter_name, title):
     if len(alt) > 180:
         abort(400, description='Describe the image in 180 characters or fewer.')
     raw = _limited_bytes(upload, IMAGE_LIMIT)
+    folder = name = None
     try:
         image = Image.open(io.BytesIO(raw))
         if image.format not in {'JPEG', 'PNG', 'WEBP', 'GIF'} or image.width * image.height > 20_000_000:
@@ -116,7 +117,11 @@ def _save_image(upload, alt, filter_name, title):
             image.convert('RGB').save(folder / filename, 'WEBP', quality=88, method=4)
         return dict(kind='image', filename=filename, poster=None, loop_filename=None,
                     alt_text=alt, filter_name=filter_name, title=title)
-    except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError):
+    except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError) as error:
+        from .resource_errors import discard_files, raise_if_storage_full
+        if folder is not None and name:
+            discard_files(*(folder / (name + suffix) for suffix in ('.jpg', '.webp', '-once.gif', '-loop.gif')))
+        raise_if_storage_full(error)
         abort(400, description='The selected image could not be read.')
 
 

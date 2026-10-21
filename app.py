@@ -586,7 +586,9 @@ def upload_avatar():
         finally:
             if os.path.exists(temporary):
                 os.unlink(temporary)
-    except (OSError, ValueError, UnidentifiedImageError, Image.DecompressionBombError):
+    except (OSError, ValueError, UnidentifiedImageError, Image.DecompressionBombError) as error:
+        from .resource_errors import raise_if_storage_full
+        raise_if_storage_full(error)
         flash('Please choose a valid JPG, PNG, WebP, or GIF image.', 'error')
         return redirect(url_for('user_by_handle', handle=viewer['handle'].lstrip('@')))
 
@@ -1005,12 +1007,21 @@ def save_post_image():
         image = ImageOps.exif_transpose(image)
         image.thumbnail((2200, 2200))
         image = image.convert('RGB')
-    except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError):
+    except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError) as error:
+        from .resource_errors import raise_if_storage_full
+        raise_if_storage_full(error)
         abort(400, description='The selected image could not be read.')
     folder = os.path.join(app.static_folder, 'uploads', 'posts')
     os.makedirs(folder, exist_ok=True)
     filename = uuid.uuid4().hex + '.jpg'
-    image.save(os.path.join(folder, filename), 'JPEG', quality=85, optimize=True)
+    path = os.path.join(folder, filename)
+    try:
+        image.save(path, 'JPEG', quality=85, optimize=True)
+    except OSError:
+        from .resource_errors import discard_files
+        from pathlib import Path
+        discard_files(Path(path))
+        raise
     safe_alt = alt.replace(chr(92), "").replace("]", "").replace("[", "")
     return f"![{safe_alt}]({url_for('static', filename='uploads/posts/' + filename)})"
 
@@ -2692,3 +2703,6 @@ with app.app_context():
     from .search_index import install as install_search_index
     install_search_index(get_db())
     get_db().commit()
+
+from .resource_errors import install as install_resource_errors
+install_resource_errors(app)
