@@ -9,7 +9,7 @@ from pathlib import Path
 from flask import abort, request, session, render_template, url_for, send_file
 from PIL import Image
 from cryptography.fernet import Fernet, InvalidToken
-from neonrest import privacy_workflows as privacy
+from neonrest_sandbox import privacy_workflows as privacy
 
 DAY = 86400
 DOCUMENT_DAYS = 30

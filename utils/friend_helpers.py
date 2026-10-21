@@ -1,6 +1,6 @@
 from flask import g, current_app
 import sqlite3
-from neonrest.community_features import register_db_functions
+from neonrest_sandbox.community_features import register_db_functions
 
 def get_db():
     if 'db' not in g:

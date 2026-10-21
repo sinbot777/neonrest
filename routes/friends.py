@@ -1,7 +1,7 @@
 from flask import Blueprint, request, session, redirect, flash, abort, current_app, g, render_template
-from neonrest.utils.friend_helpers import are_friends, get_friend_requests
+from neonrest_sandbox.utils.friend_helpers import are_friends, get_friend_requests
 import sqlite3
-from neonrest.community_features import register_db_functions
+from neonrest_sandbox.community_features import register_db_functions
 import secrets
 import hmac
 from flask import jsonify
@@ -102,7 +102,7 @@ def send_request(user_id):
         db.execute('DELETE FROM friend_requests WHERE sender_id = ? AND receiver_id = ?', (sender, user_id))
         db.execute('''INSERT INTO friend_requests (sender_id, receiver_id, status)
             VALUES (?, ?, 'pending')''', (sender, user_id))
-        from neonrest.community_features import notify
+        from neonrest_sandbox.community_features import notify
         notify(db, user_id, 'friends', 'You received a friend request.', '/friends', sender)
         db.commit()
         flash('Friend request sent!', 'success')
@@ -115,7 +115,7 @@ def accept_friend(user_id):
     result = db.execute('''UPDATE friend_requests SET status = 'accepted', updated_at = CURRENT_TIMESTAMP
         WHERE sender_id = ? AND receiver_id = ? AND status = 'pending' ''', (user_id, receiver))
     if result.rowcount:
-        from neonrest.community_features import notify
+        from neonrest_sandbox.community_features import notify
         notify(db, user_id, 'friends', 'Your friend request was accepted.', '/friends', receiver)
     db.commit()
     flash('Friend request accepted!' if result.rowcount else 'Request no longer available.', 'info')
@@ -198,8 +198,8 @@ def friends_page():
         WHERE sender_id = ? AND status = 'pending'
     ''', (viewer_id,)).fetchall()
 
-    from neonrest.community_features import member_visible, blocked
-    from neonrest import age_policy as ages
+    from neonrest_sandbox.community_features import member_visible, blocked
+    from neonrest_sandbox import age_policy as ages
     def eligible(row):
         return member_visible(db,row['id'],viewer_id) and not blocked(db,viewer_id,row['id']) and ages.contact(db,viewer_id,row['id'],invitation=True)
     incoming = [row for row in incoming if eligible(row)]

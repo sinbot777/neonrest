@@ -28,7 +28,7 @@
         <div class="mood-line">
           <span>Mood:</span>
           {% if session.user_id == user.id %}
-            <form method="POST" action="/update_mood" class="inline-form"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
+            <form method="POST" action="/sandbox/update_mood" class="inline-form"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
               <input type="text" name="mood" value="{{ user.mood or '' }}" class="glow-input small" placeholder="Enter your mood…">
               <button type="submit" class="icon-button" title="Save mood">✏️</button>
             </form>
@@ -39,7 +39,7 @@
         <div class="haunts-section">
           <span>Frequent haunts:</span>
           {% if session.user_id == user.id %}
-            <form method="POST" action="/update_haunts" class="inline-form"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
+            <form method="POST" action="/sandbox/update_haunts" class="inline-form"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
               <input type="text" name="haunts" value="{{ user.frequent_haunts or '' }}" class="glow-input small" placeholder="e.g. Retro Arcade, Blue Moon Café">
               <button type="submit" class="icon-button" title="Save haunts">📍</button>
             </form>
@@ -101,7 +101,7 @@
             <div class="avatar-frame">+</div>
             <a href="#" class="user-handle">Add</a>
           {% else %}
-            <a href="/@{{ friend.handle.lstrip('@') }}">
+            <a href="/sandbox/@{{ friend.handle.lstrip('@') }}">
               <div class="avatar-frame">
                 <img src="{{ friend.avatar_path or '/static/default-avatar.png' }}" alt="Avatar" class="avatar-img small">
               </div>
@@ -121,7 +121,7 @@
       <button id="toggle-post-form" class="button">Sign Guestbook</button>
     {% endif %}
     <div class="inline-post-form" id="inline-post-form" style="display: none;">
-      <form method="POST" action="/create_post"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
+      <form method="POST" action="/sandbox/create_post"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
         <textarea name="content" placeholder="Write something..." required></textarea>
         <input type="hidden" name="target_user_id" value="{{ user.id }}">
         <input type="text" name="vibes" placeholder="Vibes (comma separated)">
@@ -141,7 +141,7 @@
   <strong>Vibes:</strong>
   {% if vibe_list and vibe_list[0] %}
     {% for vibe in vibe_list %}
-      <a href="/vibe/{{ vibe.strip() | urlencode }}">
+      <a href="/sandbox/vibe/{{ vibe.strip() | urlencode }}">
         <span class="vibe-pill">{{ vibe.strip() }}</span>
       </a>
     {% endfor %}
@@ -158,7 +158,7 @@
   <img src="{{ post.author_avatar or '/static/default-avatar.png' }}" alt="avatar" class="avatar-img small">
   <div class="post-user-meta">
     <strong>
-      <a href="/{{ post.author_handle }}" class="user-handle">{{ post.author_handle }}</a>
+      <a href="/sandbox/{{ post.author_handle }}" class="user-handle">{{ post.author_handle }}</a>
     </strong>
     {% if post.author_codename %}
       <span class="user-codename">({{ post.author_codename }})</span>

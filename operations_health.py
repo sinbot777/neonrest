@@ -135,7 +135,7 @@ def account_storage(app):
 
 
 def health(app, db, now=None):
-    from neonrest.retention import storage_roots
+    from neonrest_sandbox.retention import storage_roots
     roots = storage_roots(app)
     categories = [('Database', app.config['DATABASE']),
                   ('Avatars and legacy uploads', Path(app.static_folder) / 'uploads'),

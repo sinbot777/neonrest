@@ -1,8 +1,8 @@
-"""Production retention. Preview is the default; live erasure requires explicit activation."""
+"""Sandbox retention. Preview is the default; live erasure requires explicit activation."""
 import argparse,json,sqlite3,time
 from pathlib import Path
 from urllib.parse import urlsplit, unquote
-from neonrest.privacy_workflows import blockers,erasure_blockers
+from neonrest_sandbox.privacy_workflows import blockers,erasure_blockers
 
 def avatar_filename(value):
     """Compare the URL path, excluding cache queries and fragments."""
@@ -220,7 +220,7 @@ def run(db,roots,apply=False,now=None):
     return summary
 
 def storage_roots(app):
-    return {'avatars':str(Path(app.static_folder)/'uploads'/'avatars'),'media':str(Path(app.instance_path)/'media'),'consent':app.config.get('FAMILY_CONSENT_FOLDER','/home/sinbot/private/neonrest_production/family_consent'),'backups':str(Path(app.config['DATABASE']).parent/'production_backups')}
+    return {'avatars':str(Path(app.static_folder)/'uploads'/'avatars'),'media':str(Path(app.instance_path)/'media'),'consent':app.config.get('FAMILY_CONSENT_FOLDER','/home/sinbot/private/neonrest_sandbox/family_consent'),'backups':str(Path(app.config['DATABASE']).parent/'sandbox_backups')}
 
 def register_reserved_guard(app,core):
     from flask import session,redirect,url_for
@@ -235,10 +235,10 @@ def main():
     parser=argparse.ArgumentParser();parser.add_argument('--apply',action='store_true');args=parser.parse_args()
     import sys
     sys.path.insert(0,'/home/sinbot')
-    import neonrest.app as core
+    import neonrest_sandbox.app as core
     app=core.app
     with app.app_context():
-        roots={'avatars':str(Path(app.static_folder)/'uploads'/'avatars'),'media':str(Path(app.instance_path)/'media'),'consent':app.config.get('FAMILY_CONSENT_FOLDER','/home/sinbot/private/neonrest_production/family_consent'),'backups':str(Path(app.config['DATABASE']).parent/'production_backups')}
+        roots={'avatars':str(Path(app.static_folder)/'uploads'/'avatars'),'media':str(Path(app.instance_path)/'media'),'consent':app.config.get('FAMILY_CONSENT_FOLDER','/home/sinbot/private/neonrest_sandbox/family_consent'),'backups':str(Path(app.config['DATABASE']).parent/'sandbox_backups')}
         if args.apply and not app.config.get('RETENTION_ENABLED',False):parser.error('Live retention is not activated. Preview remains available.')
         print(json.dumps(run(core.get_db(),roots,args.apply),sort_keys=True))
 if __name__=='__main__':main()

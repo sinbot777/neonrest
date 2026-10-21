@@ -7,9 +7,9 @@ from flask import Flask,abort,request,session
 source=Path(os.environ.get('NEONREST_TEST_SOURCE',Path(__file__).resolve().parents[1]))
 sys.path.insert(0,str(source.parent))
 # Exercise the actual request routes with deterministic synthetic ages, not live enrollment.
-ages=types.ModuleType('neonrest.age_policy');ages.age=lambda db,uid:18 if uid in (1,2,4) else 14 if uid==3 else None
-sys.modules['neonrest.age_policy']=ages
-from neonrest import privacy_workflows as privacy, family_data, retention
+ages=types.ModuleType('neonrest_sandbox.age_policy');ages.age=lambda db,uid:18 if uid in (1,2,4) else 14 if uid==3 else None
+sys.modules['neonrest_sandbox.age_policy']=ages
+from neonrest_sandbox import privacy_workflows as privacy, family_data, retention
 
 SCHEMA='''
 CREATE TABLE users(id INTEGER PRIMARY KEY,handle TEXT,email TEXT,password_hash TEXT,verified INTEGER DEFAULT 1,created_at TEXT DEFAULT CURRENT_TIMESTAMP,bio TEXT,dob TEXT,actual_name TEXT,pronouns TEXT,timezone TEXT,avatar TEXT,avatar_path TEXT);

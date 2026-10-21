@@ -2,7 +2,7 @@
 import sqlite3
 import unittest
 from unittest.mock import patch
-from neonrest import circle_ids, public_ids
+from neonrest_sandbox import circle_ids, public_ids
 
 
 class CircleIds(unittest.TestCase):

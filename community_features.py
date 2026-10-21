@@ -15,8 +15,8 @@ from flask import request, session, g, abort, redirect, url_for, flash, render_t
 from werkzeug.security import check_password_hash, generate_password_hash
 from flask_mail import Message
 import posixpath
-from neonrest import age_policy as ages
-from neonrest import welcome
+from neonrest_sandbox import age_policy as ages
+from neonrest_sandbox import welcome
 
 KINDS = ('friends', 'comments', 'replies', 'circles', 'circle_posts', 'moderation', 'appeals', 'reports')
 FIELDS = ('bio', 'dob', 'pronouns', 'location', 'pets', 'relationship_status', 'timezone', 'lastfm_username', 'mood', 'frequent_haunts')
@@ -110,10 +110,10 @@ def member_visible(db, owner, viewer):
 def visible_post(db, pid, viewer, muted=True, include_circle_removed=False, external_circle_share=False):
     post = db.execute('SELECT user_id,target_user_id FROM posts WHERE id=?', (pid,)).fetchone()
     if not post: return False
-    from neonrest.circles import post_allowed
+    from neonrest_sandbox.circles import post_allowed
     circle_access = post_allowed(db,pid,viewer,include_removed=include_circle_removed)
     if external_circle_share and circle_access is False:
-        from neonrest.sharing import circle_external_allowed
+        from neonrest_sandbox.sharing import circle_external_allowed
         if circle_external_allowed(db, pid, viewer):
             circle_access = True
     if circle_access is False: return False
@@ -137,7 +137,7 @@ def visible_post(db, pid, viewer, muted=True, include_circle_removed=False, exte
 
 
 def register_db_functions(db):
-    from neonrest.circles import comment_allowed
+    from neonrest_sandbox.circles import comment_allowed
     db.create_function('age_comment_visible',1,lambda cid: int(ages.comment_read(db,cid,session.get('user_id')) and comment_allowed(db,cid,session.get('user_id'))))
     db.create_function('community_profile_visible',1,lambda uid: int(member_visible(db,uid,session.get('user_id')) and audience_allows(db,uid,session.get('user_id'),settings(db,uid)['profile_audience'])))
     db.create_function('community_personal_profile_visible',1,lambda uid: int(member_visible(db,uid,session.get('user_id')) and not ages.limited_staff_profile(db,uid,session.get('user_id')) and audience_allows(db,uid,session.get('user_id'),settings(db,uid)['profile_audience'])))
@@ -168,11 +168,11 @@ def notification_visible(db, row, uid):
             or not ages.contact(db, uid, actor, invitation=row['kind']=='friends')):
         return False
     if row['kind']=='messages':
-        from neonrest.messaging import visible_notice
+        from neonrest_sandbox.messaging import visible_notice
         return bool(current_app.config.get('MESSAGING_ENABLED') and visible_notice(db,row,uid))
     path = row['path'] or ''
     if path.startswith('/circles/'):
-        from neonrest import circles, circle_ids
+        from neonrest_sandbox import circles, circle_ids
         from urllib.parse import urlsplit,parse_qs
         parsed=urlsplit(path)
         parts = parsed.path[len('/circles/'):].split('/')
@@ -201,7 +201,7 @@ def notification_visible(db, row, uid):
     if path.startswith('/posts/'):
         parts = path.split('#', 1)
         pid = parts[0][len('/posts/'):]
-        from neonrest.public_ids import resolve
+        from neonrest_sandbox.public_ids import resolve
         try:pid=resolve(db,'post',pid)
         except ValueError:return False
         if not visible_post(db,pid,uid):return False
@@ -210,7 +210,7 @@ def notification_visible(db, row, uid):
             try:cid=resolve(db,'comment',cid,anchor=True)
             except ValueError:return False
             comment = db.execute('SELECT user_id FROM comments WHERE id=? AND post_id=?', (cid,pid)).fetchone()
-            from neonrest.circles import comment_allowed
+            from neonrest_sandbox.circles import comment_allowed
             if not comment or not member_visible(db, comment['user_id'], uid) or not ages.comment_read(db,cid,uid) or not comment_allowed(db,cid,uid):
                 return False
         return True
@@ -221,7 +221,7 @@ def notification_visible(db, row, uid):
 
 
 def notify(db, uid, kind, message, path, actor=None):
-    from neonrest.public_ids import canonical_path
+    from neonrest_sandbox.public_ids import canonical_path
     path=canonical_path(db,path,internal=True)
     if not uid or uid == actor:
         return
@@ -308,7 +308,7 @@ def preserve(db, case_id, kind, target_id, report_id=None, event_id=None, legacy
     if not shared_source and kind == 'post' and db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_shares'").fetchone():
         ref = db.execute('SELECT source_post_id FROM post_shares WHERE share_post_id=?',(target_id,)).fetchone()
         if ref:
-            from neonrest.sharing import source_viewable
+            from neonrest_sandbox.sharing import source_viewable
             if source_viewable(db,ref[0],session.get('user_id')):
                 preserve(db,case_id,'post',ref[0],report_id=report_id,event_id=event_id,legacy=legacy,shared_source=True)
 
@@ -384,7 +384,7 @@ def register(app, core):
     app.config.setdefault('MAX_CONTENT_LENGTH', 6*1024*1024)
     with app.app_context():
         migrate(get_db())
-        from neonrest.operations_health import initialize as initialize_operations
+        from neonrest_sandbox.operations_health import initialize as initialize_operations
         initialize_operations(get_db())
         ages.init(get_db())
         db = get_db()
@@ -472,7 +472,7 @@ def register(app, core):
                 db.execute('UPDATE active_sessions SET seen_at=? WHERE token_hash=?',(int(time.time()),digest(sid)))
                 db.commit()
         state=db.execute('SELECT inactive FROM account_safety WHERE user_id=?',(uid,)).fetchone() if uid else None
-        if state and state['inactive'] and request.endpoint not in ('community_data','community_export','community_reactivate','logout','community_reauth'):
+        if state and state['inactive'] and request.endpoint not in ('community_data','community_export','community_reactivate','logout','community_reauth','family_data_requests','privacy_request_appeal'):
             return redirect(url_for('community_data'))
         if request.method=='POST':
             if request.endpoint in ('login','community_login_factor','community_reauth','password_reset_request','password_reset'):
@@ -503,7 +503,7 @@ def register(app, core):
                 db.execute('UPDATE active_sessions SET revoked=1 WHERE user_id=?',(uid,))
                 db.commit()
         if request.endpoint=='edit_comment':
-            from neonrest.circles import post_allowed,comment_allowed
+            from neonrest_sandbox.circles import post_allowed,comment_allowed
             if not comment_allowed(db,request.view_args.get('comment_id'),uid):abort(404)
             comment=db.execute('SELECT post_id FROM comments WHERE id=?',(request.view_args.get('comment_id'),)).fetchone()
             if comment and post_allowed(db,comment['post_id'],uid) is False: abort(404)
@@ -550,7 +550,7 @@ def register(app, core):
                     abort(404)
                 if kind=='comment':
                     row=db.execute('SELECT user_id,post_id FROM comments WHERE id=?',(target,)).fetchone()
-                    from neonrest.circles import comment_allowed
+                    from neonrest_sandbox.circles import comment_allowed
                     if not row or not member_visible(db,row['user_id'],uid) or not ages.comment_read(db,target,uid) or not comment_allowed(db,target,uid) or not visible_post(db,row['post_id'],uid,muted=False):
                         abort(404)
             else:
@@ -607,7 +607,7 @@ def register(app, core):
             response.headers.setdefault('Referrer-Policy','same-origin')
         return response
 
-    from neonrest.email_delivery import install as install_email_delivery
+    from neonrest_sandbox.email_delivery import install as install_email_delivery
     install_email_delivery(app,core)
 
     from flask import got_request_exception
@@ -643,7 +643,7 @@ def register(app, core):
             if user and db.execute('SELECT 1 FROM reserved_accounts WHERE user_id=? AND disabled=1 UNION SELECT 1 FROM account_disables WHERE user_id=? AND disabled=1',(user['id'],user['id'])).fetchone():user=None
             password=request.form.get('password','')
             if user and not user['verified'] and len(password)<=128 and check_password_hash(user['password_hash'],password):
-                from neonrest.email_verification import send_verification
+                from neonrest_sandbox.email_verification import send_verification
                 accepted=send_verification(core,db,user['email'])
                 flash('Please verify your email before signing in.' if accepted else 'We could not send your verification email. Your account is saved; request another email below or use a previously received link.','info' if accepted else 'error')
                 return redirect(url_for('verification_request'))
@@ -682,15 +682,12 @@ def register(app, core):
             next_path='/account/security'
         if request.method=='POST':
             csrf()
-            if len(request.form.get('password',''))>128 or not check_password_hash(user['password_hash'],request.form.get('password','')):
-                flash('Your password does not match.','error')
-            elif second_factor(user['id']) and not verify_second_factor(get_db(),user['id'],request.form.get('code','')):
-                flash('Your authenticator or recovery code was not accepted. Try a new authenticator code or an unused recovery code.','error')
-            else:
+            if len(request.form.get('password',''))<=128 and check_password_hash(user['password_hash'],request.form.get('password','')) and (not second_factor(user['id']) or verify_second_factor(get_db(),user['id'],request.form.get('code',''))):
                 session['fresh_at']=int(time.time())
                 if second_factor(user['id']):
                     session['factor_at']=int(time.time())
                 return redirect(request.script_root+next_path)
+            flash('Confirmation failed. Check your password and verification code.','error')
         return render('reauth','Confirm your sign-in',needs_factor=second_factor(user['id']))
 
     @app.route('/account/security',methods=['GET','POST'])
@@ -738,8 +735,8 @@ def register(app, core):
         pending_secret=session.get('pending_totp')
         if pending_secret and not fresh():
             return redirect(url_for('community_reauth',next='/account/security'))
-        from neonrest.authenticator_qr import enrollment_image
-        issuer='Neonrest'
+        from neonrest_sandbox.authenticator_qr import enrollment_image
+        issuer='Neonrest Sandbox'
         response=current_app.make_response(render('security','Account safety',sessions=sessions,current_hash=digest(session.get('sid','')),enabled=second_factor(uid),
             pending_secret=pending_secret,backup_codes=backup_codes,
             enrollment_qr=enrollment_image(pending_secret,user['handle'],issuer) if pending_secret else None))
@@ -753,12 +750,12 @@ def register(app, core):
             csrf(); db=get_db()
             row=db.execute('SELECT id,email FROM users WHERE email=? COLLATE NOCASE',(request.form.get('email','').strip(),)).fetchone()
             if row:
-                from neonrest.email_delivery import deliver,finish_token_delivery
+                from neonrest_sandbox.email_delivery import deliver,finish_token_delivery
                 raw=secrets.token_urlsafe(32)
                 db.execute('INSERT INTO password_resets VALUES (?,?,?,2)',(digest(raw),row['id'],int(time.time())+3600)); db.commit()
                 msg=Message(subject='Reset your Neonrest password',recipients=[row['email']])
                 msg.body='Reset your password within one hour: '+('https://www.neonrest.com'+url_for('password_reset',reset_token=raw,_external=False))+'\nIf you did not request this, ignore this email.'
-                from neonrest.mail_queue import submit
+                from neonrest_sandbox.mail_queue import submit
                 queued=submit(core,db,msg,row['id'],'reset',digest(raw))
                 if queued!='queued':
                     accepted=deliver(core,msg) if queued is None else False
@@ -852,7 +849,7 @@ def register(app, core):
                 item=db.execute('SELECT * FROM notifications WHERE id=? AND user_id=?',(request.form.get('id'),uid)).fetchone()
                 if not item or not notification_visible(db,item,uid):
                     abort(404)
-                from neonrest.public_ids import canonical_path
+                from neonrest_sandbox.public_ids import canonical_path
                 destination=canonical_path(db,item['path'])
                 from urllib.parse import unquote, urlsplit
                 decoded=unquote(destination or '')
@@ -928,7 +925,7 @@ def register(app, core):
                 continue
             export[table]=[dict(row) for row in db.execute(f'SELECT * FROM {table} WHERE {predicate}',args)]
         if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='dm_messages'").fetchone():
-            from neonrest.messaging import export_user
+            from neonrest_sandbox.messaging import export_user
             export['private_messages']=export_user(db,uid)
         core.identifiers.export_ids(db,export)
         # Exclude internal case notes, password hashes, tokens and two-factor secrets.
@@ -1011,9 +1008,9 @@ def register(app, core):
                 return redirect(url_for('community_reauth',next='/manage/operations'))
             if request.form.get('action')!='backup':
                 abort(400)
-            from neonrest.operations_health import create_backup
+            from neonrest_sandbox.operations_health import create_backup
             try:
-                create_backup(db,Path(app.config['DATABASE']).parent/'production_backups')
+                create_backup(db,Path(app.config['DATABASE']).parent/'sandbox_backups')
             except (OSError,sqlite3.Error):
                 app.logger.warning('Database backup failed')
                 flash('The backup could not be completed. Existing backups are preserved; check storage and try again.','error')
@@ -1022,7 +1019,7 @@ def register(app, core):
             return redirect(url_for('community_operations'))
         backup=db.execute('SELECT * FROM backup_records ORDER BY id DESC LIMIT 1').fetchone()
         size=Path(app.config['DATABASE']).stat().st_size
-        from neonrest.operations_health import health
+        from neonrest_sandbox.operations_health import health
         operations_health=health(app,db)
         storage=operations_health['total_bytes']-size
         events=db.execute('SELECT * FROM operations_events ORDER BY id DESC LIMIT 50').fetchall()
@@ -1033,7 +1030,7 @@ def register(app, core):
         metrics={table:db.execute(f'SELECT COUNT(*) FROM {table}').fetchone()[0] for table in ('users','posts','comments','active_sessions')}
         metrics['active_sessions']=db.execute('SELECT COUNT(*) FROM active_sessions WHERE revoked=0 AND expires_at>?',(int(time.time()),)).fetchone()[0]
         integrity=db.execute('PRAGMA quick_check').fetchone()[0]
-        from neonrest.retention import run as retention_run,storage_roots
+        from neonrest_sandbox.retention import run as retention_run,storage_roots
         retention_preview=retention_run(db,storage_roots(app))
         return render('operations','Site operations',operations_health=operations_health,retention_preview=retention_preview,retention_enabled=app.config.get('RETENTION_ENABLED',False),backup=backup,backup_exists=bool(backup and Path(backup['path']).is_file()),
             size=size,storage=storage,events=events,abuse=abuse,deletion=deletion,metrics=metrics,integrity=integrity,

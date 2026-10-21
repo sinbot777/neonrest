@@ -1,6 +1,7 @@
 """Sandbox age boundaries. Parent approval is a reviewed consent record, not identity proof."""
+from .request_cache import request_lookup
 from datetime import date, datetime
-from neonrest import age_clock
+from neonrest_sandbox import age_clock
 from flask import request, session, redirect, url_for, abort, render_template_string, flash, g
 import hmac
 from werkzeug.security import generate_password_hash
@@ -18,27 +19,33 @@ def age_of(value, today=None):
     d=parse_dob(value); t=today or date.today()
     return None if not d else t.year-d.year-((t.month,t.day)<(d.month,d.day))
 
+@request_lookup
 def age(db, uid):
     row=db.execute('SELECT dob FROM users WHERE id=?',(uid,)).fetchone() if uid else None
     return age_of(row['dob'],age_clock.date_for(db,uid)) if row else None
 
+@request_lookup
 def approved_parent(db, parent, child):
     child_age=age(db,child);parent_age=age(db,parent)
     return bool(parent and child and child_age is not None and 10<=child_age<18 and parent_age is not None and parent_age>=18 and db.execute("SELECT 1 FROM family_links WHERE parent_id=? AND child_id=? AND status='approved'",(parent,child)).fetchone())
 
+@request_lookup
 def ready(db, uid):
     a=age(db,uid)
     return a is not None and a>=10 and (a>=13 or bool(db.execute("SELECT 1 FROM family_links WHERE child_id=? AND status='approved'",(uid,)).fetchone()))
 
+@request_lookup
 def band(db,a,b):
     aa,bb=age(db,a),age(db,b)
     return aa is not None and bb is not None and min(aa,bb)>=10 and (min(aa,bb)>=18 or abs(aa-bb)<=3)
 
+@request_lookup
 def family(db,a,b):
     return approved_parent(db,a,b) or approved_parent(db,b,a)
 
+@request_lookup
 def can_read(db,owner,viewer, protected=False, profile=False):
-    from neonrest import welcome
+    from neonrest_sandbox import welcome
     if welcome.staff(db,viewer): return True
     oa=age(db,owner)
     if viewer==owner: return True
@@ -50,15 +57,18 @@ def can_read(db,owner,viewer, protected=False, profile=False):
     if oa>=18 and not protected and (not viewer or (va is not None and va>=18)): return True
     return bool(viewer and ready(db,viewer) and (family(db,owner,viewer) or (age(db,viewer) is not None and abs(oa-age(db,viewer))<=3)))
 
+@request_lookup
 def limited_staff_profile(db,owner,viewer):
-    from neonrest import welcome
+    from neonrest_sandbox import welcome
     va,oa=age(db,viewer),age(db,owner)
     return bool(viewer and owner!=viewer and va is not None and va<18 and oa is not None and abs(oa-va)>3 and welcome.staff(db,owner) and not welcome.staff(db,viewer) and not family(db,owner,viewer))
 
+@request_lookup
 def comment_read(db,cid,viewer):
     row=db.execute('SELECT user_id FROM comments WHERE id=?',(cid,)).fetchone()
     return bool(row and can_read(db,row['user_id'],viewer,protected=bool(db.execute('SELECT 1 FROM protected_age_comments WHERE comment_id=?',(cid,)).fetchone())))
 
+@request_lookup
 def contact(db,a,b, invitation=False):
     if not ready(db,a) or not ready(db,b): return False
     if family(db,a,b): return True
@@ -93,7 +103,7 @@ PAGE='''{% extends 'base.html' %}{% block content %}<div class="community-page">
 
 def register(app,core, fresh):
     with app.app_context(): init(core.get_db())
-    from neonrest import family_consent
+    from neonrest_sandbox import family_consent
     import sys
     family_consent.register(app,core,sys.modules[__name__],fresh)
     def csrf():
@@ -135,7 +145,7 @@ def register(app,core, fresh):
                 try:
                     cur=db.execute('INSERT INTO users(email,handle,password_hash,dob,verified,created_at) VALUES (?,?,?,?,0,CURRENT_TIMESTAMP)',(email,'@'+handle,generate_password_hash(password),d.isoformat()))
                 except Exception: db.rollback();abort(400,description='Handle or contact email unavailable.')
-                child=cur.lastrowid;__import__('neonrest.welcome',fromlist=['add_welcome_friend']).add_welcome_friend(db,child);db.execute('INSERT INTO family_links(parent_id,child_id) VALUES (?,?)',(uid,child));event(db,uid,child,'parent-enrollment-pending');db.commit()
+                child=cur.lastrowid;__import__('neonrest_sandbox.welcome',fromlist=['add_welcome_friend']).add_welcome_friend(db,child);db.execute('INSERT INTO family_links(parent_id,child_id) VALUES (?,?)',(uid,child));event(db,uid,child,'parent-enrollment-pending');db.commit()
             else:
                 child=request.form.get('child_id',type=int)
                 if not approved_parent(db,uid,child): abort(403)
@@ -182,7 +192,7 @@ def register(app,core, fresh):
             import posixpath
             name=posixpath.normpath((request.view_args or {}).get('filename',''))
             match=re.fullmatch(r'uploads/avatars/user_(\d+)_avatar\.png',name)
-            from neonrest.community_features import member_visible
+            from neonrest_sandbox.community_features import member_visible
             if match and not member_visible(db,int(match.group(1)),uid): abort(404)
             if name.startswith('uploads/'):
                 from urllib.parse import urlsplit

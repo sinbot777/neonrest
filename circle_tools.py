@@ -1,8 +1,8 @@
 """Member-controlled Circle alerts and explicitly shared local reports."""
 import json
 from flask import abort, flash, redirect, render_template, request, session, url_for
-from neonrest import circles, circle_ids, age_policy as ages
-from neonrest import community_features as community
+from neonrest_sandbox import circles, circle_ids, age_policy as ages
+from neonrest_sandbox import community_features as community
 
 
 def initialize(db):

@@ -1,6 +1,6 @@
 from pathlib import Path
 exec(compile(Path(__file__).with_name('verify_circles_full_app.py').read_text(), 'verify_circles_full_app.py', 'exec'))
-from neonrest import public_ids
+from neonrest_sandbox import public_ids
 change('DELETE FROM rate_buckets')
 change("UPDATE circles SET created_at='2020-01-01' WHERE owner_id=?",(users['Owner'],))
 pc=create('public');pt=public_circle(pc)

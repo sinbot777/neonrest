@@ -3,7 +3,7 @@
 {% set VALID_REACTS = _reacts if _reacts is defined else [] %}
 {% set viewer_id = _viewer_id if _viewer_id is defined else None %}
 
-{%- macro render_comment(comment, post) -%}
+{%- macro render_comment(comment, post, depth=0) -%}
   <div id="comment-{{ comment.id }}"{% if legacy_comment_anchor(comment.raw_id) %} data-legacy-anchor="{{ legacy_comment_anchor(comment.raw_id) }}"{% endif %} class="comment{% if comment.parent_comment_id %} reply-comment{% endif %}" data-comment-id="{{ comment.id }}">
     <div class="comment-header">
       <div class="comment-meta">
@@ -47,9 +47,9 @@
     {% endif %}
 
     {% if comment.replies %}
-      <div class="reply-thread">
+      <div class="reply-thread"{% if depth>=3 %} style="margin-left:0;padding-left:0;border-left:0"{% endif %}>
         {% for reply in comment.replies %}
-          {{ render_comment(reply, post) }}
+          {{ render_comment(reply, post, depth+1) }}
         {% endfor %}
       </div>
     {% endif %}
@@ -57,6 +57,7 @@
 {%- endmacro -%}
 
 {% for post in posts %}
+{% set can_participate = viewer_id and circle_can_participate(post.id) %}
 {% if circle is defined and circle.pinned_post_id == post.id %}<p class="circle-badge">Pinned welcome post</p>{% endif %}
 <div id="post-{{ public_post_id(post.id) }}" class="post-preview{% if post.is_guestbook_outbound %} guestbook-outbound{% endif %}">
   <div class="post-header">
@@ -109,13 +110,14 @@
   {% if repost_enabled is not defined or repost_enabled(post.id) %}<div class="neon-share-row">{% set share_label='Share' %}{% set share_kind='post' %}{% set share_ref=public_post_id(post.id) %}{% set share_url=url_for('post_detail',post_id=post.id) %}{% set share_notice='Public Circle post. Anyone eligible can read it; membership is required to reply.' if circle_post_public(post.id) else 'Only members with access to this Circle can open this post. Sharing does not invite or admit anyone.' if private_circle else 'Readers still need permission to view the original post. Sharing does not change its audience.' %}{% include 'partials/share_button.html' %}</div>{% else %}<p class="shared-post-notice">Sharing outside this Circle is off.{% if viewer_id==post.user_id %} <a href="{{ url_for('edit_post',post_id=post.id) }}">Edit sharing</a>{% endif %}</p>{% endif %}
   <div class="post-reactions-box react-form" data-post-id="{{ public_post_id(post.id) }}" data-csrf-token="{{ community_token() }}">
     {% for emoji in VALID_REACTS %}
-      <button type="button" data-reaction-url="{{ url_for('react_to_post',post_id=post.id) }}"{% if not viewer_id or not circle_can_participate(post.id) %} disabled title="Sign in and join this Circle to react"{% endif %} class="react-btn{% if post.reaction_counts.get(emoji) %} active{% endif %}" data-emoji="{{ emoji }}" data-post-id="{{ public_post_id(post.id) }}">
+      <button type="button" data-reaction-url="{{ url_for('react_to_post',post_id=post.id) }}"{% if not can_participate %} disabled title="Sign in and join this Circle to react"{% endif %} class="react-btn{% if post.reaction_counts.get(emoji) %} active{% endif %}" data-emoji="{{ emoji }}" data-post-id="{{ public_post_id(post.id) }}">
         {{ emoji }}{% if post.reaction_counts.get(emoji) %}<sub>{{ post.reaction_counts.get(emoji) }}</sub>{% endif %}
       </button>
     {% endfor %}
     <span class="reaction-status" role="status" aria-live="polite"></span>
 </div>
 
+  <div id="comments-{{ public_post_id(post.id) }}"></div>
   {% if post.comments %}
   <div class="comments-section">
     {% for comment in post.comments %}
@@ -124,9 +126,14 @@
   </div>
   {% endif %}
 
-  {% if viewer_id and circle_can_participate(post.id) %}
+  {% if post.comment_navigation %}<nav class="comment-pagination" aria-label="Comments">
+    {% if post.comment_navigation.previous %}<a href="{{ post.comment_navigation.previous }}">← Earlier comments</a>{% endif %}
+    {% if post.comment_navigation.more %}<a href="{{ post.comment_navigation.all }}">View all comments →</a>{% endif %}
+    {% if post.comment_navigation.next %}<a href="{{ post.comment_navigation.next }}">More comments →</a>{% endif %}
+  </nav>{% endif %}
+  {% if can_participate %}
   <div class="comment-form">
-    <form id="comment-form-{{ public_post_id(post.id) }}" method="POST" action="/create_comment" data-post-id="{{ public_post_id(post.id) }}"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
+    <form id="comment-form-{{ public_post_id(post.id) }}" method="POST" action="/sandbox/create_comment" data-post-id="{{ public_post_id(post.id) }}"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
       <input type="hidden" name="post_id" value="{{ public_post_id(post.id) }}">
       <input type="hidden" name="parent_comment_id" id="parent_comment_id_{{ public_post_id(post.id) }}" value="">
       <input type="text" name="content" placeholder="Leave a comment..." required class="comment-input">
@@ -137,6 +144,9 @@
 </div>
 {% endfor %}
 
+<style>
+.comment-pagination{display:flex;flex-wrap:wrap;gap:.75rem;margin:.8rem 0}.comment-pagination a,.comment-pagination a:visited{color:inherit;background:rgba(0,0,0,.18);display:inline-flex;align-items:center;min-height:44px;padding:.3rem .8rem;border:1px solid currentColor;border-radius:999px;text-decoration:none}.comment-pagination a:focus-visible{outline:2px solid currentColor;outline-offset:3px}
+</style>
 <script>
 function toggleCommentMenu(btn) {
   const menu = btn.nextElementSibling;
@@ -168,15 +178,20 @@ async function submitComment(event, form) {
   const formData = new FormData(form);
   try {
     const res = await fetch(form.action, { method: 'POST', body: formData });
-    if (!res.ok) throw new Error('Request failed');
-    location.reload();
+    if (!res.ok) {const failure=await res.json().catch(()=>null);throw new Error(failure?.message || 'Could not submit the comment. Keep your text and try again.');}
+    if (!{{ (request.endpoint == 'post_detail') | tojson }}) {location.reload();return;}
+    const created=await res.json();
+    const url=new URL({{ url_for('feed') | tojson }},location.origin);url.pathname=url.pathname.replace(/feed$/, 'posts/'+created.post_id);url.searchParams.set('comment',created.id);url.hash='comment-'+created.id;location.assign(url);
   } catch (err) {
-    alert('Error submitting comment'); console.error(err);
+    alert(err.message || 'Error submitting comment'); console.error(err);
   }
 }
 
 window.addEventListener('DOMContentLoaded', () => {
   const oldAnchor=location.hash.slice(1);
+  if ({{ (request.endpoint == 'post_detail') | tojson }} && /^comment-[A-Za-z0-9_-]+$/.test(oldAnchor) && !document.getElementById(oldAnchor) && !document.querySelector('[data-legacy-anchor="'+oldAnchor+'"]') && !new URLSearchParams(location.search).has('comment')) {
+    const url=new URL(location.href);url.searchParams.delete('comments_after');url.searchParams.delete('comments_before');url.searchParams.set('comment',oldAnchor.slice(8));location.replace(url);return;
+  }
   if (/^comment-[1-9][0-9]*$/.test(oldAnchor)) {
     const target=document.querySelector(`[data-legacy-anchor="${oldAnchor}"]`);
     if(target){target.scrollIntoView();history.replaceState(null,'',location.pathname+location.search+'#'+target.id);}
@@ -207,17 +222,17 @@ window.addEventListener('DOMContentLoaded', () => {
       const commentId = container.dataset.commentId;
       const content = container.querySelector('textarea').value;
       try {
-        const res = await fetch(`/edit_comment/${commentId}`, {
+        const res = await fetch(`/sandbox/edit_comment/${commentId}`, {
           method: 'POST',
           headers: {'Content-Type':'application/x-www-form-urlencoded'},
           body: new URLSearchParams({content, theme_csrf_token: "{{ community_token() }}"})
         });
-        if (!res.ok) throw new Error('Update failed');
+        if (!res.ok) {const failure=await res.json().catch(()=>null);throw new Error(failure?.message || 'Could not save the comment. Keep your text and try again.');}
         container.querySelector('.comment-text').textContent = content;
         container.querySelectorAll('.comment-text, .edit-btn').forEach(el => el.style.display='block');
         container.querySelector('.edit-form').style.display='none';
       } catch(err) {
-        alert('Failed to save'); console.error(err);
+        alert(err.message || 'Failed to save'); console.error(err);
       }
     };
   });

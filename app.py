@@ -7,23 +7,23 @@ import hmac
 import secrets
 import markdown2
 from urllib.parse import urlparse
-from neonrest.community_features import (register_db_functions, redacted_profile, attach_report, attach_appeal, attach_event, notify, settings)
+from neonrest_sandbox.community_features import (register_db_functions, redacted_profile, attach_report, attach_appeal, attach_event, notify, settings)
 
 from flask_mail import Mail, Message
 from werkzeug.security import generate_password_hash, check_password_hash
 from email_validator import validate_email
-from neonrest.utils.lastfm import get_now_playing  # this is the helper you created
+from neonrest_sandbox.utils.lastfm import get_now_playing  # this is the helper you created
 
 import itsdangerous
 from datetime import datetime
-from neonrest.utils.friend_helpers import are_friends, get_friend_requests, get_following_map, get_top_friends
-from neonrest.utils.vibe_lifecycle import (add_post_vibes, approve_vibe, can_approve_vibes,
+from neonrest_sandbox.utils.friend_helpers import are_friends, get_friend_requests, get_following_map, get_top_friends
+from neonrest_sandbox.utils.vibe_lifecycle import (add_post_vibes, approve_vibe, can_approve_vibes,
                                   default_vibe_css, init_vibe_tables, is_pending, minimum_users,
                                   supporter_count, vibe_slug)
-from neonrest.utils.image_uploads import allowed_file   # ✅ Your image upload helper
+from neonrest_sandbox.utils.image_uploads import allowed_file   # ✅ Your image upload helper
 
-from neonrest.routes.friends import bp as friends_bp  # ✅ IMPORT FIRST
-from neonrest.utils.utils import generate_unique_handle, build_comment_tree, encode_base62
+from neonrest_sandbox.routes.friends import bp as friends_bp  # ✅ IMPORT FIRST
+from neonrest_sandbox.utils.utils import generate_unique_handle, build_comment_tree, encode_base62
 
 
 
@@ -33,9 +33,9 @@ VALID_REACTS = ["👍", "👎", "🕶️", "💖", "💩", "🤮", "❓", "🔥"
 logging.basicConfig(level=logging.DEBUG)
 
 # SQLite DB path
-DATABASE = os.environ.get('NEONREST_PRODUCTION_DATABASE', '/home/sinbot/db/neonrest.db')
+DATABASE = os.environ.get('NEONREST_SANDBOX_DATABASE', '/home/sinbot/db/neonrest_sandbox.db')
 
-app = Flask(__name__, instance_path=os.environ.get('NEONREST_PRODUCTION_INSTANCE', '/home/sinbot/private/neonrest_production/instance'))
+app = Flask(__name__)
 app.config['DATABASE'] = DATABASE
 
 @app.template_filter('readable_badge_text')
@@ -71,8 +71,7 @@ app.register_blueprint(friends_bp)  # ✅ REGISTER HERE
 
 # Secret key for token generation
 # Keep sandbox sessions separate from production and persist signing across reloads.
-_sandbox_key_file = os.environ.get('NEONREST_PRODUCTION_SECRET_FILE', '/home/sinbot/private/neonrest_production/session-secret')
-os.makedirs(os.path.dirname(_sandbox_key_file), mode=0o700, exist_ok=True)
+_sandbox_key_file = os.environ.get('NEONREST_SANDBOX_SECRET_FILE', '/home/sinbot/.neonrest_sandbox_secret')
 try:
     _key_fd = os.open(_sandbox_key_file, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
 except FileExistsError:
@@ -83,8 +82,8 @@ else:
 with open(_sandbox_key_file, 'rb') as _key_stream:
     app.secret_key = _key_stream.read()
 app.config.update(
-    SESSION_COOKIE_NAME='neonrest_session',
-    SESSION_COOKIE_PATH='/',
+    SESSION_COOKIE_NAME='neonrest_sandbox_session',
+    SESSION_COOKIE_PATH='/sandbox',
     SESSION_COOKIE_SECURE=True,
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE='Lax',
@@ -98,7 +97,7 @@ app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USE_SSL'] = False
 app.config['MAIL_USERNAME'] = 'noreply@neonrest.com'
 _purelymail_password_file = os.path.expanduser('~/.neonrest_sandbox_purelymail_password')
-app.config['MAIL_PASSWORD'] = os.getenv('NEONREST_PRODUCTION_PURELYMAIL_PASSWORD')
+app.config['MAIL_PASSWORD'] = os.getenv('NEONREST_SANDBOX_PURELYMAIL_PASSWORD')
 if not app.config['MAIL_PASSWORD'] and os.path.isfile(_purelymail_password_file):
     with open(_purelymail_password_file, encoding='utf-8') as _mail_password_stream:
         app.config['MAIL_PASSWORD'] = _mail_password_stream.read()
@@ -126,7 +125,7 @@ def close_db(exception):
     if db is not None:
         db.close()
 
-from neonrest import public_ids as identifiers
+from neonrest_sandbox import public_ids as identifiers
 
 def decode_prefixed_id(value):
     return identifiers.resolve(get_db(),'comment',value)
@@ -291,7 +290,7 @@ def validated_ad_destination(value):
 
 def validated_ad_image(value):
     # Local static art only: external images would let sponsors track page views.
-    return not value or (value.startswith('/static/') and '..' not in value and len(value)<=300)
+    return not value or (value.startswith('/sandbox/static/') and '..' not in value and len(value)<=300)
 
 
 def can_edit_vibe_settings(user_id, vibe):
@@ -515,7 +514,7 @@ def signup():
                     VALUES (?, ?, ?, 0, ?, ?, ?, ?, ?)
                 ''', (email, handle, hashed, avatar_filename, created_at, g.signup_dob, actual_name, g.signup_timezone))
                 db.execute("UPDATE users SET legal_terms_version=?, legal_privacy_version=?, legal_accepted_at=strftime('%Y-%m-%dT%H:%M:%SZ','now') WHERE id=?",
-                           ('2026-10-13-production', '2026-10-14-production', created.lastrowid))
+                           ('2026-10-13', '2026-10-14', created.lastrowid))
                 db.execute('INSERT INTO age_clocks(user_id,zone,confirmed) VALUES (?,?,1)',(created.lastrowid,g.signup_timezone))
                 # Every new member starts with @brendoom as a friend and in Top 9.
                 first_friend = db.execute(
@@ -536,7 +535,7 @@ def signup():
             return redirect(url_for('signup'))
 
         g.statistics_signup_outcome = 'created_mail_problem'
-        from neonrest.email_verification import send_verification
+        from neonrest_sandbox.email_verification import send_verification
         delivered = send_verification(sys.modules[__name__],db,email)
         g.statistics_signup_outcome = 'created_mail_problem' if delivered is False else 'created_queued' if delivered == 'queued' else 'created_sent'
         if delivered is False:
@@ -586,7 +585,9 @@ def upload_avatar():
         finally:
             if os.path.exists(temporary):
                 os.unlink(temporary)
-    except (OSError, ValueError, UnidentifiedImageError, Image.DecompressionBombError):
+    except (OSError, ValueError, UnidentifiedImageError, Image.DecompressionBombError) as error:
+        from .resource_errors import raise_if_storage_full
+        raise_if_storage_full(error)
         flash('Please choose a valid JPG, PNG, WebP, or GIF image.', 'error')
         return redirect(url_for('user_by_handle', handle=viewer['handle'].lstrip('@')))
 
@@ -637,7 +638,7 @@ def login():
         if user and check_password_hash(user['password_hash'], password):
             # Check if the email is verified
             if user['verified'] == 0:
-                from neonrest.email_verification import send_verification
+                from neonrest_sandbox.email_verification import send_verification
                 send_verification(sys.modules[__name__],db,user['email'])
                 flash('Please verify your email before signing in.', 'info')
                 return redirect(url_for('verification_request'))
@@ -690,7 +691,7 @@ def user_page_test(user_id):
 
     if user:
         user = redacted_profile(db, user, session.get('user_id'))
-        from neonrest import age_policy as ages
+        from neonrest_sandbox import age_policy as ages
         if ages.limited_staff_profile(db,user_id,session.get('user_id')):
             return render_template('staff_profile.html', staff_handle=user['handle'],
                 staff_avatar=user['avatar_path'], staff_id=user_id,
@@ -698,13 +699,7 @@ def user_page_test(user_id):
     # -- Now Playing --
     now_playing_text = None
     now_playing_url = None
-    if user and user['lastfm_username']:
-        try:
-            now = get_now_playing(user['lastfm_username'])
-            now_playing_text = now.get('track')
-            now_playing_url = now.get('url')
-        except Exception as e:
-            app.logger.warning(f"[Last.fm] Error: {e}")
+    # Music is fetched after the profile renders; never wait for Last.fm here.
 
     if not user:
         flash('User not found.', 'error')
@@ -835,18 +830,8 @@ def user_page_test(user_id):
             post_reactors.setdefault(b62, {}).setdefault(r['emoji'], []).append(r['handle'])
 
     # -- Comments threaded --
-    comments_raw = []
-    if post_ids:
-        placeholders = ','.join(['?'] * len(post_ids))
-        comments_raw = db.execute(f'''
-            SELECT c.id, c.post_id, c.user_id, c.content, c.parent_comment_id,
-                   c.last_edited, u.handle, u.avatar_path
-            FROM comments c
-            JOIN users u ON u.id = c.user_id
-            WHERE c.post_id IN ({placeholders})
-              AND NOT EXISTS (SELECT 1 FROM moderated_comments mc WHERE mc.comment_id=c.id) AND community_member_visible(c.user_id)=1 AND age_comment_visible(c.id)=1
-            ORDER BY c.created_at ASC
-        ''', post_ids).fetchall()
+    from .growth_queries import comment_windows
+    comments_raw, comment_navigation = comment_windows(db,post_ids,identifiers,single=False)
     post_comments = {}
     for c in comments_raw:
         pid, par = c['post_id'], c['parent_comment_id']
@@ -866,6 +851,7 @@ def user_page_test(user_id):
         post_comments.setdefault(comment['post_id'], []).append(comment)
     for post in posts_with_html:
         post['comments'] = build_comment_tree(post_comments.get(post['base62_id'], []))
+        post['comment_navigation'] = comment_navigation.get(post['base62_id'], {})
 
     # ——— Load vibe theme metadata ———
     vibe_rows = db.execute('''
@@ -980,7 +966,7 @@ def account():
 
 @app.route("/now_playing/<username>")
 def now_playing(username):
-    from neonrest.utils.lastfm import get_now_playing
+    from neonrest_sandbox.utils.lastfm import get_now_playing
     import sys
 
     print(f"Now Playing check for {username}", file=sys.stderr)
@@ -1009,12 +995,21 @@ def save_post_image():
         image = ImageOps.exif_transpose(image)
         image.thumbnail((2200, 2200))
         image = image.convert('RGB')
-    except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError):
+    except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError) as error:
+        from .resource_errors import raise_if_storage_full
+        raise_if_storage_full(error)
         abort(400, description='The selected image could not be read.')
     folder = os.path.join(app.static_folder, 'uploads', 'posts')
     os.makedirs(folder, exist_ok=True)
     filename = uuid.uuid4().hex + '.jpg'
-    image.save(os.path.join(folder, filename), 'JPEG', quality=85, optimize=True)
+    path = os.path.join(folder, filename)
+    try:
+        image.save(path, 'JPEG', quality=85, optimize=True)
+    except OSError:
+        from .resource_errors import discard_files
+        from pathlib import Path
+        discard_files(Path(path))
+        raise
     safe_alt = alt.replace(chr(92), "").replace("]", "").replace("[", "")
     return f"![{safe_alt}]({url_for('static', filename='uploads/posts/' + filename)})"
 
@@ -1031,10 +1026,10 @@ def create_post():
     selected_circle = circles.selected(db, user_id, request.form.get('circle_id') if request.method == 'POST' else request.args.get('circle_id'))
 
     if request.method == 'POST':
-        from neonrest import welcome
+        from neonrest_sandbox import welcome
         welcome.validate_flag(db,user_id)
         content = request.form['content'].strip()
-        from neonrest import sharing
+        from neonrest_sandbox import sharing
         share_ref = request.form.get('shared_source', '').strip()
         if share_ref:
             sharing.validate_reference(db, share_ref, request.form.get('shared_kind'), user_id)
@@ -1070,7 +1065,7 @@ def create_post():
                 sharing.set_permission(db, post_key, request.form.get('allow_circle_sharing'))
                 circles.save_visibility(db, post_key, request.form.get('circle_audience'))
             db.execute('INSERT INTO post_privacy(post_id,audience) VALUES (?,?)', (cursor.lastrowid, 'private' if selected_circle else g.new_post_audience))
-            from neonrest.age_policy import age
+            from neonrest_sandbox.age_policy import age
             if age(db,user_id) is not None and age(db,user_id)<18:
                 db.execute('INSERT OR IGNORE INTO protected_age_posts VALUES (?)',(cursor.lastrowid,))
             if target_user_id != user_id:
@@ -1079,7 +1074,7 @@ def create_post():
             attach_post_media(db, cursor.lastrowid, media)
             vibe_names = vibes_input.split(',')
             add_post_vibes(db, cursor.lastrowid, vibe_names)
-            from neonrest import circle_tools
+            from neonrest_sandbox import circle_tools
             circle_tools.notify_post(db,cursor.lastrowid,user_id)
             db.commit()
 
@@ -1088,7 +1083,7 @@ def create_post():
                 return redirect(url_for('circle_page', circle_id=selected_circle['id']))
             return redirect(url_for('user_page', user_id=target_user_id))
 
-    from neonrest.sharing import prepare as prepare_share
+    from neonrest_sandbox.sharing import prepare as prepare_share
     shared = prepare_share(db, request.args.get('share_kind'), request.args.get('share_ref'), user_id) if request.method == 'GET' else None
     return render_template('create_post.html', selected_circle=selected_circle, shared_content=('' if request.args.get('share_kind') in ('post','image') else shared['content']) if shared else None, share_preview=shared['preview'] if shared else None, shared_source=request.args.get('share_ref') if shared and request.args.get('share_kind') in ('post','image') else None)
 
@@ -1137,7 +1132,7 @@ def create_comment():
     )
     raw_id = cur.lastrowid
     identifiers.ensure(db,'comment',raw_id)
-    from neonrest.age_policy import age
+    from neonrest_sandbox.age_policy import age
     if age(db,session['user_id']) is not None and age(db,session['user_id'])<18:
         db.execute('INSERT OR IGNORE INTO protected_age_comments VALUES (?)',(raw_id,))
     owner = db.execute('SELECT user_id FROM posts WHERE id=?', (post_id,)).fetchone()
@@ -1261,27 +1256,9 @@ def feed(post_id=None, circle_context=None):
     circle_query = request.args.get('q', '').strip()[:200] if circle_context else ''
     circle_pattern = '%' + circle_query.replace('!', '!!').replace('%', '!%').replace('_', '!_') + '%'
     pinned_id = circle_context['circle']['pinned_post_id'] if circle_context else None
-    total_posts = db.execute('SELECT COUNT(*) FROM posts p WHERE NOT EXISTS (SELECT 1 FROM moderated_posts mp WHERE mp.post_id=p.id) AND community_post_visible(p.id)=1 AND (? IS NULL OR p.id IN (SELECT post_id FROM circle_posts WHERE circle_id=?)) AND (?=\'\' OR p.content LIKE ? ESCAPE \'!\')', (cid,cid,circle_query,circle_pattern)).fetchone()[0]
-    total_pages = 1 if post_id is not None else max(1,(total_posts+19)//20)
-    if page > total_pages:
-        abort(404)
-    # --- Fetch posts ---
-    rows = db.execute(''' 
-        SELECT posts.id, posts.user_id, posts.content, posts.circle,
-               posts.created_at, posts.last_edited,
-               users.handle      AS author_handle,
-               users.codename    AS author_codename,
-               users.avatar_path,
-               GROUP_CONCAT(vibes.name, ', ') AS vibes
-        FROM posts
-        JOIN users ON users.id = posts.user_id
-        LEFT JOIN post_vibes ON posts.id = post_vibes.post_id
-        LEFT JOIN vibes      ON post_vibes.vibe_id = vibes.id
-        WHERE NOT EXISTS (SELECT 1 FROM moderated_posts mp WHERE mp.post_id = posts.id) AND community_post_visible(posts.id)=1 AND (? IS NULL OR posts.id=?) AND (? IS NULL OR posts.id IN (SELECT post_id FROM circle_posts WHERE circle_id=?))
-        AND (?='' OR posts.content LIKE ? ESCAPE '!')
-        GROUP BY posts.id
-        ORDER BY (posts.id=COALESCE(?,-1)) DESC, posts.created_at DESC, posts.id DESC LIMIT 20 OFFSET ?
-    ''', (post_id,post_id,cid,cid,circle_query,circle_pattern,pinned_id,(page-1)*20)).fetchall()
+    from .growth_queries import timeline_rows
+    rows, has_more = timeline_rows(db,page,post_id,cid,circle_query,pinned_id)
+    total_pages = page + int(has_more)
     if post_id is not None and not rows:
         abort(404)
 
@@ -1333,18 +1310,8 @@ def feed(post_id=None, circle_context=None):
                          .append(r['handle'])
 
     # -- Comments threaded --
-    comments_raw = []
-    if post_ids:
-        placeholders = ','.join(['?'] * len(post_ids))
-        comments_raw = db.execute(f'''
-            SELECT c.id, c.post_id, c.user_id, c.content, c.parent_comment_id,
-                   c.last_edited, u.handle, u.avatar_path
-            FROM comments c
-            JOIN users u ON u.id = c.user_id
-            WHERE c.post_id IN ({placeholders})
-              AND NOT EXISTS (SELECT 1 FROM moderated_comments mc WHERE mc.comment_id=c.id) AND community_member_visible(c.user_id)=1 AND age_comment_visible(c.id)=1
-            ORDER BY c.created_at ASC
-        ''', post_ids).fetchall()
+    from .growth_queries import comment_windows
+    comments_raw, comment_navigation = comment_windows(db,post_ids,identifiers,single=(post_id is not None))
     post_comments = {}
     for c in comments_raw:
         pid, par = c['post_id'], c['parent_comment_id']
@@ -1364,6 +1331,7 @@ def feed(post_id=None, circle_context=None):
         post_comments.setdefault(comment['post_id'], []).append(comment)
     for post in posts_with_html:
         post['comments'] = build_comment_tree(post_comments.get(post['base62_id'], []))
+        post['comment_navigation'] = comment_navigation.get(post['base62_id'], {})
 
 
     # --- Load vibe theme metadata ---
@@ -1387,7 +1355,7 @@ def feed(post_id=None, circle_context=None):
     }
 
     if circle_context:
-        from neonrest.vibe_gallery import build_vibe_gallery
+        from neonrest_sandbox.vibe_gallery import build_vibe_gallery
         init_media_tables(db)
         circle_context['circle_query'] = circle_query
         circle_context['gallery_items'] = build_vibe_gallery(db, [dict(p, handle=p['author_handle']) for p in posts_with_html], lambda f: url_for('media_file',filename=f), lambda f: url_for('static',filename=f))
@@ -1420,7 +1388,7 @@ def edit_post(post_id):
         abort(404)
 
     if request.method == 'POST':
-        from neonrest import welcome
+        from neonrest_sandbox import welcome
         welcome.validate_flag(db,session['user_id'])
         new_content = request.form['content'].strip()
         media = prepare_post_media()
@@ -1459,7 +1427,7 @@ def edit_post(post_id):
             attach_post_media(db, post_id, media)
             update_post_media_labels(db, post_id, request.form)
             if circle_post:
-                from neonrest.sharing import set_permission
+                from neonrest_sandbox.sharing import set_permission
                 set_permission(db, post_id, request.form.get('allow_circle_sharing'))
                 circles.save_visibility(db, post_id, request.form.get('circle_audience'))
             selected_filter = request.form.get('image_filter')
@@ -1537,27 +1505,11 @@ def vibe_page(vibe_name):
         vibe_css = None
 
     page = post_page()
-    total_posts = db.execute('''SELECT COUNT(*) FROM post_vibes pv JOIN posts p ON p.id=pv.post_id
-        WHERE pv.vibe_id=? AND NOT EXISTS (SELECT 1 FROM moderated_posts mp WHERE mp.post_id=p.id) AND community_post_visible(p.id)=1''', (vibe['id'],)).fetchone()[0]
-    total_pages = max(1,(total_posts+19)//20)
-    if page > total_pages:
-        abort(404)
-    posts = db.execute('''
-        SELECT posts.id, posts.user_id, posts.content, posts.circle, posts.created_at,
-               posts.last_edited, users.handle, users.avatar_path,
-               GROUP_CONCAT(vibes.name, ', ') AS vibes
-        FROM posts
-        JOIN users ON posts.user_id = users.id
-        LEFT JOIN post_vibes ON posts.id = post_vibes.post_id
-        LEFT JOIN vibes ON post_vibes.vibe_id = vibes.id
-        WHERE posts.id IN (
-            SELECT post_id FROM post_vibes WHERE vibe_id = ?
-        ) AND NOT EXISTS (SELECT 1 FROM moderated_posts mp WHERE mp.post_id = posts.id) AND community_post_visible(posts.id)=1
-        GROUP BY posts.id
-        ORDER BY posts.created_at DESC, posts.id DESC LIMIT 20 OFFSET ?
-    ''', (vibe['id'],(page-1)*20)).fetchall()
+    from .growth_queries import timeline_rows
+    posts, has_more = timeline_rows(db,page,vibe_id=vibe['id'])
+    total_pages = page + int(has_more)
 
-    from neonrest.vibe_gallery import build_vibe_gallery
+    from neonrest_sandbox.vibe_gallery import build_vibe_gallery
     init_media_tables(db)
     gallery_items = build_vibe_gallery(
         db, posts,
@@ -1743,7 +1695,7 @@ def enforce_moderation_status():
         row = get_db().execute('SELECT banned, posting_restricted, interaction_restricted FROM user_moderation WHERE user_id = ?', (user_id,)).fetchone()
         if row:
             if row['banned']:
-                if request.endpoint not in ('my_appeals', 'appeal_form', 'logout', 'static', 'community_security', 'account_email', 'account_email_confirm', 'community_reauth', 'community_notifications', 'community_data', 'community_export', 'community_privacy', 'community_relationship'):
+                if request.endpoint not in ('my_appeals', 'appeal_form', 'logout', 'static', 'community_security', 'account_email', 'account_email_confirm', 'community_reauth', 'community_notifications', 'community_data', 'community_export', 'community_privacy', 'community_relationship','family_data_requests','privacy_request_appeal'):
                     abort(403)
             if request.method == 'POST':
                 if row['posting_restricted'] and request.endpoint in ('create_post', 'create_comment', 'edit_post', 'edit_comment', 'post.create_post'):
@@ -1837,7 +1789,7 @@ def manage_home():
 
 @app.route('/manage/vibes/<slug>')
 def manage_vibe(slug):
-    from neonrest.vibe_tools import dashboard
+    from neonrest_sandbox.vibe_tools import dashboard
     return dashboard(sys.modules[__name__], slug)
 
 
@@ -1845,7 +1797,7 @@ def manage_vibe(slug):
 def manage_users():
     require_staff_permission('restrict_users')
     db = get_db()
-    from neonrest.management_audit import identity_query, literal_pattern
+    from neonrest_sandbox.management_audit import identity_query, literal_pattern
     query, identifier = identity_query(request.args.get('q', ''))
     condition = '1=1' if not query else 'CAST(u.id AS TEXT)=?' if identifier is not None else "u.handle LIKE ? ESCAPE '\\'"
     params = () if not query else (identifier,) if identifier is not None else (literal_pattern(query),)
@@ -1887,7 +1839,7 @@ def manage_user_detail(target_id):
 
 
 def moderation_history_filters(db):
-    from neonrest.management_audit import history_filters
+    from neonrest_sandbox.management_audit import history_filters
     return history_filters(db)
 
 
@@ -2340,7 +2292,7 @@ def privacy():
 
 @app.route("/explore")
 def explore():
-    from neonrest.vibe_directory import directory
+    from neonrest_sandbox.vibe_directory import directory
     return directory(get_db())
 
 @app.route("/about-mailersend")
@@ -2351,7 +2303,7 @@ app.config['UPLOAD_FOLDER'] = os.path.join(app.static_folder, 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 26 * 1024 * 1024  # 25 MB image plus form overhead
 
 
-from neonrest.media_features import (register_media, prepare_post_media, attach_post_media,
+from neonrest_sandbox.media_features import (register_media, prepare_post_media, attach_post_media,
                                             init_media_tables, update_post_media_labels, FILTERS as MEDIA_FILTERS)
 register_media(app, get_db)
 
@@ -2419,7 +2371,7 @@ def manage_reports():
     status = request.args.get('status','open')
     if status not in ('open','resolved','dismissed'):
         abort(400)
-    from neonrest.vibe_tools import report_filter
+    from neonrest_sandbox.vibe_tools import report_filter
     vibe_clause,vibe_params,vibe_filter_name=report_filter(get_db(),request.args.get('vibe_id',''))
     records = get_db().execute('''SELECT r.*, u.handle AS member_handle FROM content_reports r
         JOIN users u ON u.id=r.reporter_id WHERE r.status=?''' + vibe_clause + ' ORDER BY r.id DESC LIMIT 100', [status]+vibe_params).fetchall()
@@ -2653,50 +2605,50 @@ def ad_click(campaign_id):
 
 
 # Register community tools after all existing routes and helpers are defined.
-from neonrest import circles
+from neonrest_sandbox import circles
 with app.app_context():
     circles.initialize(get_db())
 import sys
-from neonrest.network_security import register as register_network_security
+from neonrest_sandbox.network_security import register as register_network_security
 register_network_security(app,sys.modules[__name__])
-from neonrest.community_features import register as register_community
+from neonrest_sandbox.community_features import register as register_community
 register_community(app, sys.modules[__name__])
-from neonrest.sharing import register as register_sharing
+from neonrest_sandbox.sharing import register as register_sharing
 register_sharing(app, sys.modules[__name__])
-from neonrest.social_previews import register as register_social_previews
+from neonrest_sandbox.social_previews import register as register_social_previews
 register_social_previews(app, sys.modules[__name__])
-from neonrest.email_verification import register as register_verification
+from neonrest_sandbox.email_verification import register as register_verification
 register_verification(app, sys.modules[__name__])
-from neonrest.retention import initialize as initialize_retention
+from neonrest_sandbox.retention import initialize as initialize_retention
 with app.app_context():
     initialize_retention(get_db())
 app.config['RETENTION_ENABLED'] = False
-from neonrest.retention import register_reserved_guard
+from neonrest_sandbox.retention import register_reserved_guard
 register_reserved_guard(app,sys.modules[__name__])
-from neonrest.account_disabling import register as register_account_disabling
+from neonrest_sandbox.account_disabling import register as register_account_disabling
 register_account_disabling(app,sys.modules[__name__])
-from neonrest.age_clock import register as register_age_clock
+from neonrest_sandbox.age_clock import register as register_age_clock
 register_age_clock(app,sys.modules[__name__])
-from neonrest.family_data import register as register_family_data
+from neonrest_sandbox.family_data import register as register_family_data
 register_family_data(app,sys.modules[__name__])
-from neonrest.email_change import register as register_email_change
+from neonrest_sandbox.email_change import register as register_email_change
 register_email_change(app,sys.modules[__name__])
-from neonrest.mail_queue import register as register_mail_queue
+from neonrest_sandbox.mail_queue import register as register_mail_queue
 register_mail_queue(app,sys.modules[__name__])
 circles.register(app,sys.modules[__name__])
-from neonrest.site_search import register as register_site_search
+from neonrest_sandbox.site_search import register as register_site_search
 register_site_search(app,sys.modules[__name__])
 identifiers.register(app,sys.modules[__name__])
-from neonrest.vibe_tools import register as register_vibe_tools
+from neonrest_sandbox.vibe_tools import register as register_vibe_tools
 register_vibe_tools(app,sys.modules[__name__])
-from neonrest.site_statistics import register as register_site_statistics
-app.config['SITE_STATISTICS_DATABASE'] = os.environ.get('NEONREST_PRODUCTION_STATISTICS_DATABASE', '/home/sinbot/private/neonrest_production/site-statistics.sqlite')
+from neonrest_sandbox.site_statistics import register as register_site_statistics
+app.config['SITE_STATISTICS_DATABASE'] = os.environ.get('NEONREST_SANDBOX_STATISTICS_DATABASE', '/home/sinbot/private/neonrest_sandbox/site-statistics.sqlite')
 register_site_statistics(app,sys.modules[__name__])
 
-from neonrest.site_discovery import register as register_site_discovery
+from neonrest_sandbox.site_discovery import register as register_site_discovery
 register_site_discovery(app,sys.modules[__name__])
 
-from neonrest.messaging import register as register_messaging
+from neonrest_sandbox.messaging import register as register_messaging
 register_messaging(app,sys.modules[__name__])
 
 @app.errorhandler(404)
@@ -2712,9 +2664,15 @@ if __name__ == '__main__':
 def upload_too_large(error):
     return render_template('upload_error.html'), 413
 
-# Initialize optional tables for legacy Production databases.
+# Additive growth indexes, once per application startup.
 with app.app_context():
-    init_media_tables(get_db())
-    init_profile_styles(get_db())
-    get_db().execute("CREATE TABLE IF NOT EXISTS vibe_editors(vibe_id INTEGER NOT NULL,user_id INTEGER NOT NULL,PRIMARY KEY(vibe_id,user_id))")
+    from .growth_queries import install as install_growth_queries
+    install_growth_queries(get_db())
+
+with app.app_context():
+    from .search_index import install as install_search_index
+    install_search_index(get_db())
     get_db().commit()
+
+from .resource_errors import install as install_resource_errors
+install_resource_errors(app)

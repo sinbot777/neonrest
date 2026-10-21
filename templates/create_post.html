@@ -7,7 +7,7 @@
     <div class="glow large">New Post</div>
     <p>Share something honest.</p>
   </header>
-  <form method="POST" action="/create_post" enctype="multipart/form-data" class="new-post-form"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
+  <form method="POST" action="/sandbox/create_post" enctype="multipart/form-data" class="new-post-form"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
     {% if shared_source %}<input type="hidden" name="shared_source" value="{{ shared_source }}"><input type="hidden" name="shared_kind" value="{{ request.args.get('share_kind') }}">{% endif %}
     {% if share_preview %}{% include 'partials/share_preview.html' %}{% endif %}
     <section class="post-form-panel" aria-labelledby="post-content-heading">
@@ -15,7 +15,7 @@
       <div class="post-form-field">
         <label for="content">{{ 'Your comment (optional)' if shared_source else 'Post content' }}</label>
         {% if shared_content %}<p class="share-composer-notice">Add your thoughts before posting. Your post displays the original content according to its sharing and access settings. The original Circle link still requires membership.</p>{% endif %}<textarea name="content" id="content" class="post-textarea" rows="8">{{ shared_content or '' }}</textarea><label>Audience <select name="audience">{% for option in ('public','friends','private') %}<option value="{{ option }}" {% if community_defaults.post_audience == option %}selected{% endif %}>{{ option|title }}</option>{% endfor %}</select></label>
-        <small>Formatting supported: <a href="/markdown-guide" target="_blank" rel="noopener">Markdown Guide</a></small>
+        <small>Formatting supported: <a href="/sandbox/markdown-guide" target="_blank" rel="noopener">Markdown Guide</a></small>
       </div>
     </section>
 

@@ -4,8 +4,8 @@ Shares reference current source content. Media bytes and membership grants are n
 Publishing remains an explicit action in the normal CSRF-protected composer.
 """
 from flask import abort, url_for
-from neonrest import public_ids, circle_ids, circles
-from neonrest.community_features import visible_post
+from neonrest_sandbox import public_ids, circle_ids, circles
+from neonrest_sandbox.community_features import visible_post
 
 
 def draft(db, kind, reference, uid):
@@ -75,7 +75,7 @@ def prepare(db, kind, reference, uid):
         if circle['icon']:
             preview.update(image=url_for('circle_icon', circle_id=cid), image_alt=circle['name'] + ' image')
     else:
-        from neonrest.utils.vibe_lifecycle import is_pending
+        from neonrest_sandbox.utils.vibe_lifecycle import is_pending
         vibe = db.execute('SELECT * FROM vibes WHERE name=? COLLATE NOCASE', (reference,)).fetchone()
         preview.update(title=vibe['name'], audience='Each post keeps its own audience')
         if is_pending(db, vibe['id']):
@@ -107,7 +107,7 @@ def external_enabled(db, pid):
 
 def circle_external_allowed(db, pid, viewer):
     """Only a published share can use this exception; original routes never do."""
-    from neonrest.community_features import blocked
+    from neonrest_sandbox.community_features import blocked
     circle = circles.post_circle(db, pid)
     post = db.execute('SELECT user_id FROM posts WHERE id=?', (pid,)).fetchone()
     return bool(circle and post and external_enabled(db, pid) and not circle['archived']
@@ -144,7 +144,7 @@ def source_viewable(db, pid, viewer):
 def register(app, core):
     import markdown2
     from flask import session, request, send_from_directory
-    from neonrest.media_features import media_folder
+    from neonrest_sandbox.media_features import media_folder
     with app.app_context():
         initialize(core.get_db())
 

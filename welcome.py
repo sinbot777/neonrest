@@ -2,17 +2,17 @@
 from flask import session, abort, current_app
 
 def staff(db, uid):
-    from neonrest import app as core
+    from neonrest_sandbox import app as core
     return bool(uid and core.has_staff_permission(db,uid,'moderate_posts'))
 
 def announcement(db,pid):
     row=db.execute('SELECT p.user_id,p.target_user_id FROM posts p JOIN staff_announcements a ON a.post_id=p.id WHERE p.id=?',(pid,)).fetchone()
     privacy=db.execute('SELECT audience FROM post_privacy WHERE post_id=?',(pid,)).fetchone()
-    from neonrest import age_policy as ages
+    from neonrest_sandbox import age_policy as ages
     return bool(row and staff(db,row['user_id']) and ages.age(db,row['user_id']) is not None and ages.age(db,row['user_id'])>=18 and (not row['target_user_id'] or row['target_user_id']==row['user_id']) and (not privacy or privacy['audience']=='public'))
 
 def personal_hidden(db,owner,viewer):
-    from neonrest import age_policy as ages
+    from neonrest_sandbox import age_policy as ages
     a=ages.age(db,viewer) if viewer else None
     row=db.execute('SELECT handle FROM users WHERE id=?',(owner,)).fetchone()
     return bool(a is not None and a<18 and row and row['handle'].lower().lstrip('@')=='brendoom' and not ages.family(db,owner,viewer) and not staff(db,viewer))
@@ -33,7 +33,7 @@ def require_recent(db,uid):
 
 def post_draft():
     from flask import request
-    from neonrest import app as core
+    from neonrest_sandbox import app as core
     import json,time
     if request.method!='GET' or request.endpoint not in ('create_post','edit_post') or not session.get('user_id') or not current_app.extensions['privileged_fresh'](): return {}
     db=core.get_db()
@@ -57,7 +57,7 @@ def save_flag(db,pid,uid):
         if not staff(db,uid) or row['user_id']!=uid or (row['target_user_id'] and row['target_user_id']!=uid) or (privacy and privacy['audience']!='public'): abort(400,'Staff announcements must be public posts on your own profile.')
         db.execute('INSERT OR IGNORE INTO staff_announcements(post_id) VALUES (?)',(pid,))
     elif existing:
-        from neonrest import community_features as cf
+        from neonrest_sandbox import community_features as cf
         require_recent(db,uid)
         db.execute('DELETE FROM staff_announcements WHERE post_id=?',(pid,))
     from flask import request

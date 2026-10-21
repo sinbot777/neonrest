@@ -23,7 +23,7 @@
 
 <div class="user-section">
   <h2>Update Handle & Codename</h2>
-  <form method="POST" action="/account"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
+  <form method="POST" action="/sandbox/account"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
     <label for="handle">Handle:</label>
     <input type="text" name="handle" value="{{ session.user_handle }}" class="glow-input" required>
 

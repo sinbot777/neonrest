@@ -1,8 +1,8 @@
 """Tracked family data and DOB-review requests; no self-attested DOB changes."""
 import json,time
 from flask import request,session,abort,redirect,url_for,render_template,Response,flash
-from neonrest import age_policy as ages
-from neonrest import privacy_workflows as privacy
+from neonrest_sandbox import age_policy as ages
+from neonrest_sandbox import privacy_workflows as privacy
 
 def register(app,core):
     with app.app_context():

@@ -6,7 +6,7 @@ let handler, calls = [], resolveFetch, fail = false;
 const status = {textContent: ''};
 const box = {dataset: {csrfToken: 'fixture-token'}, querySelector: () => status};
 function button() {
-  return {disabled: false, dataset: {postId: 'OpaquePostId12345', emoji: '👍', reactionUrl: '/react/OpaquePostId12345'}, closest: () => box,
+  return {disabled: false, dataset: {postId: 'OpaquePostId12345', emoji: '👍', reactionUrl: '/sandbox/react/OpaquePostId12345'}, closest: () => box,
     classList: {toggle(name, value) {this[name] = value;}}, setAttribute(name, value) {this[name] = value;}, append(node) {this.count = node.textContent;}};
 }
 const a = button(), duplicate = button();
@@ -24,7 +24,7 @@ const click = () => handler({target: {closest: () => a}, preventDefault() {}});
   assert.equal(a.disabled, true);
   await click();
   assert.equal(calls.length, 1, 'Repeated clicks must not toggle a reaction twice');
-  assert.equal(calls[0].url, '/react/OpaquePostId12345');
+  assert.equal(calls[0].url, '/sandbox/react/OpaquePostId12345');
   assert.equal(calls[0].options.headers['X-CSRF-Token'], 'fixture-token');
   assert.deepEqual(JSON.parse(calls[0].options.body), {emoji: '👍'});
   resolveFetch({ok: true, json: async () => ({status: 'ok', action: 'added', count: 1})});

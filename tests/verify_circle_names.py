@@ -1,6 +1,6 @@
 """Display numbering migrations and namespace allocation use disposable databases."""
 import sqlite3, unittest
-from neonrest import circle_names
+from neonrest_sandbox import circle_names
 
 class Names(unittest.TestCase):
     def setUp(self):

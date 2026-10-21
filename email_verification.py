@@ -2,8 +2,8 @@
 import secrets,time
 from flask import g,request,session,redirect,url_for,render_template,flash,current_app
 from flask_mail import Message
-from neonrest.community_features import digest
-from neonrest.email_delivery import deliver,finish_token_delivery
+from neonrest_sandbox.community_features import digest
+from neonrest_sandbox.email_delivery import deliver,finish_token_delivery
 
 def issue_token(db,email,pending=False):
     row=db.execute('SELECT id,email,verified FROM users WHERE email=? COLLATE NOCASE',(email,)).fetchone()
@@ -26,7 +26,7 @@ def send_verification(core,db,email):
     if raw is None:return True # Another request may already have verified it.
     msg=Message(subject='Verify your Neonrest email',recipients=[row['email']])
     msg.body='Verify your email within one hour: '+('https://www.neonrest.com'+url_for('verify_email',token=raw,_external=False))+chr(10)+'Use this link once. If you did not create this account, ignore this email.'
-    from neonrest.mail_queue import submit
+    from neonrest_sandbox.mail_queue import submit
     queued=submit(core,db,msg,row['id'],'verification',digest(raw))
     if queued=='queued':return queued
     accepted=deliver(core,msg) if queued is None else False

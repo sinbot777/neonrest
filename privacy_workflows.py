@@ -225,7 +225,7 @@ def register(app,core):
     from flask import abort,flash,redirect,render_template,request,session,url_for
     with app.app_context(): initialize(core.get_db())
     app.jinja_env.filters['privacy_date']=lambda value:datetime.fromtimestamp(value,timezone.utc).strftime('%Y-%m-%d %H:%M UTC') if value else 'Not scheduled'
-    from neonrest.privacy_submissions import register as register_submissions
+    from neonrest_sandbox.privacy_submissions import register as register_submissions
     register_submissions(app,core)
     def helpers(): return app.extensions['community_auth_helpers']
     def staff():

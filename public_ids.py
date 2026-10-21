@@ -1,4 +1,5 @@
 """Opaque post/comment identifiers, bounded legacy aliases and prefix capacity."""
+from .request_cache import request_lookup
 import re,secrets,sqlite3
 from flask import current_app,g,request,url_for,redirect,abort
 ALPHABET='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
@@ -15,7 +16,7 @@ def random_token():
     raise RuntimeError('Public ID entropy unavailable')
 
 def old_label(value):
-    from neonrest.utils.utils import encode_base62
+    from neonrest_sandbox.utils.utils import encode_base62
     return encode_base62(value).rjust(8,'A')
 
 def ensure(db,kind,key):
@@ -66,6 +67,7 @@ def initialize(db):
 def next_post_key(db):
     return max(db.execute("SELECT highest_key FROM public_id_state WHERE kind='post'").fetchone()[0],db.execute('SELECT COALESCE(MAX(id),0) FROM posts').fetchone()[0])+1
 
+@request_lookup
 def public(db,kind,key):
     if key is None:return None
     if isinstance(key,str) and TOKEN.fullmatch(key):return key

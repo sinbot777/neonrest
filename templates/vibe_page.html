@@ -37,14 +37,14 @@
       </div>
       <p class="rail-stat"><strong>{{ viewer_posts }}</strong> {{ 'post' if viewer_posts == 1 else 'posts' }} here</p>
       <nav class="rail-links" aria-label="Your links">
-        <a href="/@{{ viewer['handle'].lstrip('@') | urlencode }}">My profile <span aria-hidden="true">↗</span></a>
-        <a href="/feed">Feed <span aria-hidden="true">↗</span></a>
+        <a href="/sandbox/@{{ viewer['handle'].lstrip('@') | urlencode }}">My profile <span aria-hidden="true">↗</span></a>
+        <a href="/sandbox/feed">Feed <span aria-hidden="true">↗</span></a>
       </nav>
       {% else %}
       <div class="rail-eyebrow">Your corner</div>
       <h2>Make yourself at home.</h2>
       <p>Sign in to see your profile and posts in this Vibe.</p>
-      <a class="rail-action" href="/login">Log in</a>
+      <a class="rail-action" href="/sandbox/login">Log in</a>
       {% endif %}
     </aside>
     <main class="user-page vibe-feed">
@@ -105,7 +105,7 @@
             <p><strong>Vibes:</strong>
               {% set vibe_list = (post['vibes'] or '').split(',') %}
               {% for vibe in vibe_list %}
-                <a class="vibe-label" href="/vibe/{{ vibe.strip() | urlencode }}">{{ vibe.strip() }}</a>
+                <a class="vibe-label" href="/sandbox/vibe/{{ vibe.strip() | urlencode }}">{{ vibe.strip() }}</a>
               {% endfor %}
               | <strong>Circle:</strong> {{ post['circle'] or '—' }}
             </p>
@@ -145,7 +145,7 @@
       <h2>People here</h2>
       <div class="rail-members">
         {% for handle in contributors %}
-        <a href="/@{{ handle.lstrip('@') | urlencode }}">@{{ handle.lstrip('@') }}</a>
+        <a href="/sandbox/@{{ handle.lstrip('@') | urlencode }}">@{{ handle.lstrip('@') }}</a>
         {% endfor %}
       </div>
       {% endif %}

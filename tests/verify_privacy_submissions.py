@@ -7,7 +7,7 @@ import unittest
 from datetime import datetime, timezone
 from pathlib import Path
 from verify_privacy_workflows import PrivacyTests
-from neonrest import privacy_submissions as intake, retention
+from neonrest_sandbox import privacy_submissions as intake, retention
 
 
 class SubmissionTests(unittest.TestCase):
@@ -129,7 +129,7 @@ class SubmissionTests(unittest.TestCase):
 
     def test_unpurged_evidence_blocks_account_erasure(self):
         raw=self.invite();self.upload(raw)
-        from neonrest import privacy_workflows
+        from neonrest_sandbox import privacy_workflows
         self.assertIn('Private verification documents require reviewed disposal',privacy_workflows.erasure_blockers(self.db,3))
         self.assertIn('Private verification documents require reviewed disposal',privacy_workflows.erasure_blockers(self.db,2))
 

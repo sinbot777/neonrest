@@ -1,4 +1,5 @@
 """Private communities. Text in posts.circle is not an access-control record."""
+from .request_cache import request_lookup
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import io
@@ -6,7 +7,7 @@ import secrets
 
 from flask import abort, flash, redirect, render_template, request, send_file, session, url_for, current_app, g
 from PIL import Image, UnidentifiedImageError
-from neonrest import age_policy as ages, circle_ids, circle_names
+from neonrest_sandbox import age_policy as ages, circle_ids, circle_names
 
 
 def initialize(db):
@@ -51,10 +52,11 @@ def initialize(db):
     db.commit()
     circle_ids.initialize(db)
     circle_names.initialize(db)
-    from neonrest import circle_tools
+    from neonrest_sandbox import circle_tools
     circle_tools.initialize(db)
 
 
+@request_lookup
 def usable(db, uid):
     if not uid or not ages.ready(db, uid):
         return False
@@ -65,12 +67,14 @@ def usable(db, uid):
         and not db.execute('SELECT 1 FROM user_moderation WHERE user_id=? AND banned=1', (uid,)).fetchone())
 
 
+@request_lookup
 def compatible(db, a, b):
-    from neonrest.community_features import blocked
+    from neonrest_sandbox.community_features import blocked
     return a == b or (usable(db, a) and usable(db, b)
                       and not blocked(db, a, b) and ages.contact(db, a, b, invitation=True))
 
 
+@request_lookup
 def eligible(db, circle, uid):
     if not usable(db, uid) or not usable(db, circle['owner_id']):
         return False
@@ -81,6 +85,7 @@ def eligible(db, circle, uid):
         (uid, circle['owner_id'])).fetchone())
 
 
+@request_lookup
 def membership(db, circle, uid):
     if circle['archived'] or not eligible(db, circle, uid):
         return None
@@ -97,13 +102,15 @@ def public_circle(circle):
     return bool(circle and circle['mode'] == 'discoverable' and circle['public_read'])
 
 
+@request_lookup
 def public_info_allowed(db, circle, uid):
-    from neonrest.community_features import member_visible
+    from neonrest_sandbox.community_features import member_visible
     return bool(public_circle(circle) and not circle['archived'] and usable(db, circle['owner_id'])
                 and member_visible(db, circle['owner_id'], uid)
                 and ages.can_read(db, circle['owner_id'], uid, profile=True))
 
 
+@request_lookup
 def public_post(db, pid):
     circle = post_circle(db, pid)
     return bool(public_circle(circle) and db.execute("SELECT 1 FROM circle_post_visibility WHERE post_id=? AND audience='public'", (pid,)).fetchone())
@@ -117,11 +124,13 @@ def save_visibility(db, pid, value):
     db.execute("INSERT INTO circle_post_visibility VALUES (?,?) ON CONFLICT(post_id) DO UPDATE SET audience=excluded.audience", (pid, value or 'private'))
 
 
+@request_lookup
 def participate(db, pid, uid):
     circle = post_circle(db, pid)
     return circle is None or bool(membership(db, circle, uid))
 
 
+@request_lookup
 def info_allowed(db, circle, uid):
     if public_info_allowed(db, circle, uid):
         return True
@@ -129,10 +138,12 @@ def info_allowed(db, circle, uid):
         circle['mode'] != 'hidden' or membership(db, circle, uid) or invitation(db, circle['id'], uid))
 
 
+@request_lookup
 def post_circle(db, pid):
     return db.execute('SELECT c.* FROM circles c JOIN circle_posts cp ON cp.circle_id=c.id WHERE cp.post_id=?', (pid,)).fetchone()
 
 
+@request_lookup
 def post_allowed(db, pid, uid, include_removed=False):
     """None means an ordinary post; False denies even an author or site staff."""
     mapping = db.execute('SELECT circle_id FROM circle_posts WHERE post_id=?', (pid,)).fetchone()
@@ -265,7 +276,7 @@ def register(app, core):
         db().execute('INSERT INTO circle_events(circle_id,actor_id,target_id,action,reason) VALUES (?,?,?,?,?)', (cid, uid, target, action, reason))
 
     def send_notice(cid, target, actor_id, message, management=False):
-        from neonrest.community_features import notify
+        from neonrest_sandbox.community_features import notify
         path = '/circles/'+circle_ids.public(db(), cid)+('/manage' if management else '')
         notify(db(), target, 'circles', message, path, actor_id)
 
@@ -292,6 +303,7 @@ def register(app, core):
         data = upload.read(5 * 1024 * 1024 + 1)
         if len(data) > 5 * 1024 * 1024:
             abort(413)
+        folder = filename = None
         try:
             with Image.open(io.BytesIO(data)) as image:
                 if image.format not in ('PNG', 'JPEG', 'WEBP') or image.width * image.height > 16000000:
@@ -305,7 +317,10 @@ def register(app, core):
                 filename = secrets.token_hex(24) + '.png'
                 image.save(folder / filename, format='PNG')
                 return filename
-        except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError):
+        except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError) as error:
+            from .resource_errors import discard_files, raise_if_storage_full
+            discard_files(folder / filename if folder is not None and filename else None)
+            raise_if_storage_full(error)
             abort(400, description='Choose a JPEG, PNG or WebP image up to 5 MB and 16 million pixels.')
 
     @app.context_processor
@@ -483,7 +498,7 @@ def register(app, core):
                 if not target or not admit_allowed(db(), circle, target['id']):
                     abort(400, description='An invitation cannot be issued to that account under the current contact safeguards.')
                 tid = target['id']
-                from neonrest.community_features import settings, friends
+                from neonrest_sandbox.community_features import settings, friends
                 preference = settings(db(), tid)['requests_from']
                 if preference == 'nobody' or preference == 'friends' and not (friends(db(), uid, tid) or ages.family(db(), uid, tid)):
                     abort(403, description='This account is not accepting invitations from you.')
@@ -545,5 +560,5 @@ def register(app, core):
         pinned = db().execute('SELECT p.id,p.content FROM posts p JOIN circle_posts cp ON cp.post_id=p.id WHERE cp.circle_id=? AND p.id=? AND community_post_visible(p.id)=1 AND NOT EXISTS(SELECT 1 FROM moderated_posts WHERE post_id=p.id)', (circle_id,circle['pinned_post_id'])).fetchone()
         return render_template('circle_manage.html', circle=circle, membership=member, people=people, invitations=invites, member_query=member_query, events=events, pinned=pinned)
 
-    from neonrest import circle_tools
+    from neonrest_sandbox import circle_tools
     circle_tools.register(app,core,circle_for,actor,mutation,record)

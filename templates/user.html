@@ -31,7 +31,7 @@
       </h2>
 
       {% if session.get('user_id') == user['id'] %}
-        <form id="edit-bio-form" method="POST" action="/update_bio" style="display: none;"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
+        <form id="edit-bio-form" method="POST" action="/sandbox/update_bio" style="display: none;"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
           <textarea name="bio" rows="4" cols="50">{{ user.bio or '' }}</textarea>
           <br>
           <button type="submit">Save</button>
@@ -45,7 +45,7 @@
       <div class="user-section">
         <button class="post-action" id="toggle-post-form">New Post</button>
 
-        <form id="inline-post-form" method="POST" action="/create_post" style="display: none; margin-top: 1rem;"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
+        <form id="inline-post-form" method="POST" action="/sandbox/create_post" style="display: none; margin-top: 1rem;"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
           <textarea name="content" class="post-textarea" rows="4" placeholder="What's on your mind?" required></textarea><br>
           <input type="text" name="vibes" class="glow-input" maxlength="100" placeholder="Vibes"><br>
           {% include 'partials/profile_circle_destination.html' %}<br>
@@ -62,14 +62,14 @@
       <div class="post-preview">
         <p>
           {% if session.get('user_id') == post['user_id'] %}
-            <a href="/edit_post/{{ post['id'] }}" class="edit-link">(edit)</a>
+            <a href="/sandbox/edit_post/{{ post['id'] }}" class="edit-link">(edit)</a>
           {% endif %}
         </p>
         <p>
           <strong>Vibes:</strong>
           {% if vibe_list and vibe_list[0] %}
             {% for vibe in vibe_list %}
-              <a href="/vibe/{{ vibe.strip() | urlencode }}">
+              <a href="/sandbox/vibe/{{ vibe.strip() | urlencode }}">
                 <span class="vibe-pill">{{ vibe.strip() }}</span>
               </a>
             {% endfor %}

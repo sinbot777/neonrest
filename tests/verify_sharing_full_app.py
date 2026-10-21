@@ -5,7 +5,7 @@ exec(compile(Path(__file__).with_name('verify_circles_full_app.py').read_text(),
 import json
 from urllib.parse import urlencode
 from html import unescape
-from neonrest import public_ids
+from neonrest_sandbox import public_ids
 with app.app_context():
     action_public=public_ids.public(core.get_db(),'post',action_pid)
 change("UPDATE circle_members SET status='removed' WHERE circle_id=? AND user_id=?",(action_cid,users['Outsider']))
@@ -68,7 +68,7 @@ check(old_media['filename'].encode() in gif_preview.data and b'PREVIEW_LOOP_ONLY
 # Loading a shared draft creates no preview records or permanent source snapshots.
 check(query('SELECT COUNT(*) FROM posts')[0][0]==before_share+3,'Only three explicitly submitted fixture posts were created')
 with app.app_context():
-    from neonrest.sharing import prepare
+    from neonrest_sandbox.sharing import prepare
     with app.test_request_context('/'):
         info=prepare(core.get_db(),'circle',hidden_opaque,users['Owner'])
         check(info['preview']['title'].startswith('Fixture Circle#') and info['preview']['audience']=='Hidden · invitation only','Hidden Circle preview shows exact numbered name and privacy')

@@ -1,7 +1,7 @@
 """Circle IDs share the post ID format without rebuilding the post/comment registry."""
 import re
 import sqlite3
-from neonrest import public_ids
+from neonrest_sandbox import public_ids
 
 
 def ensure(db, key):

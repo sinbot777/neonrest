@@ -5,19 +5,19 @@ from unittest.mock import patch
 from PIL import Image
 
 stage = Path(sys.argv[1]).resolve()
-assert stage.name == 'neonrest' and '/releases/CIRCLES-' in str(stage)
-fixture = Path('/home/sinbot/releases/CIRCLES-20261016/production-public-20261017/production-before.db')
+assert stage.name == 'neonrest_sandbox' and '/releases/CIRCLES-' in str(stage)
+fixture = Path('/home/sinbot/releases/V081-SECURITY-20261015/neonrest-fixture.db')
 assert fixture.is_file()
 work = tempfile.TemporaryDirectory(prefix='circle-fixture-')
 root = Path(work.name)
 source = sqlite3.connect('file:' + str(fixture) + '?mode=ro', uri=True)
 destination = sqlite3.connect(root / 'fixture.db'); source.backup(destination); source.close(); destination.close()
-os.environ.update(NEONREST_PRODUCTION_DATABASE=str(root/'fixture.db'), NEONREST_PRODUCTION_SECRET_FILE=str(root/'secret'), NEONREST_PRODUCTION_INSTANCE=str(root/'instance'), NEONREST_PRODUCTION_MAIL_QUEUE_DIR=str(root/'mail'), NEONREST_PRODUCTION_MAIL_QUEUE='0')
+os.environ.update(NEONREST_SANDBOX_DATABASE=str(root/'fixture.db'), NEONREST_SANDBOX_SECRET_FILE=str(root/'secret'), NEONREST_SANDBOX_INSTANCE=str(root/'instance'), NEONREST_SANDBOX_MAIL_QUEUE_DIR=str(root/'mail'), NEONREST_SANDBOX_MAIL_QUEUE='0')
 sys.path.insert(0, str(stage.parent))
 with contextlib.redirect_stdout(io.StringIO()):
-    core = importlib.import_module('neonrest.app')
-from neonrest import community_features as cf, circles, circle_ids
-from neonrest.media_features import media_folder
+    core = importlib.import_module('neonrest_sandbox.app')
+from neonrest_sandbox import community_features as cf, circles, circle_ids
+from neonrest_sandbox.media_features import media_folder
 app = core.app
 app.config.update(TESTING=True, SESSION_COOKIE_PATH='/', MAIL_QUEUE_ENABLED=False)
 app.instance_path = str(root/'instance')
@@ -335,7 +335,7 @@ for unsafe in ['//example.invalid','/\\example.invalid','/%2fexample.invalid','/
     check(post('Owner','/notifications',action='view',id=nid).status_code==400,'Unsafe notification destination refused')
     check(query('SELECT read_at FROM notifications WHERE id=?',(nid,))[0][0] is None,'Unsafe destination remains unread')
 # Circle report boundaries and opt-in new-post alerts.
-from neonrest import circle_tools, privacy_workflows
+from neonrest_sandbox import circle_tools, privacy_workflows
 extra_cid=create();other_cid=create();extra_token=public_circle(extra_cid)
 for key,role in [('Member','member'),('Moderator','moderator'),('Outsider','member')]:
     change("INSERT INTO circle_members VALUES (?,?,?,'active',CURRENT_TIMESTAMP)",(extra_cid,users[key],role))

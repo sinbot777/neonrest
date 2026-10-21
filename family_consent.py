@@ -5,7 +5,7 @@ from flask import request,session,abort,redirect,url_for,send_file
 from PIL import Image
 
 def folder(core):
-    return Path(core.app.config.get('FAMILY_CONSENT_FOLDER', '/home/sinbot/private/neonrest_production/family_consent'))
+    return Path(core.app.config.get('FAMILY_CONSENT_FOLDER', '/home/sinbot/private/neonrest_sandbox/family_consent'))
 
 def register(app,core,ages,fresh):
     with app.app_context():

@@ -28,7 +28,7 @@ def date_for(db,uid,instant=None):
     return local_date(row[0] if row else 'UTC',instant)
 
 def protect_history(db,target=None):
-    from neonrest.age_policy import age_of
+    from neonrest_sandbox.age_policy import age_of
     for table,protected,column in [('posts','protected_age_posts','post_id'),('comments','protected_age_comments','comment_id')]:
         sql='SELECT p.id,p.user_id,p.created_at,u.dob FROM '+table+' p JOIN users u ON u.id=p.user_id'+(' WHERE p.user_id=?' if target else '')
         for row in db.execute(sql,(target,) if target else ()).fetchall():
@@ -49,7 +49,7 @@ def register(app,core):
         if not helpers['fresh']():return redirect(url_for('community_reauth',next=url_for('age_setup')))
         target=request.form.get('child_id',type=int) or uid
         if target!=uid:
-            from neonrest.age_policy import approved_parent
+            from neonrest_sandbox.age_policy import approved_parent
             if not approved_parent(core.get_db(),uid,target):abort(403)
         zone=valid_zone(request.form.get('zone','').strip())
         if not zone:abort(400,description='Choose a valid IANA timezone, such as America/Los_Angeles.')

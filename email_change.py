@@ -5,7 +5,7 @@ import time
 from email_validator import validate_email, EmailNotValidError
 from flask import request, session, abort, redirect, url_for, render_template, flash, current_app
 from flask_mail import Message
-from neonrest.community_features import digest
+from neonrest_sandbox.community_features import digest
 
 
 def invalidate_changes(db, uid):
@@ -82,7 +82,7 @@ def register(app, core):
         msg.body = ('Sign in to the Neonrest account whose email you are changing, then confirm within one hour: '
             + 'https://www.neonrest.com' + url_for('account_email_confirm', change_token=raw, _external=False)
             + '\nYour old email stays active until you confirm. If you did not request this, ignore this message.')
-        from neonrest.mail_queue import submit
+        from neonrest_sandbox.mail_queue import submit
         queued=submit(core,db,msg,uid,'change',digest(raw),now+3600)
         if queued=='queued':
             flash('Confirmation email queued. Your current address stays active; check the new inbox shortly.','info')
@@ -143,7 +143,7 @@ def register(app, core):
         notice.body = ('Your Neonrest sign-in email was changed and all sessions were signed out. '
             'If this was not you, contact ToS@neonrest.com. No password or verification code is included in this notice.')
         try:
-            from neonrest.mail_queue import submit
+            from neonrest_sandbox.mail_queue import submit
             queued=submit(core,db,notice,user['id'],'notice',dedupe='email-change-notice:'+str(row['id']))
             if queued is None:core.mail.send(notice)
         except Exception as exc:

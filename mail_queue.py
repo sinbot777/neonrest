@@ -6,7 +6,7 @@ if __package__ in (None,''):sys.path.insert(0,str(Path(__file__).resolve().paren
 from cryptography.fernet import Fernet,InvalidToken
 from flask import current_app,request,redirect,url_for,render_template,flash,abort
 from flask_mail import Message
-from neonrest.email_delivery import retryable
+from neonrest_sandbox.email_delivery import retryable
 
 ACTIVE=('queued','retry','claimed','sending','dead')
 TABLES={'verification':'email_verifications','reset':'password_resets','change':'email_changes'}
@@ -253,8 +253,8 @@ def staff_retry(app,db,jid):
 
 def register(app,core):
     app.extensions['mail_queue_core']=core
-    app.config.setdefault('MAIL_QUEUE_ENABLED',os.environ.get('NEONREST_PRODUCTION_MAIL_QUEUE','1')=='1')
-    app.config.setdefault('MAIL_QUEUE_PRIVATE_DIR',os.environ.get('NEONREST_PRODUCTION_MAIL_QUEUE_DIR','/home/sinbot/private/neonrest_production/mail_queue'))
+    app.config.setdefault('MAIL_QUEUE_ENABLED',os.environ.get('NEONREST_SANDBOX_MAIL_QUEUE','1')=='1')
+    app.config.setdefault('MAIL_QUEUE_PRIVATE_DIR',os.environ.get('NEONREST_SANDBOX_MAIL_QUEUE_DIR','/home/sinbot/private/neonrest_sandbox/mail_queue'))
     app.jinja_env.globals['mail_time']=lambda stamp:time.strftime('%Y-%m-%d %H:%M UTC',time.gmtime(stamp))
     with app.app_context():initialize(core.get_db())
     @app.route('/manage/mail',methods=['GET','POST'])
@@ -285,7 +285,7 @@ def main():
     parser=argparse.ArgumentParser();parser.add_argument('--once',action='store_true');parser.add_argument('--provision',action='store_true');parser.add_argument('--rotate-key',action='store_true');parser.add_argument('--invalidate-restored',action='store_true');args=parser.parse_args()
     import sys
     sys.path.insert(0,str(Path(__file__).resolve().parent.parent))
-    from neonrest import app as core
+    from neonrest_sandbox import app as core
     app=core.app
     with app.app_context():
         if args.provision:provision(app);print('Mail queue private state provisioned');return
@@ -296,7 +296,7 @@ def main():
                 if args.invalidate_restored:provision(app,allow_empty_ledger=True)
                 print('Mail key rotated; restore intents invalidated' if args.invalidate_restored else 'Mail key rotated');return
             if not app.config.get('MAIL_QUEUE_ENABLED'):raise RuntimeError('Mail queue is disabled')
-            print('Production mail worker started',flush=True)
+            print('Sandbox mail worker started',flush=True)
             while True:
                 try:run_once(app,core)
                 except Exception as exc:
