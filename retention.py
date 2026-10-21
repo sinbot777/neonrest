@@ -124,6 +124,9 @@ def erase_account(db,uid,roots):
     if 'dm_messages' in ts:
         from .messaging import erase_user
         erase_user(db,uid)
+    if 'friend_labels' in ts:
+        from .social_connections import erase_user as erase_connections
+        erase_connections(db,uid)
     db.execute('DELETE FROM users WHERE id=?',(uid,))
 
 def file_work(db,roots,now):
@@ -242,4 +245,3 @@ def main():
         if args.apply and not app.config.get('RETENTION_ENABLED',False):parser.error('Live retention is not activated. Preview remains available.')
         print(json.dumps(run(core.get_db(),roots,args.apply),sort_keys=True))
 if __name__=='__main__':main()
-

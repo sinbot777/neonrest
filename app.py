@@ -2676,3 +2676,6 @@ with app.app_context():
 
 from .resource_errors import install as install_resource_errors
 install_resource_errors(app)
+
+from .social_connections import register as register_social_connections
+register_social_connections(app,sys.modules[__name__])
