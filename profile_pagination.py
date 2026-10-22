@@ -14,7 +14,13 @@ def selection(user_id):
     if len(token) > 1024:
         abort(400)
     try:
-        owner, created, post_id, direction = serializer().loads(token)
+        payload = serializer().loads(token)
+        if len(payload)==4:
+            if request.args.get('profile_view','all')!='all': raise ValueError()
+            owner, created, post_id, direction = payload
+        else:
+            owner, created, post_id, direction, view = payload
+            if view!=request.args.get('profile_view','all'): raise ValueError()
         if owner != user_id or not isinstance(created, str) or len(created) > 64 or type(post_id) is not int or post_id < 1 or direction not in ('older', 'newer'):
             raise ValueError()
     except (BadData, ValueError, TypeError):
@@ -28,7 +34,7 @@ def finish(rows, user_id, reverse):
     if reverse:
         rows.reverse()
     def cursor(row, direction):
-        return serializer().dumps([user_id, row['created_at'], row['id'], direction])
+        return serializer().dumps([user_id, row['created_at'], row['id'], direction, request.args.get('profile_view','all')])
     older = newer = None
     if rows:
         if more or reverse:

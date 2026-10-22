@@ -123,7 +123,7 @@ check(send('Regular','/account/feed',default_view='all').status_code==302,'Retur
 # More than one page preserves the chosen view and filters before LIMIT.
 for n in range(22):newpost(writer,'READING PAGE FRIEND '+str(n))
 response=get('Regular','/feed',view='friends');html=text(response)
-check(response.status_code==200 and 'view=friends' in html and 'page=2' in html,'Pagination preserves explicit grouping')
+check(response.status_code==200 and 'view=friends' in html and 'timeline_cursor=' in html,'Pagination preserves explicit grouping')
 check('READING PAGE FRIEND' in text(get('Regular','/feed',view='friends',page=2)),'Second grouped page renders')
 # Private references do not become content copies.
 check(send('Regular','/reading/bookmark/'+pub,action='save').status_code==302,'Save bookmark')
