@@ -2,7 +2,7 @@
 
 ## Completed engineering
 
-- T40 publication: four HelpLine posts in Fresh Starts. Ordinary public posts retain current age restrictions; the guide is the age-neutral onboarding surface. No changes to HelpLine roles, authentication or age information.
+- T40 publication: four HelpLine posts prepared for Fresh Starts. Production HelpLine has no age setup and publication there remains blocked; Sandbox is age-ready. Ordinary public posts retain current age restrictions; the guide is the age-neutral onboarding surface. No changes to HelpLine roles, authentication or age information.
 - Direct placements: at most four cards and one banner on Feed/Vibe pages; independent random selections on navigation. No timed refresh, behavioral ranking or private-Circle placement.
 - Campaign controls: paused creation, scheduled eligibility, CSRF/staff/fresh-authorization checks, sponsor-review acknowledgments recorded in management history, bounded IDs and validated destinations/local raster assets.
 - Disclosure: /advertising sets mixed-age sponsor standards, no endorsement/moderation privileges, no personal ad profiles, and coarse sponsor-reporting rules. Direct event records have no account/session/IP identifiers; selection counts are not verified views. No external sponsor reporting interface exists.
