@@ -14,3 +14,6 @@
 .circles-shell .circle-palette-fields input[type=color]{height:48px;min-width:44px;padding:.2rem;cursor:pointer}
 .circles-shell .circle-remove-cover{display:flex;align-items:center;gap:.4rem}
 @media(max-width:420px){.circle-palette-fields{grid-template-columns:minmax(0,1fr)}}
+
+/* Media controls keep paired colors inside any Circle palette. */
+.circle-themed :is(.neon-video-actions,.midi-card){--circle-panel:#152136;--circle-text:#edf2fa;--circle-accent:#a8dcff;--circle-button-text:#102239;background:#152136!important;color:#edf2fa!important;border-color:#a8dcff;padding:.65rem;border-radius:8px}
