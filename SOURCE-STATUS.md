@@ -1,3 +1,7 @@
+# T17 source update — October 21, 2026 (Pacific)
+
+Reading tools are implemented and verified separately against current Production and Sandbox source. Only T17 is ported; environment-specific code and configuration remain separate. New private data and runtime credentials are excluded from Git. See READING-TOOLS.md and tests/verify_reading_tools.py. No new release tag is declared.
+
 # T16 Production source update — October 21, 2026 (Pacific)
 
 This update ports only the reviewed T16 following and private friend-label changes from Sandbox PR #39, preserving Production-specific code and configuration. Sandbox source is not merged into main. Production and Sandbox were tested with separate database copies. Runtime data, uploaded media and credentials are excluded. No new release tag is declared.

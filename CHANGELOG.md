@@ -1,3 +1,7 @@
+# T17 reading tools — October 21, 2026 (Pacific)
+
+Production and Sandbox: chronological feed views, a saved default, selected Vibes, private live-reference bookmarks and explicit private drafts. Current visibility applies on every view; pagination keeps the grouping. Draft revisions prevent lost updates and duplicate publishing; a successful post consumes the draft atomically. Limits: 50 drafts and 2,000 bookmarks per account. Attachments and staff-announcement status are not saved in drafts. Existing muting and notification preferences are retained. Passed 119 focused checks per environment plus applicable regression suites on disposable copies. Permanent erasure remains disabled; Afterglow remains Sandbox-only.
+
 # T16 following and private friend labels — October 21, 2026 (Pacific)
 
 Production and Sandbox: optional one-way following, incoming-follower controls, explicit Friends and followers posts, private labels for accepted Friends, label post audiences and bounded connection lists. Existing post audiences retain their rules; migration does not rewrite existing records. Current safety checks, CSRF and account restrictions apply. Archived labels fail closed; blocking and unfriending clear assignments. Permanent erasure remains disabled.
