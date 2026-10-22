@@ -49,7 +49,7 @@ Flash messages remain available instead of vanishing after three seconds.
 Footer rotation has a saved pause control and pauses for reduced motion and
 background tabs. Reduced-motion and forced-color styles, visible focus,
 image-viewer button contrast, wrapped dropdowns and touch-sized Circle actions
-round out the shared review. Existing native image/share dialogs and explicitly
+round out the shared review. Profile content IDs are unique, and long post text wraps within the desktop feed column instead of forcing horizontal overflow. Existing native image/share dialogs and explicitly
 loaded provider players retain their close/focus behavior.
 
 Validation uses disposable database copies with SMTP disabled, owner/member/
