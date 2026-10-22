@@ -105,7 +105,7 @@ def erase_account(db,uid,roots):
         for doc in db.execute('SELECT storage_key FROM family_consent_documents WHERE parent_id=? OR child_id=?',(uid,uid)).fetchall():queue(db,Path(roots['consent'])/doc[0],roots['consent'])
     def remove(table,column,values):
         if table in ts and column in ts[table] and values:db.execute('DELETE FROM "'+table+'" WHERE "'+column+'" IN ('+','.join('?'*len(values))+')',values)
-    for table in ('post_vibes','post_privacy','post_media','post_reactions','post_edit_history','moderated_posts','protected_age_posts','staff_announcements'):remove(table,'post_id',pids)
+    for table in ('post_bookmarks','post_vibes','post_privacy','post_media','post_reactions','post_edit_history','moderated_posts','protected_age_posts','staff_announcements'):remove(table,'post_id',pids)
     for table in ('moderated_comments','protected_age_comments'):remove(table,'comment_id',cids)
     if cids:
         db.execute('UPDATE comments SET parent_comment_id=NULL WHERE parent_comment_id IN ('+','.join('?'*len(cids))+')',cids)
@@ -113,7 +113,7 @@ def erase_account(db,uid,roots):
     relationships={'friend_requests':['sender_id','receiver_id'],'follows':['follower_id','followed_id'],'top_friends':['user_id','friend_id'],'user_blocks':['user_id','target_id'],'user_mutes':['user_id','target_id'],'notifications':['user_id','actor_id'],'family_links':['parent_id','child_id'],'parent_contacts':['parent_id','child_id','peer_id'],'family_consent_documents':['parent_id','child_id']}
     for table,columns in relationships.items():
         for column in columns:remove(table,column,[uid])
-    for table in ('account_safety','active_sessions','recovery_codes','password_resets','email_verifications','email_changes','account_lifecycle_events','privacy_settings','notification_settings','media_settings','profile_styles','vibe_editors','user_themes','post_reactions','authorization_post_drafts','user_moderation','account_disables','age_clocks','mail_jobs'):
+    for table in ('reading_preferences','reading_vibes','post_bookmarks','composer_drafts','account_safety','active_sessions','recovery_codes','password_resets','email_verifications','email_changes','account_lifecycle_events','privacy_settings','notification_settings','media_settings','profile_styles','vibe_editors','user_themes','post_reactions','authorization_post_drafts','user_moderation','account_disables','age_clocks','mail_jobs'):
         remove(table,'user_id',[uid])
     # Shared themes and restricted moderation evidence remain; erase creator linkage where nullable.
     if 'themes' in ts:db.execute('UPDATE themes SET created_by=NULL WHERE created_by=?',(uid,))

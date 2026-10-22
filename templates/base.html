@@ -82,6 +82,7 @@ body > .session-info > a:focus-visible { outline:2px solid currentColor; outline
       <div class="session-info">
         <a href="/sandbox/account" class="account-link">{{ session['user_email'] }}</a>
 <a href="{{ url_for('feed') }}" class="account-link">Feed</a>
+<a href="{{ url_for('reading_drafts') }}" class="account-link">Drafts</a>
 <a href="{{ url_for('explore') }}" class="account-link">Vibes</a>
 <a href="/sandbox/circles" class="account-link">Circles</a>
 <a href="{{ url_for('user_by_handle',handle=session.user_handle.lstrip('@')) }}" class="account-link">Your profile</a>

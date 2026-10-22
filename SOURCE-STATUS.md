@@ -1,3 +1,7 @@
+# T17 source update — October 21, 2026 (Pacific)
+
+Reading tools are implemented and verified separately against current Production and Sandbox source. Only T17 is ported; environment-specific code and configuration remain separate. New private data and runtime credentials are excluded from Git. See READING-TOOLS.md and tests/verify_reading_tools.py. No new release tag is declared.
+
 # Source status — October 20, 2026 (Pacific)
 
 Production source was compared against main after PR #37 (1527402652e9ecd2bad01521222f22f6bd9cca90). All present tracked application files match, except the local Last.fm credential assignment; the repository retains environment-variable configuration instead of a deployed credential. Repository-only licensing, README and test files are retained.
