@@ -1035,7 +1035,13 @@ def create_post():
 
     user_id = session['user_id']
     db = get_db()
-    selected_circle = circles.selected(db, user_id, request.form.get('circle_id') if request.method == 'POST' else request.args.get('circle_id'))
+    from .reading_tools import composer, check_publish, consume_draft
+    reading_draft, draft_data = composer(db,user_id)
+    if request.method == 'POST':
+        check_publish(db,user_id)
+    reading_share_kind = request.args.get('share_kind',draft_data.get('shared_kind'))
+    reading_share_ref = request.args.get('share_ref',draft_data.get('shared_source'))
+    selected_circle = circles.selected(db, user_id, request.form.get('circle_id') if request.method == 'POST' else request.args.get('circle_id',draft_data.get('circle_id')))
 
     if request.method == 'POST':
         from neonrest import welcome
@@ -1061,6 +1067,7 @@ def create_post():
             now = datetime.utcnow().isoformat()
 
             db.execute('BEGIN IMMEDIATE')
+            consume_draft(db,user_id)
             if selected_circle:
                 selected_circle = circles.selected(db, user_id, selected_circle['id'])
             post_key=identifiers.next_post_key(db)
@@ -1096,8 +1103,8 @@ def create_post():
             return redirect(url_for('user_page', user_id=target_user_id))
 
     from neonrest.sharing import prepare as prepare_share
-    shared = prepare_share(db, request.args.get('share_kind'), request.args.get('share_ref'), user_id) if request.method == 'GET' else None
-    return render_template('create_post.html', selected_circle=selected_circle, shared_content=('' if request.args.get('share_kind') in ('post','image') else shared['content']) if shared else None, share_preview=shared['preview'] if shared else None, shared_source=request.args.get('share_ref') if shared and request.args.get('share_kind') in ('post','image') else None)
+    shared = prepare_share(db, reading_share_kind, reading_share_ref, user_id) if request.method == 'GET' else None
+    return render_template('create_post.html', reading_draft=reading_draft, draft_data=draft_data, reading_share_kind=reading_share_kind, selected_circle=selected_circle, shared_content=('' if reading_share_kind in ('post','image') else shared['content']) if shared else None, share_preview=shared['preview'] if shared else None, shared_source=reading_share_ref if shared and reading_share_kind in ('post','image') else None)
 
 @app.route('/create_comment', methods=['POST'])
 def create_comment():
@@ -2709,3 +2716,6 @@ install_resource_errors(app)
 
 from .social_connections import register as register_social_connections
 register_social_connections(app,sys.modules[__name__])
+
+from .reading_tools import register as register_reading_tools
+register_reading_tools(app,sys.modules[__name__])

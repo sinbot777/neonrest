@@ -936,6 +936,8 @@ def register(app, core):
             export[table]=[dict(row) for row in db.execute(f'SELECT * FROM {table} WHERE {predicate}',args)]
         from .social_connections import export_user as export_connections
         export['social_connections']=export_connections(db,uid)
+        from .reading_tools import export_user as export_reading
+        export['reading_tools']=export_reading(db,uid,core.identifiers)
         core.identifiers.export_ids(db,export)
         # Exclude internal case notes, password hashes, tokens and two-factor secrets.
         return Response(json.dumps(export,ensure_ascii=False,indent=2),mimetype='application/json',headers={'Content-Disposition':'attachment; filename="neonrest-data.json"'})
