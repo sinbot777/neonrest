@@ -5,6 +5,9 @@ from flask import abort, request, url_for
 def timeline_rows(db, page, post_id=None, circle_id=None, query='', pinned_id=None, vibe_id=None):
     where=["NOT EXISTS(SELECT 1 FROM moderated_posts mp WHERE mp.post_id=p.id)","community_post_visible(p.id)=1"]
     args=[]
+    from .reading_tools import feed_filter
+    filters, filter_args = feed_filter(db)
+    where.extend(filters); args.extend(filter_args)
     if post_id is not None:
         where.append('p.id=?');args.append(post_id)
     if circle_id is not None:

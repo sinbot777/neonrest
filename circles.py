@@ -49,6 +49,8 @@ def initialize(db):
     db.execute('CREATE TRIGGER IF NOT EXISTS circle_read_cleanup AFTER DELETE ON circles BEGIN DELETE FROM circle_reads WHERE circle_id=OLD.id; END')
     db.execute("CREATE TABLE IF NOT EXISTS circle_post_visibility(post_id INTEGER PRIMARY KEY, audience TEXT NOT NULL DEFAULT 'private' CHECK(audience IN ('public','private')))")
     db.execute('CREATE TRIGGER IF NOT EXISTS circle_visibility_cleanup AFTER DELETE ON posts BEGIN DELETE FROM circle_post_visibility WHERE post_id=OLD.id; END')
+    from . import circle_appearance
+    circle_appearance.initialize(db)
     db.commit()
     circle_ids.initialize(db)
     circle_names.initialize(db)
@@ -202,13 +204,13 @@ def label(circle):
 
 def register(app, core):
     app.extensions['circles_core'] = core
-    endpoints = {'circle_page','circle_icon','circle_join','circle_leave','circle_manage','circle_restore','circle_notifications','circle_report','circle_reports'}
+    endpoints = {'circle_appearance','circle_cover','circle_page','circle_icon','circle_join','circle_leave','circle_manage','circle_restore','circle_notifications','circle_report','circle_reports'}
 
     @app.url_value_preprocessor
     def inbound_circle_id(endpoint, values):
         if endpoint not in endpoints or not values:
             return
-        if not session.get('user_id') and endpoint not in ('circle_page', 'circle_icon'):
+        if not session.get('user_id') and endpoint not in ('circle_page', 'circle_icon', 'circle_cover'):
             abort(404)
         original = values['circle_id']
         try:
@@ -562,3 +564,5 @@ def register(app, core):
 
     from neonrest_sandbox import circle_tools
     circle_tools.register(app,core,circle_for,actor,mutation,record)
+    from . import circle_appearance
+    circle_appearance.register(app,core,circle_for,actor,mutation,record)

@@ -8,7 +8,7 @@
     <div class="comment-header">
       <div class="comment-meta">
         <a href="{{ url_for('user_by_handle', handle=comment.author_handle.lstrip('@')) }}">
-          <img src="{{ comment.avatar or '/static/default-avatar.png' }}" class="avatar-img tiny">
+          <img src="{{ comment.avatar or '/static/default-avatar.png' }}" class="avatar-img tiny" alt="{{ comment.author_handle }} profile">
         </a>
         <a href="{{ url_for('user_by_handle', handle=comment.author_handle.lstrip('@')) }}">
           <strong>@{{ comment.author_handle }}</strong>
@@ -22,7 +22,7 @@
       </div>
       {% if viewer_id == comment.user_id %}
       <div class="comment-actions">
-        <button class="icon-button" onclick="toggleCommentMenu(this)">⋮</button>
+        <button type="button" class="icon-button" aria-label="Comment options" aria-expanded="false" onclick="toggleCommentMenu(this)">⋮</button>
         <div class="comment-dropdown" style="display: none;">
           <button type="button" class="link-button edit-btn">Edit</button>
           <form method="POST" action="{{ url_for('delete_comment',comment_id=comment.id) }}" style="display:inline;" onsubmit="return confirm('Delete this comment?');"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
@@ -37,13 +37,13 @@
     </div>
     <div class="comment-body comment-text">{{ comment.content }}</div>
     <form class="edit-form" style="display:none;">
-      <textarea name="content">{{ comment.content }}</textarea>
+      <textarea name="content" aria-label="Edit comment">{{ comment.content }}</textarea>
       <button type="button" class="save-btn">Save</button>
       <button type="button" class="cancel-btn">Cancel</button>
     </form>
 
     {% if viewer_id %}
-      <a href="javascript:void(0);" class="small-button" onclick="setReplyTarget('{{ comment.id }}', '{{ public_post_id(post.id) }}')">Reply</a>
+      <button type="button" class="small-button" onclick="setReplyTarget('{{ comment.id }}', '{{ public_post_id(post.id) }}')">Reply</button>
     {% endif %}
 
     {% if comment.replies %}
@@ -62,7 +62,7 @@
 <div id="post-{{ public_post_id(post.id) }}" class="post-preview{% if post.is_guestbook_outbound %} guestbook-outbound{% endif %}">
   <div class="post-header">
     <a href="{{ url_for('user_by_handle', handle=post.author_handle.lstrip('@')) }}">
-      <img src="{{ post.author_avatar or '/static/default-avatar.png' }}" alt="avatar" class="avatar-img small">
+      <img src="{{ post.author_avatar or '/static/default-avatar.png' }}" alt="{{ post.author_handle }} profile" class="avatar-img small">
     </a>
     <div class="post-user-meta">
       <a href="{{ url_for('user_by_handle', handle=post.author_handle.lstrip('@')) }}">
@@ -88,7 +88,7 @@
 
         {% if viewer_id == post.user_id %}
         <div class="post-actions">
-          <button class="icon-button" onclick="togglePostMenu(this)">⋮</button>
+          <button type="button" class="icon-button" aria-label="Post options" aria-expanded="false" onclick="togglePostMenu(this)">⋮</button>
           <div class="post-dropdown" style="display:none;">
             <a href="{{ url_for('post_edit_history', post_id=post.id) }}" class="link-button">Edit history</a>
             <a href="{{ url_for('edit_post',post_id=post.id) }}" class="link-button">Edit</a>
@@ -108,6 +108,7 @@
   {% include "post_media.html" %}
 
   {% if repost_enabled is not defined or repost_enabled(post.id) %}<div class="neon-share-row">{% set share_label='Share' %}{% set share_kind='post' %}{% set share_ref=public_post_id(post.id) %}{% set share_url=url_for('post_detail',post_id=post.id) %}{% set share_notice='Public Circle post. Anyone eligible can read it; membership is required to reply.' if circle_post_public(post.id) else 'Only members with access to this Circle can open this post. Sharing does not invite or admit anyone.' if private_circle else 'Readers still need permission to view the original post. Sharing does not change its audience.' %}{% include 'partials/share_button.html' %}</div>{% else %}<p class="shared-post-notice">Sharing outside this Circle is off.{% if viewer_id==post.user_id %} <a href="{{ url_for('edit_post',post_id=post.id) }}">Edit sharing</a>{% endif %}</p>{% endif %}
+  {% if viewer_id %}<form class="reading-bookmark-form" method="post" action="{{ url_for('reading_bookmark',post_id=public_post_id(post.id)) }}"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">{% set is_saved=reading_bookmarked(post.id) %}<button class="friend-btn reading-bookmark-button" name="action" value="{{ 'remove' if is_saved else 'save' }}">{{ 'Remove bookmark' if is_saved else 'Bookmark' }}</button></form>{% endif %}
   <div class="post-reactions-box react-form" data-post-id="{{ public_post_id(post.id) }}" data-csrf-token="{{ community_token() }}">
     {% for emoji in VALID_REACTS %}
       <button type="button" data-reaction-url="{{ url_for('react_to_post',post_id=post.id) }}"{% if not can_participate %} disabled title="Sign in and join this Circle to react"{% endif %} class="react-btn{% if post.reaction_counts.get(emoji) %} active{% endif %}" data-emoji="{{ emoji }}" data-post-id="{{ public_post_id(post.id) }}">
@@ -136,7 +137,7 @@
     <form id="comment-form-{{ public_post_id(post.id) }}" method="POST" action="/sandbox/create_comment" data-post-id="{{ public_post_id(post.id) }}"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
       <input type="hidden" name="post_id" value="{{ public_post_id(post.id) }}">
       <input type="hidden" name="parent_comment_id" id="parent_comment_id_{{ public_post_id(post.id) }}" value="">
-      <input type="text" name="content" placeholder="Leave a comment..." required class="comment-input">
+      <input type="text" name="content" aria-label="Write a comment" placeholder="Leave a comment..." required class="comment-input">
       <button type="submit" class="comment-submit">Post</button>
     </form>
   </div>
@@ -206,6 +207,7 @@ window.addEventListener('DOMContentLoaded', () => {
       const container = btn.closest('[data-comment-id]');
       container.querySelectorAll('.comment-text, .edit-btn').forEach(el => el.style.display='none');
       container.querySelector('.edit-form').style.display='block';
+      container.querySelector('.edit-form textarea').focus();
     };
   });
   document.querySelectorAll('.cancel-btn').forEach(btn => {
@@ -213,6 +215,7 @@ window.addEventListener('DOMContentLoaded', () => {
       const container = btn.closest('[data-comment-id]');
       container.querySelectorAll('.comment-text, .edit-btn').forEach(el => el.style.display='block');
       container.querySelector('.edit-form').style.display='none';
+      container.querySelector('.comment-actions > .icon-button')?.focus();
     };
   });
   document.querySelectorAll('.save-btn').forEach(btn => {
@@ -231,6 +234,7 @@ window.addEventListener('DOMContentLoaded', () => {
         container.querySelector('.comment-text').textContent = content;
         container.querySelectorAll('.comment-text, .edit-btn').forEach(el => el.style.display='block');
         container.querySelector('.edit-form').style.display='none';
+      container.querySelector('.comment-actions > .icon-button')?.focus();
       } catch(err) {
         alert(err.message || 'Failed to save'); console.error(err);
       }

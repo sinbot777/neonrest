@@ -1,0 +1,11 @@
+{% extends 'base.html' %}{% block content %}
+<main class="reading-panel"><h1>Feed preferences</h1>{% include 'partials/reading_links.html' %}
+<p>Every view is chronological and checks current post access. All posts keeps discovery open. Friends and Followed show those authors; Your Circles shows joined Circles. Your Vibes uses your selections below.</p>
+<form method="get"><label>Find a Vibe <input name="q" value="{{ query }}" maxlength="100"></label><button>Search</button></form>
+<p>Save changes before searching or changing pages. Choose up to 50 Vibes.</p>
+<form method="post"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
+<label>Default Feed view <select name="default_view">{% for value,title in views.items() %}<option value="{{ value }}" {% if default_view==value %}selected{% endif %}>{{ title }}</option>{% endfor %}</select></label>
+<fieldset><legend>Your selected Vibes</legend>{% for vibe in chosen %}<label><input type="checkbox" name="vibe_id" value="{{ vibe.id }}" checked> {{ vibe.name }}</label>{% else %}<p>No Vibes selected yet.</p>{% endfor %}</fieldset>
+<fieldset><legend>Available Vibes</legend>{% for vibe in vibes %}{% if not vibe.selected %}<label><input type="checkbox" name="vibe_id" value="{{ vibe.id }}"> {{ vibe.name }}</label>{% endif %}{% else %}<p>No matching active Vibes.</p>{% endfor %}</fieldset><button>Save feed preferences</button></form>
+<nav aria-label="Vibe selection pages">{% if page>1 %}<a href="{{ url_for('reading_settings',page=page-1,q=query) }}">Previous</a>{% endif %} Page {{ page }} {% if more %}<a href="{{ url_for('reading_settings',page=page+1,q=query) }}">Next</a>{% endif %}</nav>
+</main>{% include 'partials/reading_style.html' %}{% endblock %}

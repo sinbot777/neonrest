@@ -135,6 +135,8 @@ def erasure_blockers(db, uid):
     if 'posts' in ts:
         for row in db.execute('SELECT id,user_id,target_user_id FROM posts WHERE user_id=? OR target_user_id=?',(uid,uid)):
             pids.append(row[0]);related.update(v for v in row[1:] if v)
+    if pids and 'post_bookmarks' in ts:
+        related.update(r[0] for r in db.execute('SELECT user_id FROM post_bookmarks WHERE post_id IN ('+','.join('?'*len(pids))+')',pids))
     if pids and 'comments' in ts:
         related.update(r[0] for r in db.execute('SELECT user_id FROM comments WHERE post_id IN ('+','.join('?'*len(pids))+')',pids))
     if 'comments' in ts and 'posts' in ts:
