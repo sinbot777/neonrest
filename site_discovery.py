@@ -2,14 +2,14 @@
 import math
 from pathlib import Path
 from xml.etree.ElementTree import Element,SubElement,tostring
-from flask import abort,make_response,request,send_file,url_for
+from flask import abort,make_response,request,send_file,url_for,render_template
 from . import circles
 from .social_previews import public_post
 
 ORIGIN='https://www.neonrest.com'
 NS='http://www.sitemaps.org/schemas/sitemap/0.9'
 CHUNK=250
-PAGES=('/', '/about', '/guide', '/explore', '/circles', '/privacy', '/terms', '/markdown-guide')
+PAGES=('/', '/about', '/guide', '/explore', '/circles', '/privacy', '/terms', '/markdown-guide', '/advertising')
 
 def xml(kind,locations):
     root=Element(kind,xmlns=NS)
@@ -22,6 +22,16 @@ def xml(kind,locations):
 
 def register(app,core):
     sandbox='sandbox' in app.import_name
+    @app.context_processor
+    def advertising_environment():return {'advertising_sandbox':sandbox}
+    @app.get('/advertising')
+    def advertising_policy():return render_template('advertising_policy.html')
+    @app.get('/ads.txt')
+    def authorized_ad_sellers():
+        if sandbox or request.script_root:abort(404)
+        response=make_response('google.com, pub-6365201061952837, DIRECT, f08c47fec0942fa0\n')
+        response.headers.update({'Content-Type':'text/plain; charset=utf-8','Cache-Control':'public, max-age=3600','X-Content-Type-Options':'nosniff'})
+        return response
     @app.get('/favicon.ico')
     def site_favicon():
         return send_file(Path(app.static_folder)/'favicon.ico',mimetype='image/vnd.microsoft.icon',max_age=86400)
