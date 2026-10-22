@@ -29,7 +29,7 @@ for who in ['Regular','Teen']:
 pid,ref=post_fixture('ADULT PERSONAL ONBOARDING SENTINEL');change('UPDATE posts SET user_id=1 WHERE id=?',(pid,))
 check(get('Teen','/posts/'+ref).status_code==404,'Welcome friendship never bypasses age reading')
 change('UPDATE account_disables SET disabled=1 WHERE user_id=1')
-if not query('SELECT 1 FROM account_disables WHERE user_id=1'):change('INSERT INTO account_disables(user_id,disabled) VALUES(1,1)')
+if not query('SELECT 1 FROM account_disables WHERE user_id=1'):change('INSERT INTO account_disables(user_id,disabled,reason) VALUES(1,1,?)',('fixture',))
 with app.app_context():db=core.get_db();welcome.add_welcome_friend(db,users['OtherManager']);db.commit()
 check(not query("SELECT 1 FROM friend_requests WHERE sender_id=1 AND receiver_id=?",(users['OtherManager'],)),'Unavailable founder not auto-added')
 change('UPDATE account_disables SET disabled=0 WHERE user_id=1')
@@ -72,7 +72,7 @@ base='/@VMFixtureRegular'
 for view in expected:
  p=base+'?'+urlencode({'profile_view':view,'mode':'night'});collected=[];first=None
  for _ in range(5):
-  contexts.clear();r=get('Regular',p);check(r.status_code==200,'Profile view renders '+view);c=contexts[-1];check(len(c['posts'])<=20,'Profile batch bound');collected.extend(x['id'] for x in c['posts'] if x['content'].startswith('PROFILE VIEW'))
+  contexts.clear();r=clients['Regular'].get(p,environ_overrides=env);check(r.status_code==200,'Profile view renders '+view);c=contexts[-1];check(len(c['posts'])<=20,'Profile batch bound');collected.extend(x['id'] for x in c['posts'] if x['content'].startswith('PROFILE VIEW'))
   if first is None:first=c
   if not c['profile_older']:break
   p=base+'?'+urlencode({'profile_view':view,'posts_cursor':c['profile_older'],'mode':'night'})

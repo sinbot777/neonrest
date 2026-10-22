@@ -1489,7 +1489,8 @@ def vibe_page(vibe_name):
         from neonrest.utils.vibe_lifecycle import canonical_vibe
         alias = canonical_vibe(db, vibe_name)
         if alias:
-            return redirect(url_for('vibe_page', vibe_name=alias['name'], **request.args.to_dict()))
+            values = {k:v for k,v in request.args.items() if k in ('mode','q','view','page','timeline_cursor')}
+            return redirect(url_for('vibe_page', vibe_name=alias['name'], **values))
         flash("That vibe doesn't exist yet.", "error")
         return redirect('/feed')
 

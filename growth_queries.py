@@ -72,7 +72,7 @@ def timeline_rows(db, page, post_id=None, circle_id=None, query='', pinned_id=No
     def cursor(row,direction,target):
         return signer.dumps([scope,row['created_at'],row['id'],direction,target,1])
     def link(value):
-        values=request.args.to_dict();values.pop('page',None);values.pop('timeline_cursor',None)
+        values={k:v for k,v in request.args.items() if k in ('mode','q','view')}
         if value: values['timeline_cursor']=value
         return url_for(request.endpoint,**(request.view_args or {}),**values)
     nav={'older':None,'newer':None,'latest':link(None),'page':number}
