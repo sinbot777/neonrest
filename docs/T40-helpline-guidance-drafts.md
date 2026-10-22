@@ -1,6 +1,6 @@
-# HelpLine onboarding guidance — ready for owner publication
+# HelpLine onboarding guidance — publication status — October 22, 2026
 
-These are proposed HelpLine posts, not records of messages that have been published. No account is created or impersonated, and no post is inserted by deployment. Publish using the intended authorized HelpLine identity, with Public audience and the Fresh Starts Vibe. If using an explicit staff announcement to reach age-separated members, the author must have the appropriate staff permissions and fresh authentication; ordinary posts retain all age restrictions.
+Prepared for ordinary public Fresh Starts publication by the owner-authorized maintenance batch. Production HelpLine must complete its existing age setup first; Sandbox is age-ready. These posts retain current audience and age restrictions; the shared User guide remains the onboarding source for younger members. No staff role or announcement bypass was added to HelpLine.
 
 ## 1. Welcome to Neonrest
 
