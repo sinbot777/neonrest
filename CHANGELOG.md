@@ -1,3 +1,9 @@
+# T16 following and private friend labels — October 21, 2026 (Pacific)
+
+Production and Sandbox: optional one-way following, incoming-follower controls, explicit Friends and followers posts, private labels for accepted Friends, label post audiences and bounded connection lists. Existing post audiences retain their rules; migration does not rewrite existing records. Current safety checks, CSRF and account restrictions apply. Archived labels fail closed; blocking and unfriending clear assignments. Permanent erasure remains disabled.
+
+Validation: 91 focused Production fixture checks and the recovery, privacy, Circle, sharing, network security, statistics, pagination, video and deletion-return suites on separate database copies. Afterglow remains Sandbox-only.
+
 # Development update — October 20, 2026 (Pacific)
 
 The public development log is available at /dev (Production) and /sandbox/dev (Sandbox). Environment labels distinguish deployed features.

@@ -12,3 +12,12 @@
     <form method="post" action="{{ url_for('friends.send_request', user_id=user['id']) }}"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}"><input type="hidden" name="friend_csrf_token" value="{{ friend_csrf_token() }}"><button class="friend-btn" type="submit">Add Friend</button></form>
   {% endif %}
 {% endif %}
+
+
+{% if viewer_id and viewer_id != user['id'] %}
+  {% if connection_is_following(user['id']) %}
+    <form method="post" action="{{ url_for('friends.unfollow', user_id=user['id']) }}"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}"><button class="friend-btn">Unfollow</button></form>
+  {% elif connection_can_follow(user['id']) %}
+    <form method="post" action="{{ url_for('friends.follow', user_id=user['id']) }}"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}"><input type="hidden" name="friend_csrf_token" value="{{ friend_csrf_token() }}"><button class="friend-btn">Follow</button></form>
+  {% endif %}
+{% endif %}
