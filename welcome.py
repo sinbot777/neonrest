@@ -69,6 +69,10 @@ def add_welcome_friend(db,uid):
     founder=db.execute("SELECT id FROM users WHERE lower(handle)='@brendoom'").fetchone()
     if not founder or founder['id']==uid: return
     fid=founder['id']
+    # Do not attach new members to a disabled or unavailable welcome account.
+    if not db.execute('SELECT verified FROM users WHERE id=?',(fid,)).fetchone()[0]: return
+    for table,flag in [('account_safety','inactive'),('account_disables','disabled'),('user_moderation','banned')]:
+        if db.execute('SELECT 1 FROM '+table+' WHERE user_id=? AND '+flag+'=1',(fid,)).fetchone(): return
     if db.execute('SELECT 1 FROM friend_requests WHERE (sender_id=? AND receiver_id=?) OR (sender_id=? AND receiver_id=?)',(fid,uid,uid,fid)).fetchone(): return
     db.execute("INSERT INTO friend_requests(sender_id,receiver_id,status) VALUES (?,?,'accepted')",(fid,uid))
     db.execute('UPDATE top_friends SET position_t9=position_t9+1 WHERE user_id=?',(uid,))

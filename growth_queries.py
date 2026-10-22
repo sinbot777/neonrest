@@ -1,5 +1,7 @@
 """Bounded timeline hydration and comment windows; visibility precedes LIMIT."""
-from flask import abort, request, url_for
+from flask import abort, request, url_for, g, session, current_app
+from itsdangerous import URLSafeSerializer, BadData
+import hashlib, json
 
 
 def timeline_rows(db, page, post_id=None, circle_id=None, query='', pinned_id=None, vibe_id=None):
@@ -20,18 +22,69 @@ def timeline_rows(db, page, post_id=None, circle_id=None, query='', pinned_id=No
     predicate=' AND '.join(where)
     # Read the pin separately so an expression sort cannot scan the entire Feed.
     pin=db.execute('SELECT p.id FROM posts p WHERE p.id=? AND '+predicate,[pinned_id]+args).fetchone() if pinned_id is not None else None
-    offset=(page-1)*20
+    # Scope the signed boundary to this viewer and exact filter, never to a visible row.
+    # Deleted boundaries keep working; current access is always checked above.
+    scope = hashlib.sha256(json.dumps([session.get('user_id'), request.endpoint,
+        post_id, circle_id, vibe_id, query, pinned_id, filters, filter_args],
+        sort_keys=True).encode()).hexdigest()
+    signer = URLSafeSerializer(current_app.secret_key, salt='timeline-pages-v1')
+    token = request.args.get('timeline_cursor') if post_id is None else None
+    reverse = False
+    boundary = None
+    number = page
+    if token:
+        try:
+            if len(token)>1536: raise ValueError()
+            payload = signer.loads(token)
+            if not isinstance(payload,list) or len(payload)!=6: raise ValueError()
+            context, created, key, direction, number, version = payload
+            if context!=scope or version!=1 or not isinstance(created,str) or len(created)>64 or type(key) is not int or key<1 or direction not in ('older','newer') or type(number) is not int or not 1<=number<=1000000000: raise ValueError()
+            reverse = direction=='newer'
+            boundary = (created,key)
+        except (BadData, ValueError, TypeError): abort(400)
+    offset=0 if token else (page-1)*20
     limit=21
     if pin:
         predicate+=' AND p.id<>?';args.append(pin['id'])
-        offset=max(0,offset-1)
-        if page==1:limit-=1
-    ids=[r['id'] for r in db.execute('SELECT p.id FROM posts p WHERE '+predicate+' ORDER BY p.created_at DESC,p.id DESC LIMIT ? OFFSET ?',args+[limit,offset])]
-    if pin and page==1:ids.insert(0,pin['id'])
-    more=len(ids)>20
-    ids=ids[:20]
+        if not token: offset=max(0,offset-1)
+        if number==1: limit-=1
+    ordering='ASC' if reverse else 'DESC'
+    def fetch_window(extra, extra_args, size, skip=0):
+        sql='SELECT p.id,p.created_at FROM posts p WHERE '+extra+predicate+' ORDER BY p.created_at '+ordering+',p.id '+ordering+' LIMIT ?'
+        params=list(extra_args)+args+[size]
+        if skip:
+            sql+=' OFFSET ?';params.append(skip)
+        return list(db.execute(sql,params))
+    if boundary:
+        # Two disjoint index ranges avoid rescanning a large run of equal
+        # timestamps: SQLite's tuple range may only seek on its first column.
+        op='>' if reverse else '<'
+        selected=fetch_window('p.created_at=? AND p.id '+op+' ? AND ',boundary,limit)
+        if len(selected)<limit:
+            selected+=fetch_window('p.created_at '+op+' ? AND ',[boundary[0]],limit-len(selected))
+    else:
+        # OFFSET is only for old numbered bookmarks. Generated links all seek.
+        selected=fetch_window('',[],limit,offset)
+    more=len(selected)>limit-1
+    selected=selected[:limit-1]
+    if reverse: selected.reverse()
+    first_page=number==1
+    def cursor(row,direction,target):
+        return signer.dumps([scope,row['created_at'],row['id'],direction,target,1])
+    def link(value):
+        values=request.args.to_dict();values.pop('page',None);values.pop('timeline_cursor',None)
+        if value: values['timeline_cursor']=value
+        return url_for(request.endpoint,**(request.view_args or {}),**values)
+    nav={'older':None,'newer':None,'latest':link(None),'page':number}
+    if selected:
+        if (more if not reverse else True): nav['older']=link(cursor(selected[-1],'older',number+1))
+        if not first_page and (not reverse or more): nav['newer']=link(cursor(selected[0],'newer',number-1))
+    # First page always includes the current eligible pin, outside date ordering.
+    ids=[r['id'] for r in selected]
+    if pin and first_page: ids.insert(0,pin['id'])
+    if post_id is None: g.timeline_navigation=nav
     if not ids:
-        if page>1:abort(404)
+        if page>1 and not token: abort(404)
         return [],False
     # Only this page receives author metadata and Vibe aggregation.
     rows=db.execute("SELECT p.*,u.handle,u.handle AS author_handle,u.codename AS author_codename,u.avatar_path,(SELECT GROUP_CONCAT(v.name,', ') FROM post_vibes pv JOIN vibes v ON v.id=pv.vibe_id WHERE pv.post_id=p.id) AS vibes FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id IN ("+','.join('?' for _ in ids)+')',ids).fetchall()

@@ -1,5 +1,17 @@
+{% if g.timeline_navigation is defined %}
+{% set nav=g.timeline_navigation %}
+{% if nav.older or nav.newer or request.args.get('timeline_cursor') %}<nav class="post-pagination" aria-label="Post pages">
+{% if nav.newer %}<a rel="prev" href="{{ nav.newer }}">← Newer posts</a>{% endif %}
+<span>Page {{ nav.page }}</span>
+{% if nav.older %}<a rel="next" href="{{ nav.older }}">Older posts →</a>{% endif %}
+{% if request.args.get('timeline_cursor') %}<a href="{{ nav.latest }}">Latest posts</a>{% endif %}
+</nav>{% endif %}
+<style>.post-pagination{display:flex;justify-content:space-between;gap:1rem;align-items:center;flex-wrap:wrap;margin:1.5rem 0;padding:1rem;border:1px solid currentColor;border-radius:12px}.post-pagination a{color:inherit;text-decoration:underline}</style>
+{% else %}
 {% if total_pages > 1 %}<nav class="post-pagination" aria-label="Post pages">
   {% if page > 1 %}<a href="{{ url_for(request.endpoint, vibe_name=vibe_name, mode=theme_mode, page=page-1) if request.endpoint == 'vibe_page' else reading_page_url(page-1) }}">← Newer posts</a>{% endif %}
   <span>Page {{ page }}</span>
   {% if page < total_pages %}<a href="{{ url_for(request.endpoint, vibe_name=vibe_name, mode=theme_mode, page=page+1) if request.endpoint == 'vibe_page' else reading_page_url(page+1) }}">Older posts →</a>{% endif %}
 </nav><style>.post-pagination{display:flex;justify-content:space-between;gap:1rem;align-items:center;flex-wrap:wrap;margin:1.5rem 0;padding:1rem;border:1px solid currentColor;border-radius:12px}.post-pagination a{color:inherit;text-decoration:underline}</style>{% endif %}
+
+{% endif %}

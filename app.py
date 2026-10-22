@@ -517,19 +517,9 @@ def signup():
                 db.execute("UPDATE users SET legal_terms_version=?, legal_privacy_version=?, legal_accepted_at=strftime('%Y-%m-%dT%H:%M:%SZ','now') WHERE id=?",
                            ('2026-10-13-production', '2026-10-14-production', created.lastrowid))
                 db.execute('INSERT INTO age_clocks(user_id,zone,confirmed) VALUES (?,?,1)',(created.lastrowid,g.signup_timezone))
-                # Every new member starts with @brendoom as a friend and in Top 9.
-                first_friend = db.execute(
-                    "SELECT id FROM users WHERE lower(handle) = '@brendoom'"
-                ).fetchone()
-                if first_friend and first_friend['id'] != created.lastrowid:
-                    db.execute('''
-                        INSERT INTO friend_requests (sender_id, receiver_id, status)
-                        VALUES (?, ?, 'accepted')
-                    ''', (first_friend['id'], created.lastrowid))
-                    db.execute('''
-                        INSERT INTO top_friends (user_id, friend_id, position_t9)
-                        VALUES (?, ?, 1)
-                    ''', (created.lastrowid, first_friend['id']))
+                # Apply the same welcome setup used for reviewed family enrollment.
+                from neonrest.welcome import add_welcome_friend
+                add_welcome_friend(db, created.lastrowid)
         except sqlite3.IntegrityError:
             g.statistics_signup_outcome = 'unavailable'
             flash('That handle or email is already in use. Try something else!', 'error')
@@ -756,7 +746,11 @@ def user_page_test(user_id):
 
     # -- Fetch one visible page before loading comments and reactions --
     from .profile_pagination import selection, finish, PAGE_SIZE
+    profile_view = request.args.get('profile_view', 'all')
+    if profile_view not in ('all', 'authored', 'guestbook'): abort(400)
     page_where, page_args, page_reverse = selection(user_id)
+    if profile_view == 'authored': page_where += ' AND posts.user_id = '+str(int(user_id))
+    elif profile_view == 'guestbook': page_where += ' AND posts.target_user_id = '+str(int(user_id))+' AND posts.user_id <> '+str(int(user_id))
     rows = db.execute(
         f'''
         WITH profile_page AS (
@@ -904,7 +898,7 @@ def user_page_test(user_id):
         vibe_metadata=vibe_metadata,
         profile_css=profile_css,
         profile_mode=profile_mode,
-        profile_older=profile_older, profile_newer=profile_newer
+        profile_older=profile_older, profile_newer=profile_newer, profile_view=profile_view
     )
 
 
@@ -1492,6 +1486,10 @@ def vibe_page(vibe_name):
     db = get_db()
     vibe = db.execute('SELECT * FROM vibes WHERE name = ? COLLATE NOCASE', (vibe_name,)).fetchone()
     if not vibe:
+        from neonrest.utils.vibe_lifecycle import canonical_vibe
+        alias = canonical_vibe(db, vibe_name)
+        if alias:
+            return redirect(url_for('vibe_page', vibe_name=alias['name'], **request.args.to_dict()))
         flash("That vibe doesn't exist yet.", "error")
         return redirect('/feed')
 

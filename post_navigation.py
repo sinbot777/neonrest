@@ -4,7 +4,7 @@ from flask import current_app, request, url_for
 from werkzeug.exceptions import HTTPException
 
 DESTINATIONS = {'user_by_handle','user_page_test','feed','vibe_page','circle_page'}
-PARAMS = {'mode','posts_cursor','page','before'}
+PARAMS = {'mode','posts_cursor','profile_view','timeline_cursor','view','page','before','q'}
 
 def after_delete():
     fallback = url_for('feed')
