@@ -16,8 +16,8 @@
 </style>
 {% if profile_css %}<style id="profile-custom-style">{{ profile_css | safe }}</style>{% endif %}
 <nav class="profile-mode-switch" aria-label="Profile appearance">
-  View: <a href="{{ url_for('user_by_handle', handle=user.handle.lstrip('@'), mode='day') }}" {% if profile_mode == 'day' %}aria-current="page"{% endif %}>Day</a>
-  <a href="{{ url_for('user_by_handle', handle=user.handle.lstrip('@'), mode='night') }}" {% if profile_mode == 'night' %}aria-current="page"{% endif %}>Night</a>
+  View: <a href="{{ url_for('user_by_handle', handle=user.handle.lstrip('@'), mode='day', profile_view=profile_view, posts_cursor=request.args.get('posts_cursor')) }}" {% if profile_mode == 'day' %}aria-current="page"{% endif %}>Day</a>
+  <a href="{{ url_for('user_by_handle', handle=user.handle.lstrip('@'), mode='night', profile_view=profile_view, posts_cursor=request.args.get('posts_cursor')) }}" {% if profile_mode == 'night' %}aria-current="page"{% endif %}>Night</a>
 </nav>
 {% if user_theme %}
   <style>
@@ -226,7 +226,7 @@
     </div>
   {% endif %}
 
-<div class="recent-posts">
+<div class="recent-posts" id="recent-posts">
   {% set track = profile_midi(user.id) %}
   {% if track %}
     <section class="profile-music"><h3>Profile music</h3>
@@ -236,6 +236,18 @@
     </section>
   {% endif %}
   <h3>Recent Posts</h3>
+  <form method="get" action="{{ url_for('user_by_handle',handle=user.handle.lstrip('@'),_anchor='recent-posts') }}">
+    <input type="hidden" name="mode" value="{{ profile_mode }}">
+    <label for="profile-post-view">Show posts</label>
+    <select id="profile-post-view" name="profile_view">
+      {% for value,label in [('all','All profile posts'),('authored','Written by this person'),('guestbook','Guestbook messages')] %}<option value="{{ value }}"{% if profile_view==value %} selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select><button type="submit">Apply view</button>
+  </form>
+<nav aria-label="Profile post pages" style="display:flex;flex-wrap:wrap;gap:1rem;margin:1rem 0">
+{% if profile_newer %}<a class="button" rel="prev" href="{{ url_for('user_by_handle', handle=user.handle.lstrip('@'), mode=profile_mode, profile_view=profile_view, posts_cursor=profile_newer, _anchor='recent-posts') }}">Newer posts</a>{% endif %}
+{% if profile_older %}<a class="button" rel="next" href="{{ url_for('user_by_handle', handle=user.handle.lstrip('@'), mode=profile_mode, profile_view=profile_view, posts_cursor=profile_older, _anchor='recent-posts') }}">Older posts</a>{% endif %}
+{% if request.args.get('posts_cursor') %}<a href="{{ url_for('user_by_handle', handle=user.handle.lstrip('@'), mode=profile_mode, profile_view=profile_view, _anchor='recent-posts') }}">Latest posts</a>{% endif %}
+</nav>
   {% if posts %}
     {% set _posts = posts %}
     {% set _reactors = post_reactors %}
@@ -243,8 +255,13 @@
     {% set _viewer_id = viewer_id %}
     {% include 'partials/posts.html' %}
   {% else %}
-    <p>No posts yet.</p>
+    <p>{% if request.args.get('posts_cursor') %}No more posts on this page.{% else %}No posts yet.{% endif %}</p>
   {% endif %}
+<nav aria-label="Profile post pages" style="display:flex;flex-wrap:wrap;gap:1rem;margin:1rem 0">
+{% if profile_newer %}<a class="button" rel="prev" href="{{ url_for('user_by_handle', handle=user.handle.lstrip('@'), mode=profile_mode, profile_view=profile_view, posts_cursor=profile_newer, _anchor='recent-posts') }}">Newer posts</a>{% endif %}
+{% if profile_older %}<a class="button" rel="next" href="{{ url_for('user_by_handle', handle=user.handle.lstrip('@'), mode=profile_mode, profile_view=profile_view, posts_cursor=profile_older, _anchor='recent-posts') }}">Older posts</a>{% endif %}
+{% if request.args.get('posts_cursor') %}<a href="{{ url_for('user_by_handle', handle=user.handle.lstrip('@'), mode=profile_mode, profile_view=profile_view, _anchor='recent-posts') }}">Latest posts</a>{% endif %}
+</nav>
 </div>
 
 
