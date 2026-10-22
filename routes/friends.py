@@ -135,6 +135,8 @@ def decline_friend(user_id):
 def remove_friend(user_id):
     uid = check_friend_post()
     db = get_db()
+    from ..social_connections import clear_pair_labels
+    clear_pair_labels(db,uid,user_id)
     db.execute('''DELETE FROM friend_requests WHERE status = 'accepted' AND
         ((sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?))''',
         (uid, user_id, user_id, uid))

@@ -1,3 +1,9 @@
+# October 21, 2026 — T16: following and private friend labels — Sandbox
+
+Following now has its own opt-out and individual follower removal/allow-again controls. Re-following after voluntary unfollow works with legacy schemas. Friends and followers is an explicit post audience; Friends excludes follower-only access and existing audiences stay unchanged. Private, custom friend labels organize current accepted Friends and can target a post audience without granting Circle membership. Label names and assignments stay owner-only; removal, blocking, archiving and changing safety eligibility revoke access. Connection lists are bounded and paginated. Export, preservation discovery and future erasure cleanup include the new records. Production rollout completed separately through PR #40 after all ten Production suites and three GitHub checks passed. Existing core records were preserved. Afterglow remains Sandbox-only and permanent erasure stays disabled.
+
+---
+
 # Development update — October 20, 2026 (Pacific)
 
 The public development log is available at /dev (Production) and /sandbox/dev (Sandbox). Environment labels distinguish deployed features.
