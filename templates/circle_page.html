@@ -2,7 +2,7 @@
 {% block title %}{{ circle_label(circle) }} - Neonrest{% endblock %}
 {% block content %}
 <link rel="stylesheet" href="{{ url_for('static',filename='css/circles.css',v='20261016-alertcompact1') }}">
-<link rel="stylesheet" href="{{ url_for('static',filename='css/circle-appearance.css',v='20261021-t13') }}">
+<link rel="stylesheet" href="{{ url_for('static',filename='css/circle-appearance.css',v='20261022-t13-media') }}">
 <div class="circles-shell circle-themed" style="{{ circle_appearance_style(circle) if circle_appearance_style is defined else '' }}"><nav class="circle-nav"><a href="{{ url_for('circles_home') }}">← All Circles</a>{% if membership and membership.role in ('owner','moderator') %}<a class="button" href="{{ url_for('circle_manage',circle_id=circle.id) }}">Manage Circle</a>{% endif %}</nav>
 {% if circle_appearance_style is defined %}<nav class="circle-nav" aria-label="Circle appearance"><a href="{{ url_for('circle_page',circle_id=circle.id,appearance='day',q=circle_query or '',page=page or 1) }}" {% if (circle_appearance_mode() if circle_appearance_mode is defined else 'night')=='day' %}aria-current="true"{% endif %}>Day theme</a><a href="{{ url_for('circle_page',circle_id=circle.id,appearance='night',q=circle_query or '',page=page or 1) }}" {% if (circle_appearance_mode() if circle_appearance_mode is defined else 'night')=='night' %}aria-current="true"{% endif %}>Night theme</a></nav>{% endif %}
 {% if circle.cover %}<img class="circle-cover" src="{{ url_for('circle_cover',circle_id=circle.id) }}" alt="{{ circle.cover_alt }}" decoding="async">{% endif %}
