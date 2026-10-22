@@ -10,11 +10,14 @@
 .friends-page form {display: inline}.friends-page button,.friends-page select {background: #302631; color: #ffe1e8; border: 1px solid #efaabf; border-radius: 8px; padding: .45rem .7rem; cursor: pointer}
 .friends-page button:hover {background: #624054}.top9-edit-grid {display: grid; grid-template-columns: repeat(auto-fit, minmax(210px,1fr)); gap: .75rem; margin: 1rem 0}
 .top9-edit-grid label {display: flex; flex-direction: column; gap: .35rem}.top9-edit-grid select {width: 100%}
+.friend-private-labels{display:flex;flex-wrap:wrap;gap:.45rem;width:100%;min-width:0}.friend-private-labels form,.friend-private-labels label{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem;max-width:100%;min-width:0}.friend-private-labels select{max-width:100%;min-width:0}
 </style>
 <div class="friends-page">
   <h1>{{ 'Your Friends' if editable else owner.handle ~ "'s Friends" }}</h1>
   <p><a href="{{ url_for('user_by_handle', handle=owner.handle.lstrip('@')) }}">← {{ owner.handle }}'s profile</a></p>
   {% if editable %}
+  <p><a href="{{ url_for('connections_page') }}">Manage following and private friend labels</a></p>
+  {% set private_labels = connection_labels() %}{% set private_assignments = connection_friend_labels() %}
   <section>
     <h2>Top 9 Friends</h2>
     <p>Choose an accepted friend for each slot. Leave slots empty if you like.</p>
@@ -49,6 +52,9 @@
   <section><h2>Friends ({{ friends|length }})</h2>
     {% for person in friends %}<div class="friend-row"><img src="{{ person.avatar_path or '/static/default-avatar.png' }}" alt=""><a href="{{ url_for('user_by_handle', handle=person.handle.lstrip('@')) }}">@{{ person.handle.lstrip('@') }}</a>
       {% if person.codename %}<span>{{ person.codename }}</span>{% endif %}
+      {% if editable %}<div class="friend-private-labels"><span>Private labels:</span>
+      {% for label in private_assignments.get(person.id,[]) %}<form method="post" action="{{ url_for('connection_label') }}"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}"><input type="hidden" name="label_id" value="{{ label.id }}"><input type="hidden" name="friend_id" value="{{ person.id }}"><button name="action" value="unassign" aria-label="Remove {{ label.name }} label from @{{ person.handle.lstrip('@') }}">{{ label.name }} ×</button></form>{% endfor %}
+      {% if private_labels %}<form method="post" action="{{ url_for('connection_label') }}"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}"><input type="hidden" name="friend_id" value="{{ person.id }}"><label>Add private label <select name="label_id">{% for label in private_labels %}<option value="{{ label.id }}">{{ label.name }}</option>{% endfor %}</select></label><button name="action" value="assign">Add label</button></form>{% else %}<a href="{{ url_for('connections_page') }}">Create a label</a>{% endif %}</div>{% endif %}
       {% if editable %}<form method="post" action="{{ url_for('friends.remove_friend', user_id=person.id) }}"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}"><input type="hidden" name="friend_csrf_token" value="{{ friend_csrf_token() }}"><button>Remove friend</button></form>{% endif %}</div>
     {% else %}<p>No friends yet.</p>{% endfor %}
   </section>

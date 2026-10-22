@@ -1,3 +1,7 @@
+# T16 Production source update — October 21, 2026 (Pacific)
+
+This update ports only the reviewed T16 following and private friend-label changes from Sandbox PR #39, preserving Production-specific code and configuration. Sandbox source is not merged into main. Production and Sandbox were tested with separate database copies. Runtime data, uploaded media and credentials are excluded. No new release tag is declared.
+
 # Source status — October 20, 2026 (Pacific)
 
 Production source was compared against main after PR #37 (1527402652e9ecd2bad01521222f22f6bd9cca90). All present tracked application files match, except the local Last.fm credential assignment; the repository retains environment-variable configuration instead of a deployed credential. Repository-only licensing, README and test files are retained.

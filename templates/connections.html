@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block title %}Following and friend labels - Neonrest{% endblock %}
+{% macro csrf() %}<input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">{% endmacro %}
+{% block content %}
+<div class="community-page connections-page">
+{% include 'partials/account_navigation.html' %}
+<h1>Following and friend labels</h1>
+<p><a href="{{ url_for('friends.friends_page') }}">Your friends and label assignments</a> · <a href="{{ url_for('community_privacy') }}">Privacy settings</a></p>
+<section><h2>Who can follow you</h2>
+<p>Following is one-way and does not make someone a Friend. Your age, block and post-audience controls still apply.</p>
+<form method="post">{{ csrf() }}<input type="hidden" name="action" value="following"><label><input type="checkbox" name="enabled" value="1" {% if enabled %}checked{% endif %}> Allow eligible people to follow me</label><button>Save following preference</button></form>
+<p>Turning this off revokes existing follows. Turning it back on lets people follow again; it does not restore old follows. Friends keep their existing access.</p>
+<p>For a post, choose <strong>Friends and followers</strong> to include eligible followers, or <strong>Friends</strong> to exclude follower-only access. Public posts remain visible to eligible visitors regardless of following.</p></section>
+{% for kind,title,data in [('followers','People following you',followers),('following','People you follow',following)] %}
+<section><h2>{{ title }}</h2>
+{% for person in data[0] %}<div class="connection-row"><a href="{{ url_for('user_by_handle',handle=person.handle.lstrip('@')) }}">@{{ person.handle.lstrip('@') }}</a>
+{% if kind == 'followers' %}<form method="post">{{ csrf() }}<input type="hidden" name="action" value="remove-follower"><input type="hidden" name="target_id" value="{{ person.id }}"><button>Remove follower</button></form>
+{% else %}<form method="post" action="{{ url_for('friends.unfollow',user_id=person.id) }}">{{ csrf() }}<button>Unfollow</button></form>{% endif %}</div>
+{% else %}<p>No eligible connections to show.</p>{% endfor %}
+<nav aria-label="{{ title }} pages">{% if data[1] > 1 %}<a href="{{ url_for('connections_page', **{kind ~ '_page': data[1]-1}) }}">Previous</a>{% endif %} <span>Page {{ data[1] }}</span> {% if data[2] %}<a href="{{ url_for('connections_page', **{kind ~ '_page': data[1]+1}) }}">Next</a>{% endif %}</nav>
+</section>{% endfor %}
+{% if exclusions[0] %}<section><h2>Removed followers</h2><p>These people cannot follow again until you allow it. Allowing does not restore a follow. Use blocking in Privacy settings if you need to prevent contact; public posts remain public.</p>
+{% for person in exclusions[0] %}<div class="connection-row"><span>@{{ person.handle.lstrip('@') }}</span><form method="post">{{ csrf() }}<input type="hidden" name="action" value="allow-follower"><input type="hidden" name="target_id" value="{{ person.id }}"><button>Allow following again</button></form></div>{% endfor %}
+<nav aria-label="Removed follower pages">{% if exclusions[1]>1 %}<a href="{{ url_for('connections_page',excluded_page=exclusions[1]-1) }}">Previous</a>{% endif %}<span>Page {{ exclusions[1] }}</span>{% if exclusions[2] %}<a href="{{ url_for('connections_page',excluded_page=exclusions[1]+1) }}">Next</a>{% endif %}</nav></section>{% endif %}
+<section><h2>Your private friend labels</h2><p>Organize accepted Friends using names you choose. Labels and assignments are visible only to you. They are separate from Circles and grant no Circle access. You can also choose a label as a post audience; only current Friends assigned to that label can read it, subject to the usual safety checks.</p>
+<form method="post" action="{{ url_for('connection_label') }}">{{ csrf() }}<input type="hidden" name="action" value="create"><label>New label <input name="name" maxlength="40" required></label><button>Create label</button></form>
+{% for label in labels %}<div class="connection-row"><form method="post" action="{{ url_for('connection_label') }}">{{ csrf() }}<input type="hidden" name="label_id" value="{{ label.id }}"><input type="hidden" name="action" value="rename"><label>Label name <input name="name" value="{{ label.name }}" maxlength="40" required></label><button>Rename</button></form><form method="post" action="{{ url_for('connection_label') }}">{{ csrf() }}<input type="hidden" name="label_id" value="{{ label.id }}"><button name="action" value="archive">Archive label</button></form></div>{% else %}<p>No labels yet.</p>{% endfor %}
+<p>Archiving hides a label and restricts its existing label-audience posts to you and authorized staff. If the label was your default post audience, new posts default to Only me. Restoring does not change that default. It does not publish or delete posts.</p>
+{% if archived_labels %}<details><summary>Archived labels</summary><p>Restoring a label restores its label-audience access for current assigned Friends.</p>{% for label in archived_labels %}<form method="post" action="{{ url_for('connection_label') }}">{{ csrf() }}<input type="hidden" name="label_id" value="{{ label.id }}"><button name="action" value="restore">Restore {{ label.name }}</button></form>{% endfor %}</details>{% endif %}
+</section>
+</div>
+<style>.connections-page{max-width:64rem}.connection-row{display:flex;align-items:center;flex-wrap:wrap;gap:.7rem;padding:.65rem 0;border-bottom:1px solid #667}.connection-row form{margin:0}.connections-page input:not([type=checkbox]){max-width:100%;box-sizing:border-box}.connections-page nav{display:flex;gap:1rem;flex-wrap:wrap}</style>
+{% endblock %}

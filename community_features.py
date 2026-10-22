@@ -133,7 +133,8 @@ def visible_post(db, pid, viewer, muted=True, include_circle_removed=False, exte
     if muted and viewer != owner and db.execute('SELECT 1 FROM user_mutes WHERE user_id=? AND target_id=?', (viewer, owner)).fetchone():
         return False
     row = db.execute('SELECT audience FROM post_privacy WHERE post_id=?', (pid,)).fetchone()
-    return bool(circle_access) if circle_access is not None else audience_allows(db, owner, viewer, row['audience'] if row else 'public')
+    from .social_connections import post_audience_allows
+    return bool(circle_access) if circle_access is not None else post_audience_allows(db, owner, viewer, row['audience'] if row else 'public')
 
 
 def register_db_functions(db):
@@ -568,23 +569,29 @@ def register(app, core):
                     target=int(request.form.get('target_user_id',uid))
                 except (ValueError,TypeError):
                     abort(400)
+            if request.endpoint=='friends.follow':
+                from .social_connections import bounded_id
+                if not bounded_id(target):abort(400)
             if target and (not member_visible(db,target,uid) or not db.execute('SELECT 1 FROM users WHERE id=?',(target,)).fetchone()):
                 abort(403)
-            if target and target!=uid:
+            if target and target!=uid and request.endpoint!='friends.follow':
                 pref=settings(db,target)['requests_from' if request.endpoint=='friends.send_request' else 'comments_from']
                 if pref=='nobody' or pref=='friends' and not friends(db,uid,target):
                     abort(403)
         if request.method=='POST' and request.endpoint=='create_post':
             audience=request.form.get('audience',settings(db,uid)['post_audience'])
-            if audience not in AUDIENCES:
-                abort(400)
+            from .social_connections import valid_post_audience
+            if not valid_post_audience(db,uid,audience):
+                abort(400,description='Choose an available post audience.')
             if len(request.form.get('content',''))>20000:
                 abort(400)
             g.new_post_audience=audience
         if request.method=='POST' and request.endpoint=='edit_post':
             audience=request.form.get('audience')
-            if audience and audience not in AUDIENCES:
-                abort(400)
+            from .social_connections import valid_post_audience
+            existing=db.execute('SELECT audience FROM post_privacy WHERE post_id=?',((request.view_args or {}).get('post_id'),)).fetchone()
+            if audience and not valid_post_audience(db,uid,audience,keep_archived=bool(existing and existing[0]==audience)):
+                abort(400,description='Choose an available post audience.')
         if request.method=='POST' and request.endpoint=='create_comment' and len(request.form.get('content',''))>5000:
             abort(400)
 
@@ -797,7 +804,8 @@ def register(app, core):
         if request.method=='POST':
             csrf()
             values={key:request.form.get(key,'') for key in ('profile_audience','post_audience','comments_from','requests_from')}
-            if values['profile_audience'] not in AUDIENCES or values['post_audience'] not in AUDIENCES or any(values[k] not in ('everyone','friends','nobody') for k in ('comments_from','requests_from')):
+            from .social_connections import valid_post_audience
+            if values['profile_audience'] not in AUDIENCES or not valid_post_audience(db,uid,values['post_audience']) or any(values[k] not in ('everyone','friends','nobody') for k in ('comments_from','requests_from')):
                 abort(400)
             fields={key:request.form.get('field_'+key,'public') for key in FIELDS}
             if any(value not in AUDIENCES for value in fields.values()):
@@ -828,6 +836,8 @@ def register(app, core):
         else:
             db.execute(f'INSERT OR IGNORE INTO {table}(user_id,target_id) VALUES (?,?)',(uid,tid))
             if action=='block':
+                from .social_connections import clear_pair_labels
+                clear_pair_labels(db,uid,tid)
                 db.execute('DELETE FROM friend_requests WHERE (sender_id=? AND receiver_id=?) OR (sender_id=? AND receiver_id=?)',(uid,tid,tid,uid))
                 db.execute('DELETE FROM top_friends WHERE (user_id=? AND friend_id=?) OR (user_id=? AND friend_id=?)',(uid,tid,tid,uid))
                 db.execute('UPDATE follows SET revoked=1 WHERE (follower_id=? AND followed_id=?) OR (follower_id=? AND followed_id=?)',(uid,tid,tid,uid))
@@ -924,6 +934,8 @@ def register(app, core):
             if not db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",(table,)).fetchone():
                 continue
             export[table]=[dict(row) for row in db.execute(f'SELECT * FROM {table} WHERE {predicate}',args)]
+        from .social_connections import export_user as export_connections
+        export['social_connections']=export_connections(db,uid)
         core.identifiers.export_ids(db,export)
         # Exclude internal case notes, password hashes, tokens and two-factor secrets.
         return Response(json.dumps(export,ensure_ascii=False,indent=2),mimetype='application/json',headers={'Content-Disposition':'attachment; filename="neonrest-data.json"'})

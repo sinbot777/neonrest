@@ -141,7 +141,8 @@ def erasure_blockers(db, uid):
         if 'parent_comment_id' in ts['comments']:
             related.update(r[0] for r in db.execute('SELECT user_id FROM comments WHERE parent_comment_id IN (SELECT id FROM comments WHERE user_id=?)',(uid,)))
     for table,cols in {'friend_requests':('sender_id','receiver_id'),'follows':('follower_id','followed_id'),
-                       'top_friends':('user_id','friend_id'),'user_blocks':('user_id','target_id'),
+                       'top_friends':('user_id','friend_id'),'friend_label_members':('user_id','friend_id'),
+                       'follower_exclusions':('user_id','target_id'),'user_blocks':('user_id','target_id'),
                        'user_mutes':('user_id','target_id'),'family_links':('parent_id','child_id'),
                        'notifications':('user_id','actor_id'),
                        'family_consent_documents':('parent_id','child_id'),'parent_contacts':('parent_id','child_id','peer_id')}.items():
