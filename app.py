@@ -267,31 +267,18 @@ def post_page():
 
 
 def ad_selection(db, vibe_id=None):
-    # Database randomness supplies a new selection on navigation without timed refreshes.
-    rows = db.execute('''SELECT * FROM ad_campaigns WHERE active=1
-        AND (starts_at IS NULL OR datetime(starts_at) <= CURRENT_TIMESTAMP)
-        AND (ends_at IS NULL OR datetime(ends_at) > CURRENT_TIMESTAMP)
-        AND (vibe_id IS NULL OR vibe_id=?) ORDER BY RANDOM() LIMIT 20''', (vibe_id,)).fetchall()
-    rail = [dict(row) for row in rows if row['placement']=='rail'][:4]
-    banner = next((dict(row) for row in rows if row['placement']=='banner'), None)
-    # Count only selections actually rendered; no member identifier or cookie is stored.
-    for ad in rail + ([banner] if banner else []):
-        db.execute("INSERT INTO ad_events(campaign_id,event_type) VALUES (?,'impression')", (ad['id'],))
-    if rail or banner:
-        db.commit()
-    return rail,banner
+    from .advertising import selection
+    return selection(db, app.static_folder, vibe_id)
 
 
 def validated_ad_destination(value):
-    parsed=urlparse(value)
-    if parsed.scheme not in ('https','http') or not parsed.netloc or parsed.username or parsed.password or len(value)>500:
-        return False
-    return True
+    from .advertising import destination
+    return destination(value)
 
 
 def validated_ad_image(value):
-    # Local static art only: external images would let sponsors track page views.
-    return not value or (value.startswith('/static/') and '..' not in value and len(value)<=300)
+    from .advertising import image
+    return image(value, app.static_folder)
 
 
 def can_edit_vibe_settings(user_id, vibe):
@@ -2547,7 +2534,9 @@ def save_ad():
     raw_id=request.form.get('campaign_id','').strip()
     if raw_id and not raw_id.isdecimal():
         abort(400)
-    campaign_id=int(raw_id) if raw_id else None
+    from .advertising import key
+    campaign_id=key(raw_id) if raw_id else None
+    if raw_id and campaign_id is None: abort(400)
     previous=db.execute('SELECT * FROM ad_campaigns WHERE id=?',(campaign_id,)).fetchone() if campaign_id else None
     if campaign_id and not previous:
         abort(404)
@@ -2557,10 +2546,12 @@ def save_ad():
     image_path=request.form.get('image_path','').strip()
     placement=request.form.get('placement','')
     vibe_raw=request.form.get('vibe_id','').strip()
-    vibe_id=int(vibe_raw) if vibe_raw.isdecimal() else None
+    vibe_id=key(vibe_raw) if vibe_raw else None
+    if vibe_raw and vibe_id is None: abort(400)
     starts=request.form.get('starts_at','').strip() or None
     ends=request.form.get('ends_at','').strip() or None
     reason=request.form.get('reason','').strip()
+    if request.form.get('policy_reviewed')!='1': abort(400,description='Review the sponsor standards before saving.')
     if (not 1<=len(title)<=80 or not 1<=len(body)<=240 or placement not in ('rail','banner')
         or not validated_ad_destination(destination) or not validated_ad_image(image_path)
         or vibe_raw and not vibe_raw.isdecimal() or not 1<=len(reason)<=500):
@@ -2585,35 +2576,39 @@ def save_ad():
         campaign_id=cursor.lastrowid
         action='create'
     db.execute('INSERT INTO ad_management_events(campaign_id,actor_id,action,reason) VALUES (?,?,?,?)',
-               (campaign_id,actor,action,reason))
+               (campaign_id,actor,action,'policy-reviewed; '+reason))
     db.commit()
-    flash('Campaign saved. It remains paused until activated.', 'success')
+    flash('Campaign saved.' if previous and previous['active'] else 'Campaign saved. It remains paused until activated.', 'success')
     return redirect(url_for('manage_ads'))
 
 
 @app.route('/manage/ads/<int:campaign_id>/state', methods=['POST'])
 def set_ad_state(campaign_id):
+    if not 0<campaign_id<2**63: abort(404)
     actor=require_staff_permission('manage_ads')
     if not valid_management_token():
         abort(400)
     state=request.form.get('state')
     reason=request.form.get('reason','').strip()
+    if state=='1' and request.form.get('policy_reviewed')!='1': abort(400,description='Review the sponsor standards before activation.')
     if state not in ('0','1') or not 1<=len(reason)<=500:
         abort(400)
     db=get_db()
-    ad=db.execute('SELECT active FROM ad_campaigns WHERE id=?',(campaign_id,)).fetchone()
+    ad=db.execute('SELECT * FROM ad_campaigns WHERE id=?',(campaign_id,)).fetchone()
     if not ad:
         abort(404)
+    if state=='1' and (not validated_ad_destination(ad['destination_url']) or not validated_ad_image(ad['image_path'])): abort(400)
     if ad['active']!=int(state):
         db.execute('UPDATE ad_campaigns SET active=?,updated_at=CURRENT_TIMESTAMP WHERE id=?',(int(state),campaign_id))
         db.execute('INSERT INTO ad_management_events(campaign_id,actor_id,action,reason) VALUES (?,?,?,?)',
-                   (campaign_id,actor,'activate' if state=='1' else 'pause',reason))
+                   (campaign_id,actor,'activate' if state=='1' else 'pause',('policy-reviewed; ' if state=='1' else '')+reason))
         db.commit()
     return redirect(url_for('manage_ads'))
 
 
 @app.route('/ad/<int:campaign_id>/click')
 def ad_click(campaign_id):
+    if not 0<campaign_id<2**63: abort(404)
     db=get_db()
     ad=db.execute('''SELECT destination_url FROM ad_campaigns WHERE id=? AND active=1
         AND (starts_at IS NULL OR datetime(starts_at)<=CURRENT_TIMESTAMP)

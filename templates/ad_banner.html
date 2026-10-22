@@ -1,2 +1,2 @@
-{% if banner_ad %}<aside class="bottom-ad" aria-label="Advertisement"><span>Advertisement</span><a href="{{ url_for('ad_click', campaign_id=banner_ad.id) }}" target="_blank" rel="sponsored noopener noreferrer">
+{% if banner_ad %}<aside class="bottom-ad" aria-label="Advertisement"><span>Advertisement</span><a href="{{ url_for('ad_click', campaign_id=banner_ad.id) }}" target="_blank" rel="sponsored noopener noreferrer" referrerpolicy="no-referrer">
 {% if banner_ad.image_path %}<img src="{{ banner_ad.image_path }}" alt="" loading="lazy">{% endif %}<strong>{{ banner_ad.title }}</strong><span>{{ banner_ad.body }}</span></a></aside>{% include 'ad_style.html' %}{% endif %}

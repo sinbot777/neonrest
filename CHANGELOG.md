@@ -1,3 +1,9 @@
+# P1 closeout — October 22, 2026 (Pacific)
+
+T40: four owner-authorized HelpLine guidance posts published as ordinary public Fresh Starts content, with existing age/audience checks and no role changes. The shared guide remains available to younger members. Publication uses an audited, idempotent maintenance batch; no sessions or factors are forged.
+
+T44 engineering: separate four-card/one-banner rotation avoids banner starvation; bounded campaign identifiers, destination checks and existing local raster validation fail closed. Staff acknowledge sponsor standards on save/activation, with audit records. Links carry sponsored/no-referrer protections, long copy wraps, and public sponsor/privacy disclosures are linked. /ads.txt authorizes the verified publisher on Production only; no third-party ad scripts are installed or activated. Google site review is still Getting ready (requested October 17); provider approval, actual sponsored inventory and delivery acceptance remain open. No paid campaign or fake sponsor was created.
+
 # T40–T43 — October 22, 2026 (Pacific)
 
 Signed seek pagination for Feed/Vibe/Circle timelines and profile All/authored/guestbook selectors, preserving access checks, filters and appearance. Legacy numbered URLs remain compatible and may still perform offset work. Welcome setup skips unavailable founders; canonical Vibe aliases redirect with appearance preserved. T40 onboarding and T41 distinct-author promotion are covered by focused disposable-data tests. HelpLine guidance remains an unpublished proposal in docs/T40-helpline-guidance-drafts.md. T42 specification is in docs/T42-vibe-engine.md; no location collection is enabled. Large reaction aggregation remains T48. Permanent erasure remains disabled; Afterglow remains Sandbox-only.
