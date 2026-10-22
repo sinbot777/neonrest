@@ -162,7 +162,7 @@ with sqlite3.connect(path) as db:
  check(db.execute('SELECT COUNT(*),SUM(pages) FROM browser_sessions').fetchone()==(2,5),'Concurrent inactivity renewal creates one new session')
  check(db.execute('SELECT COUNT(DISTINCT visitor) FROM visitor_days').fetchone()[0]==1,'Expiry retains one browser')
 before=raw();r=consent(extra={'DNT':'1'});check(any('analytics_visitor=' in h and 'Max-Age=0' in h for h in r.headers.getlist('Set-Cookie')),'DNT overrides consent bootstrap');visit('/guide',client=c,extra={'DNT':'1'});check(raw()==before,'DNT does not collect')
-r=consent(choice='no');check(any('analytics_session=' in h and 'Max-Age=0' in h for h in r.headers.getlist('Set-Cookie')),'Opt out clears session')
+r=consent(choice='no');check(r.status_code==302 and c.get_cookie(cookie_prefix+'session',path=cookie_path) is None and c.get_cookie(cookie_prefix+'visitor',path=cookie_path) is None,'Opt out leaves no optional identifiers after DNT cleared them')
 for route in ['/password-reset','/password-reset/FAKE-TOKEN','/media-file/fake.png','/social-preview/default.png','/favicon.ico','/robots.txt','/sitemap.xml','/account/security','/manage/statistics']:
  before=count('request');timing=count('latency');visit(route);check(count('request')==before and count('latency')==timing,'Exclude private/assets from requests and timing '+route)
 for rule in ['/privacy/submit','/reauth','/login/factor','/verify_email/<token>','/family/data/<request_id>']:
