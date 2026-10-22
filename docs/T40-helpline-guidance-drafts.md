@@ -1,6 +1,6 @@
-# HelpLine onboarding guidance — published October 22, 2026
+# HelpLine onboarding guidance — publication status — October 22, 2026
 
-Published as ordinary public Fresh Starts posts by the owner-authorized maintenance batch. These posts retain current audience and age restrictions; the shared User guide remains the onboarding source for younger members. No staff role or announcement bypass was added to HelpLine.
+Prepared for ordinary public Fresh Starts publication by the owner-authorized maintenance batch. Production HelpLine must complete its existing age setup first; Sandbox is age-ready. These posts retain current audience and age restrictions; the shared User guide remains the onboarding source for younger members. No staff role or announcement bypass was added to HelpLine.
 
 ## 1. Welcome to Neonrest
 

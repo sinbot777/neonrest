@@ -16,9 +16,14 @@ def destination(value):
 
 def image(value,static_folder):
     if not value:return True
-    if not isinstance(value,str) or len(value)>300 or '..' in value or not re.fullmatch(r'/static/ads/(?:[A-Za-z0-9_-]+/)*[A-Za-z0-9_.-]+\.(?:png|jpe?g|webp|gif)',value,re.I):return False
-    base=Path(static_folder).resolve();path=(base/value[len('/static/'):]).resolve()
-    return path.is_relative_to(base) and path.is_file()
+    prefix='/static/ads/'
+    if not isinstance(value,str) or len(value)>300 or not value.startswith(prefix):return False
+    name=value[len(prefix):]
+    if not name or not name.isascii() or '..' in name or any(not (c.isalnum() or c in '._-') for c in name):return False
+    # Enumerate trusted local names; never construct a filesystem path from input.
+    folder=Path(static_folder)/'ads'
+    if not folder.is_dir():return False
+    return any(not entry.is_symlink() and entry.is_file() and entry.suffix.lower() in ('.png','.jpg','.jpeg','.webp','.gif') and value==prefix+entry.name for entry in folder.iterdir())
 
 
 def selection(db,static_folder,vibe_id=None):
