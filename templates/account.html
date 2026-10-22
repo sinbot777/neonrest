@@ -7,7 +7,7 @@
 <div class="user-page account-settings-page">
   {% include 'partials/account_navigation.html' %}
   <div class="user-header">
-    <div class="glow large">Account Settings</div>
+    <h1 class="glow large">Account Settings</h1>
     <p>{{ session.user_email }}</p>
   </div>
 
@@ -25,10 +25,10 @@
   <h2>Update Handle & Codename</h2>
   <form method="POST" action="/account"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
     <label for="handle">Handle:</label>
-    <input type="text" name="handle" value="{{ session.user_handle }}" class="glow-input" required>
+    <input type="text" id="handle" name="handle" value="{{ session.user_handle }}" class="glow-input" required>
 
     <label for="codename">Codename (optional):</label>
-    <input type="text" name="codename" value="{{ user['codename'] or '' }}" class="glow-input">
+    <input type="text" id="codename" name="codename" value="{{ user['codename'] or '' }}" class="glow-input">
 
     <label for="timezone">Preferred Timezone:</label>
     <select name="timezone" id="timezone" class="glow-input">
@@ -41,7 +41,7 @@
     </select>
 
     <label for="lastfm_username">Last.fm Username</label>
-    <input type="text" name="lastfm_username" value="{{ user.lastfm_username or '' }}" class="glow-input">
+    <input type="text" id="lastfm_username" name="lastfm_username" value="{{ user.lastfm_username or '' }}" class="glow-input">
 
     <button type="submit">Save</button>
   </form>
@@ -52,7 +52,7 @@
   <form method="post" action="{{ url_for('upload_avatar') }}" enctype="multipart/form-data"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
     <input type="hidden" name="profile_edit_token" value="{{ profile_edit_token() }}">
     <label for="avatar">Upload Avatar:</label>
-    <input type="file" name="avatar" accept="image/*">
+    <input type="file" id="avatar" name="avatar" accept="image/*">
     <button type="submit">Upload</button>
   </form>
 
