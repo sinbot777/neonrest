@@ -1,0 +1,22 @@
+<section class="circle-panel" id="circle-appearance"><h2>Circle appearance</h2>
+<p>Customize this Circle without changing anyone's profile or the site navigation. Visitors can switch between your day and night palettes. Text and links need at least 4.5:1 contrast against both backgrounds.</p>
+{% set palette=circle_palette(circle) %}
+<form method="post" action="{{ url_for('circle_appearance',circle_id=circle.id) }}" class="circle-form">
+{{ token() }}<input type="hidden" name="action" value="save_theme">
+{% for mode in ['day','night'] %}<fieldset class="circle-palette-fields"><legend>{{ mode|title }} palette</legend>
+{% for key,label in [('background','Page background'),('panel','Panel background'),('text','Text'),('accent','Links and buttons')] %}
+<label>{{ label }}<input type="color" name="{{ mode }}_{{ key }}" value="{{ palette[mode][key] }}" required></label>
+{% endfor %}</fieldset>{% endfor %}
+<label>Font<select name="font">{% for value,label in [('system','System'),('serif','Serif'),('mono','Monospace')] %}<option value="{{ value }}" {% if palette.font==value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+<label>Panel corners<select name="corners">{% for value,label in [('0','Square'),('8','Soft'),('16','Round')] %}<option value="{{ value }}" {% if palette.corners==value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+<button>Save Circle theme</button></form>
+<form method="post" action="{{ url_for('circle_appearance',circle_id=circle.id) }}">{{ token() }}<input type="hidden" name="action" value="reset_theme"><button>Reset theme to defaults</button></form>
+<h3>Cover image</h3><p>JPEG, PNG or WebP, up to 5 MB and 16 million pixels. We resize to fit 1,600 × 600 pixels, remove image metadata, and store one cover per Circle. The same visibility rules as the Circle apply to its cover.</p>
+{% if circle.cover %}<img class="circle-cover circle-cover-preview" src="{{ url_for('circle_cover',circle_id=circle.id) }}" alt="{{ circle.cover_alt }}">{% endif %}
+<form method="post" enctype="multipart/form-data" action="{{ url_for('circle_appearance',circle_id=circle.id) }}" class="circle-form">{{ token() }}<input type="hidden" name="action" value="save_cover">
+<label>{{ 'Replace' if circle.cover else 'Upload' }} cover<input type="file" name="cover" accept="image/jpeg,image/png,image/webp"></label>
+<label>Image description (optional for a decorative cover)<input name="cover_alt" maxlength="200" value="{{ circle.cover_alt }}"></label>
+{% if circle.cover %}<label class="circle-remove-cover"><input type="checkbox" name="remove_cover" value="1"> Remove cover</label>{% endif %}
+<button>Save cover</button></form>
+<p><a href="{{ url_for('circle_page',circle_id=circle.id,appearance='day') }}">View day theme</a> · <a href="{{ url_for('circle_page',circle_id=circle.id,appearance='night') }}">View night theme</a></p>
+</section>

@@ -76,10 +76,12 @@ body > .session-info > a:focus-visible { outline:2px solid currentColor; outline
 <body id="theme-root"
       class="{% block body_class %}{% if theme_slug %}vibe-{{ vibe_slug }} vibe-{{ vibe_slug }}--{{ theme_mode or 'base' }} theme-{{ theme_slug }}{% else %}default-theme{% endif %}{% endblock %}"
       data-mode="{{ theme_mode or 'base' }}">
+<a class="skip-link" href="#main-content">Skip to content</a>
+
 
   {% if session.get('user_email') or request.path != '/' %}
     {% if session.get('user_email') %}
-      <div class="session-info">
+      <nav class="session-info" aria-label="Account">
         <a href="/sandbox/account" class="account-link">{{ session['user_email'] }}</a>
 <a href="{{ url_for('feed') }}" class="account-link">Feed</a>
 <a href="{{ url_for('reading_drafts') }}" class="account-link">Drafts</a>
@@ -90,7 +92,7 @@ body > .session-info > a:focus-visible { outline:2px solid currentColor; outline
 {% if messaging_enabled|default(false) %}<a href="{{ url_for('messaging_home') }}" class="account-link messages-link" aria-label="Afterglow{% if messaging_unread %}, {{ messaging_unread }} unread conversations{% endif %}">Afterglow <span data-message-badge {% if not messaging_unread %}hidden{% endif %}>{{ '99+' if messaging_unread>=100 else messaging_unread }}</span></a>{% endif %}
         <a href="{{ url_for('community_notifications') }}" class="account-link notifications-link" aria-label="Notifications{% if community_unread %}, {{ community_unread }} unread{% endif %}" title="Notifications{% if community_unread %} ({{ community_unread }} unread){% endif %}"><svg class="mailbox-icon" viewBox="0 0 28 28" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 20V12a5 5 0 0 1 10 0v8H4Zm5-13h11a5 5 0 0 1 5 5v8H14M8 13h2M17 10V3h6v4h-6M14 20v6M10 26h8" /></svg>{% if community_unread %}<span class="notification-count" aria-hidden="true">{{ community_unread }}</span>{% endif %}</a> <a href="/sandbox/logout" class="logout-link">Log out</a>
         <form class="site-search" role="search" method="get" action="{{ url_for('site_search') }}"><div class="site-search-row"><label class="site-search-label" for="site-search-query">Search Neonrest</label><input id="site-search-query" type="search" name="q" minlength="2" maxlength="120" required placeholder="Search Neonrest" value="{{ request.args.get('q','') if request.endpoint=='site_search' else '' }}"><button type="submit">Search</button></div><input type="hidden" name="scopes_present" value="1"><fieldset class="site-search-options"><legend class="site-search-label">Search categories</legend>{% for value,label in search_scope_labels.items() %}<label><input type="checkbox" name="scope" value="{{ value }}" {% if value in search_selected_scopes %}checked{% endif %}> {{ label }}</label>{% endfor %}</fieldset></form>
-      </div>
+      </nav>
     {% else %}
       <a class="button" href="/sandbox/login">Log In</a>
     {% endif %}
@@ -98,21 +100,21 @@ body > .session-info > a:focus-visible { outline:2px solid currentColor; outline
 
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
-      <div class="flash-container">
+      <div class="flash-container" role="status">
         {% for category, message in messages %}
           <div class="flash flash-{{ category }}">{{ message }}</div>
         {% endfor %}
       </div>
     {% endif %}
   {% endwith %}
-<!-- Add this just before <div id="main-content"> -->
+<!-- Add this just before <div id="main-content" tabindex="-1"> -->
 <div id="site-logo">
   <a href="/sandbox/">
     <img src="{{ url_for('static', filename='logo.png') }}" alt="Neonrest Logo" class="site-logo-img">
   </a>
 </div>
 
-  <div id="main-content">
+  <div id="main-content" tabindex="-1">
     {% set account_shell_enabled = session.get('user_id') and (request.path.startswith('/account') or request.path == '/notifications' or request.path == '/media-settings' or request.path == '/manage' or request.path.startswith('/manage/')) %}
 {% if account_shell_enabled %}<div class="account-workspace">{% include 'partials/account_workspace_navigation.html' %}<div class="account-workspace-content">{% endif %}
 {% block content %}{% endblock %}
@@ -170,41 +172,7 @@ body > .session-info > a:focus-visible { outline:2px solid currentColor; outline
   <nav class="site-help-links" aria-label="Help"><a href="{{ url_for('user_guide') }}">User guide</a></nav>
 <footer id="footer-tagline">✨ Stay human, stay weird ✨</footer>
 
-  <!-- Tagline Rotator -->
-  <script>
-    const taglines = [
-      "✨ Stay human, stay weird ✨",
-      "🎵 Mixtapes not metrics",
-      "🛋️ Come vibe with us",
-      "📼 Rewind your feed",
-      "💬 Honest posts, real people",
-      "💀 I want to get off Mr. Bones's Wild Ride!",
-      "🗺 ️Splicing Reticulations 🦙.",
-      "This machine kills fascists"
-    ];
-    const footer = document.getElementById("footer-tagline");
-    if (footer) {
-      let index = 0;
-      setInterval(() => {
-        index = (index + 1) % taglines.length;
-        footer.textContent = taglines[index];
-      }, 4000);
-    }
-  </script>
-
-  <!-- Flash Auto-Hide -->
-  <script>
-    window.addEventListener('DOMContentLoaded', () => {
-      const flashBox = document.querySelector('.flash-container');
-      if (flashBox) {
-        setTimeout(() => {
-          flashBox.style.transition = "opacity 1s ease-out";
-          flashBox.style.opacity = 0;
-          setTimeout(() => flashBox.remove(), 1000);
-        }, 3000);
-      }
-    });
-  </script>
+<button type="button" id="footer-motion-toggle" hidden>Pause footer messages</button>
 <div class="footer-version">Version 0.8.1</div>
 <style>
   .footer-version {
@@ -227,5 +195,7 @@ body > .session-info > a:focus-visible { outline:2px solid currentColor; outline
 <link rel="stylesheet" href="{{ url_for('static',filename='css/sharing.css',v='20261016-sharedcards1') }}">
 <script defer src="{{ url_for('static',filename='js/sharing.js',v='20261016-share1') }}"></script>
 {% include 'partials/analytics_choice.html' %}
+<link rel="stylesheet" href="{{ url_for('static',filename='css/accessibility.css',v='20261021-t18') }}">
+<script defer src="{{ url_for('static',filename='js/accessibility.js',v='20261021-t18') }}"></script>
 </body>
 </html>

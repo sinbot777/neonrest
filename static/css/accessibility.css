@@ -1,0 +1,38 @@
+/* Shared navigation stays readable outside user and Circle themes. */
+body#theme-root > .skip-link{position:fixed;top:.5rem;left:.5rem;z-index:100000;padding:.75rem 1rem;transform:translateY(-200%);background:#f4f7fd;color:#102239;border:3px solid #102239;border-radius:6px;font:700 1rem/1.5 system-ui,sans-serif;text-decoration:underline}
+body#theme-root > .skip-link:focus{transform:none;outline:3px solid #ffd67d;outline-offset:2px}
+#main-content:focus{outline:3px solid currentColor;outline-offset:4px}
+#theme-root :is(a,button,input,select,textarea,summary,[tabindex]):focus-visible{outline:3px solid currentColor;outline-offset:3px}
+#theme-root :is(.post-dropdown,.comment-dropdown){max-width:min(22rem,calc(100vw - 3rem));overflow-wrap:anywhere}
+#theme-root :is(.post-dropdown,.comment-dropdown) :is(a,button){white-space:normal;min-height:44px}
+#theme-root .flash-container{box-sizing:border-box;max-width:calc(100% - 2rem);overflow-wrap:anywhere}
+#theme-root .flash{opacity:1}
+#theme-root .footer-version{color:#c2ccdb}
+#theme-root > #footer-motion-toggle{display:block;width:fit-content;max-width:calc(100% - 2rem);min-height:44px;margin:.25rem auto 1rem;padding:.45rem .8rem;background:#152136;color:#edf2fa;border:1px solid #a8dcff;border-radius:8px;font:inherit;cursor:pointer}
+#theme-root > #footer-motion-toggle[hidden]{display:none}
+#theme-root .image-viewer__toolbar button{background:#c1e6ff;color:#102239;border-color:#c1e6ff}
+#theme-root :is(.comment-form,.post-reactions-box,.post-footer){min-width:0;max-width:100%;flex-wrap:wrap}
+#theme-root .reply-thread{min-width:0;max-width:100%}
+@media(max-width:768px){
+  #theme-root .circle-nav{gap:.5rem}
+  #theme-root .circles-shell :is(button,.button,a:not(.post-image-link)){min-height:44px}
+  #theme-root .circles-shell .circle-nav a{display:inline-flex;align-items:center}
+  #theme-root .circles-shell .circle-alert-toggle{min-height:44px}
+  #theme-root .post-actions{flex-shrink:0}
+  #theme-root :is(.reading-tools,.reading-toolbar,.reading-view-links){max-width:100%;flex-wrap:wrap}
+}
+@media(prefers-reduced-motion:reduce){
+  #theme-root *,#theme-root *::before,#theme-root *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+}
+@media(forced-colors:active){
+  #theme-root :is(button,.button,input,select,textarea,dialog){border:1px solid ButtonText}
+  #theme-root :focus-visible{outline:3px solid Highlight}
+}
+
+#theme-root .user-page :is(button:not(.react-btn):not(.icon-button):not(.link-button),a.button){background:#c1e6ff;color:#102239;border-color:#c1e6ff}
+#theme-root .user-page .shared-post-notice a:link,#theme-root .user-page .shared-post-notice a:visited{color:#ffd0ad;background:#17263b;text-decoration:underline;text-underline-offset:3px;border-radius:4px;padding:.1rem .25rem}
+
+#theme-root.profile-page :is(button:not(.react-btn):not(.icon-button):not(.link-button),a.button){background:#c1e6ff;color:#102239;border-color:#c1e6ff}
+#theme-root.profile-page .shared-post-notice a:link,#theme-root.profile-page .shared-post-notice a:visited{color:#ffd0ad;background:#17263b;text-decoration:underline;text-underline-offset:3px;border-radius:4px;padding:.1rem .25rem}
+
+#theme-root.profile-page #profile-content{flex:0 0 35%;min-width:260px}#theme-root.profile-page #profile-content>.info-box{background:rgba(25,23,30,.56);border:1px solid rgba(252,181,163,.44);box-shadow:0 10px 28px rgba(13,11,18,.22),inset 0 1px rgba(255,255,255,.08)}@media(max-width:768px){#theme-root.profile-page #profile-content{width:100%;max-width:100%;min-width:0;flex:0 0 auto}}

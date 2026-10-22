@@ -1,0 +1,16 @@
+.circle-themed{background:var(--circle-background);color:var(--circle-text);font-family:var(--circle-font);padding:clamp(.5rem,1.5vw,1rem);border-radius:var(--circle-radius)}
+.circle-themed :is(.circle-panel,.post-preview,.circle-badge,.circle-card,.circle-feed .post-dropdown,.circle-feed .comment-dropdown){background:var(--circle-panel)!important;color:var(--circle-text)!important;border-color:var(--circle-accent);border-radius:var(--circle-radius)}
+.circle-themed :is(h1,h2,h3,p,small,label,.circle-rules,.comment,.react-btn,.post-dropdown .link-button,.comment-dropdown .link-button){color:var(--circle-text)!important}
+.circle-themed a:link,.circle-themed a:visited,.circle-themed .circle-feed a:link,.circle-themed .circle-feed a:visited{color:var(--circle-accent)!important}
+.circle-themed :is(input:not([type=hidden]),textarea,select){background:var(--circle-panel)!important;color:var(--circle-text)!important;border-color:var(--circle-accent)!important}
+.circle-themed button:not(.react-btn):not(.icon-button):not(.link-button),.circle-themed a.button{background:var(--circle-accent);color:var(--circle-button-text)!important;border-color:var(--circle-accent)}
+.circle-themed :is(.icon-button,.link-button){color:var(--circle-text)!important}
+.circle-themed .react-btn:hover,.circle-themed .react-btn.active{background:var(--circle-accent);color:var(--circle-button-text)!important}
+.circle-themed :focus-visible{outline-color:var(--circle-text)!important}
+.circle-cover{display:block;width:100%;max-height:360px;object-fit:cover;border-radius:12px;margin:1rem 0;background:#152136}
+.circle-cover-preview{max-width:760px;max-height:240px}
+.circle-palette-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.8rem;min-width:0;border:1px solid #8395ac;border-radius:8px;padding:1rem}
+.circle-palette-fields legend{padding:0 .4rem;font-weight:700}
+.circles-shell .circle-palette-fields input[type=color]{height:48px;min-width:44px;padding:.2rem;cursor:pointer}
+.circles-shell .circle-remove-cover{display:flex;align-items:center;gap:.4rem}
+@media(max-width:420px){.circle-palette-fields{grid-template-columns:minmax(0,1fr)}}

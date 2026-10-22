@@ -40,7 +40,7 @@
 
 <div class="main-and-top9">
   <!-- Left Column: User Identity -->
-<div id="main-content">
+<div id="profile-content">
   <div class="info-box">
     <div class="user-header">
       <img src="{{ user.avatar_path or '/static/default-avatar.png' }}" alt="Avatar" class="avatar-img">
@@ -201,25 +201,25 @@
 
   {% if viewer_id %}
     {% if viewer_id == user['id'] %}
-      <button id="toggle-post-form" class="button">New Post</button>
+      <button type="button" id="toggle-post-form" class="button" aria-expanded="false" aria-controls="inline-post-form">New Post</button>
     {% else %}
-      <button id="toggle-post-form" class="button">Sign Guestbook</button>
+      <button type="button" id="toggle-post-form" class="button" aria-expanded="false" aria-controls="inline-post-form">Sign Guestbook</button>
     {% endif %}
     <div class="inline-post-form" id="inline-post-form" style="display: none;">
       <form method="POST" enctype="multipart/form-data" action="/sandbox/create_post"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
-        <textarea name="content" placeholder="Write something..."></textarea>
+        <label>Post text<textarea name="content" placeholder="Write something..."></textarea></label>
         <label>Image or animated GIF <input type="file" name="post_image" accept="image/jpeg,image/png,image/webp,image/gif"></label>
-        <input name="image_title" maxlength="100" placeholder="Image/GIF title (uses filename if blank)">
-        <input name="image_alt" maxlength="180" placeholder="Description (optional)">
+        <label>Image or GIF title<input name="image_title" maxlength="100" placeholder="Image/GIF title (uses filename if blank)"></label>
+        <label>Image description<input name="image_alt" maxlength="180" placeholder="Description (optional)"></label>
         <label>Image filter <select name="image_filter">
           <option value="original">Original</option><option value="mono">Black & White</option>
           <option value="sepia">Sepia</option><option value="negative">Negative</option>
           <option value="faded">Faded Print</option><option value="contrast">High Contrast</option>
           <option value="blue">Cool Blue</option></select></label>
         <label>Add MIDI (optional) <input type="file" name="post_midi" accept=".mid,.midi,audio/midi,audio/x-midi"></label>
-        <input name="midi_title" maxlength="100" placeholder="MIDI title (uses filename if blank)">
+        <label>MIDI title<input name="midi_title" maxlength="100" placeholder="MIDI title (uses filename if blank)"></label>
         <input type="hidden" name="target_user_id" value="{{ user.id }}">
-        <input type="text" name="vibes" placeholder="Vibes (comma separated)">
+        <label>Vibes (comma separated)<input type="text" name="vibes" placeholder="Vibes (comma separated)"></label>
         {% if viewer_id == user.id %}{% include 'partials/profile_circle_destination.html' %}{% endif %}
         <button type="submit" class="post-action update-post">Post</button>
       </form>
@@ -339,10 +339,16 @@
     const form = document.getElementById("inline-post-form");
 
     if (toggleButton && form) {
+      const originalLabel = toggleButton.textContent;
       toggleButton.addEventListener("click", function () {
         const isHidden = form.style.display === "none";
         form.style.display = isHidden ? "block" : "none";
-        toggleButton.textContent = isHidden ? "Hide Post" : "New Post";
+        toggleButton.textContent = isHidden ? "Hide composer" : originalLabel;
+        toggleButton.setAttribute("aria-expanded", String(isHidden));
+        if (isHidden) form.querySelector("textarea")?.focus();
+      });
+      form.addEventListener("keydown", function (event) {
+        if(event.key === "Escape") {event.preventDefault(); form.style.display="none"; toggleButton.textContent=originalLabel; toggleButton.setAttribute("aria-expanded","false"); toggleButton.focus();}
       });
     }
   });
@@ -350,10 +356,12 @@
 <script>
 function togglePostMenu(button) {
   const menu = button.nextElementSibling;
+  const wasOpen = menu.style.display === 'block';
   document.querySelectorAll('.post-dropdown').forEach(el => {
-    if (el !== menu) el.style.display = 'none';
+    el.style.display='none'; el.previousElementSibling?.setAttribute('aria-expanded','false');
   });
-  menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+  menu.style.display=wasOpen?'none':'block';
+  button.setAttribute('aria-expanded',String(!wasOpen));
 }
 
 document.addEventListener('click', function (e) {

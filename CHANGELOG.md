@@ -1,5 +1,9 @@
 # T17 reading tools — October 21, 2026 (Pacific)
 
+## October 21, 2026 — T13 and T18
+
+Circle owner day/night palettes, safe typography/corners and protected resized covers; shared keyboard/focus, persistent feedback, reduced-motion controls and responsive/accessibility fixes. See docs/T13-T18-appearance-accessibility.md for scope, validation and limits. T26 events remain separate; Afterglow stays Sandbox-only.
+
 Production and Sandbox: chronological feed views, a saved default, selected Vibes, private live-reference bookmarks and explicit private drafts. Current visibility applies on every view; pagination keeps the grouping. Draft revisions prevent lost updates and duplicate publishing; a successful post consumes the draft atomically. Limits: 50 drafts and 2,000 bookmarks per account. Attachments and staff-announcement status are not saved in drafts. Existing muting and notification preferences are retained. Passed 119 focused checks per environment plus applicable regression suites on disposable copies. Permanent erasure remains disabled; Afterglow remains Sandbox-only.
 
 # October 21, 2026 — T16: following and private friend labels — Sandbox
