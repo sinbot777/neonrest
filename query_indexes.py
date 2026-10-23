@@ -1,5 +1,6 @@
 """Additive non-unique indexes for existing profile, discussion and relationship queries."""
 INDEXES = (
+    ('idx_reactions_post_emoji_user', 'post_reactions', ('post_id', 'emoji', 'user_id'), 'CREATE INDEX IF NOT EXISTS idx_reactions_post_emoji_user ON post_reactions(post_id, emoji, user_id)'),
     ('idx_posts_author_created', 'posts', ('user_id', 'created_at', 'id'), 'CREATE INDEX IF NOT EXISTS idx_posts_author_created ON posts(user_id, created_at DESC, id DESC)'),
     ('idx_posts_target_created', 'posts', ('target_user_id', 'created_at', 'id'), 'CREATE INDEX IF NOT EXISTS idx_posts_target_created ON posts(target_user_id, created_at DESC, id DESC)'),
     ('idx_comments_post_created', 'comments', ('post_id', 'created_at', 'id'), 'CREATE INDEX IF NOT EXISTS idx_comments_post_created ON comments(post_id, created_at, id)'),
@@ -22,3 +23,4 @@ def install(db):
         db.execute('RELEASE neonrest_query_indexes')
         raise
     db.execute('RELEASE neonrest_query_indexes')
+
