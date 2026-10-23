@@ -183,7 +183,7 @@ body > .session-info > a:focus-visible { outline:2px solid currentColor; outline
   }
 </style>
 
-<script>window.NEON_MEDIA_PREFS = {{ media_preferences() | tojson }};</script>
+<script>window.NEON_MEDIA_PREFS = {{ media_preferences() | tojson }}; window.NEON_ATMOSPHERE_PREFS = {{ atmosphere_preferences() | tojson }};</script>
 <script defer src="{{ url_for('static', filename='js/media.js') }}?v=20261008-pause"></script>
 <script defer src="{{ url_for('static', filename='js/reactions.js',v='resource-recovery-20261020') }}"></script>
 <script type="module" src="{{ url_for('static', filename='js/image_upload.js') }}"></script>

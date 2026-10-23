@@ -147,7 +147,7 @@ import ast,time
 from flask import Response
 tree=ast.parse((root/'community_features.py').read_text())
 export_node=next(n for n in ast.walk(tree) if isinstance(n,ast.FunctionDef) and n.name=='community_export')
-for module_name,fn in [('social_connections',lambda db,uid:{}),('reading_tools',lambda db,uid,identifiers:{})]:
+for module_name,fn in [('vibe_atmosphere',lambda db,uid:{}),('social_connections',lambda db,uid:{}),('reading_tools',lambda db,uid,identifiers:{})]:
     stub=types.ModuleType('gallery_fixture.'+module_name);stub.export_user=fn;sys.modules[stub.__name__]=stub
 sys.modules['gallery_fixture.theme_gallery']=gallery
 export_app=Flask('gallery-export');export_app.secret_key='fictional-export-test'

@@ -1,4 +1,4 @@
-{% extends 'base.html' %}{% block content %}<main class="user-page"><h1>Theme gallery review</h1>
+{% extends 'base.html' %}{% block content %}{% include 'partials/theme_tools_layout.html' %}<main class="user-page theme-tools-page"><h1>Theme gallery review</h1>
 <nav aria-label="Submission status">{% for value in ['pending','approved','rejected','withdrawn'] %}<a href="{{ url_for('theme_gallery_review',status=value) }}">{{ value|capitalize }}</a> {% endfor %}</nav>
 <p>Review code, notices, resource URLs and the submitter's rights assertion. Approval does not verify ownership of external assets.</p>
 {% for item in entries %}<article><h2>{{ item.title }}</h2><p>{{ item.mode }} · {{ item.credit }} · {{ item.status }}</p><p>{{ item.description }}</p>
