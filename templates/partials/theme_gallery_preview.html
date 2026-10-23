@@ -1,0 +1,5 @@
+<section aria-label="Theme sample preview"><p>Isolated sample preview. External assets and scripts are blocked; the saved Vibe may differ.</p>
+<iframe id="gallery-theme-preview" title="Theme sample preview" sandbox="" referrerpolicy="no-referrer" style="width:100%;height:440px;max-width:100%;border:1px solid currentColor"></iframe></section>
+<script type="application/json" id="gallery-theme-data">{{ preview|tojson }}</script>
+<script src="{{ url_for('static',filename='js/theme-preview.js') }}?v=t22"></script>
+<script src="{{ url_for('static',filename='js/theme-gallery-preview.js') }}?v=t22"></script>

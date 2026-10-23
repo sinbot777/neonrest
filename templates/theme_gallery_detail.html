@@ -1,0 +1,11 @@
+{% extends 'base.html' %}{% block content %}
+<main class="user-page"><h1>{{ item.title }}</h1><p>{{ item.mode|capitalize }} · {{ item.description }}</p>
+{% include 'partials/theme_gallery_preview.html' %}
+<h2>Attribution</h2><ul>{% for credit in credits %}<li>{{ credit }}</li>{% endfor %}</ul>
+{% if parent %}<p>Independent remix of <a href="{{ url_for('theme_gallery_detail',public_id=parent.public_id) }}">{{ parent.title }}</a>.</p>{% elif item.parent_id %}<p>Independent remix; the source is no longer listed. Its notices are retained.</p>{% endif %}
+<p>This free MIT style is an independent snapshot. Fonts, images and music retain their own licenses. Review imported CSS and external resources before saving it to your Vibe.</p>
+<form method="get" action="{{ url_for('theme_gallery_download',public_id=item.public_id) }}"><label>Target Vibe CSS slug (optional) <input name="target" placeholder="fresh-starts" pattern="[a-z0-9][a-z0-9_-]{0,99}" maxlength="100"></label> <button type="submit">Download {{ item.mode }} style</button></form>
+<p>Import the download into the matching Day or Night editor, review its preview, and save explicitly. The download carries the copyright and MIT notice inside its CSS.</p>
+<p><a href="{{ url_for('theme_gallery_submit',parent=item.public_id) }}">Submit a remix of this theme</a></p>
+<details><summary>MIT License</summary><pre style="white-space:pre-wrap">{{ license_text }}</pre></details>
+<p><a href="{{ url_for('theme_gallery') }}">Back to gallery</a></p></main>{% endblock %}
