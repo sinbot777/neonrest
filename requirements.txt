@@ -6,4 +6,4 @@ cryptography==50.0.2
 requests==2.33.1
 email-validator==2.2.0
 markdown2==2.5.3
-
+certifi==2026.10.19
