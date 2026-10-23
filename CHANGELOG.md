@@ -1,3 +1,11 @@
+# T19–T23 — October 23, 2026 (Pacific)
+
+Deployed Vibe Studio unsaved Undo/Redo/Discard, style-only JSON transfer, isolated current-mode preview, inherited fonts and semantic colors; free approved-only theme gallery with explicit versioned sharing agreement, attribution-preserving independent remixes, withdrawal/review audit and own-data exports; local Day/Night logo variants, gentle motion and visitor controls, and Vibe-owned MIDI using existing default-silent playback.
+
+Production PRs #56/#58/#60 and Sandbox PRs #57/#59/#61 merged separately. Final Production CodeQL and both language analyses pass with no new alerts after adding safe_join and retaining resolved static-boundary checks. Hosted full-app checks passed 52 per environment, all 14 legacy regression runs passed, and atmosphere validation/access/failure tests passed 49 per baseline. Edge covered editing/preview, gallery credits, unchecked sharing acceptance, phone-width forms, logo pause and MIDI Play/Stop. Device audio output is not certified by playback status.
+
+Installed 41 reviewed files per app after fresh online database/source backups; five additive tables start empty. Rehearsed migration twice and restore against all original rows in 119 Production/124 Sandbox tables. Shared Web reload and live gallery, case-insensitive Vibe, asset and authentication checks passed. Post-install comparison found only routine active_sessions and mail_worker_health changes; account/content/theme/preference records remain unchanged. Temporary fictional browser pages were retired. Live Studio still requires owner fresh password/authenticator confirmation. No real agreement or Vibe setting was changed. T48 and earlier account/provider/device acceptance remain separate; no new release tag.
+
 # P1 closeout — October 22, 2026 (Pacific)
 
 T40: four owner-authorized HelpLine guidance posts prepared as ordinary public Fresh Starts content; Production publication awaits HelpLine age setup, with existing age/audience checks and no role changes. The shared guide remains available to younger members. Publication uses an audited, idempotent maintenance batch; no sessions or factors are forged.
