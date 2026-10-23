@@ -1,5 +1,9 @@
 {% extends 'base.html' %}
-{% block title %}Vibe Studio — {{ vibe.name if vibe else theme.name }}{% endblock %}
+{% block title %}Vibe Studio — {{ vibe.name if vibe else theme.name }}<script src="{{ url_for('static',filename='js/theme-visual-colors.js') }}?v=t21"></script>
+<script src="{{ url_for('static',filename='js/theme-history.js') }}?v=t19"></script>
+<script src="{{ url_for('static',filename='js/theme-transfer.js') }}?v=t20"></script>
+<script src="{{ url_for('static',filename='js/theme-preview.js') }}?v=t21"></script>
+{% endblock %}
 {% block content %}
 <style>
   .theme-workspace.user-page {
@@ -76,6 +80,7 @@
 </style>
 <div class="user-page theme-workspace">
   <p>Use only theme code and assets you have permission to publish. Fonts, images and music retain their own licenses. Saving here does not grant an MIT license; the theme-sharing agreement and recorded acceptance are still pending.</p>
+  {% if request.args.get('restored') %}<p role="status" class="studio-status">Saved {{ theme.mode }} version restored. The style it replaced is retained in Theme history. Shared logo and welcome settings were unchanged.</p>{% endif %}
   {% if request.args.get('saved') %}<p role="status" class="studio-status">Changes saved for {{ vibe.name if vibe else theme.name }} ({{ theme.mode }}).</p>{% endif %}
   <header class="studio-header">
     <div>
@@ -107,16 +112,29 @@
     </nav>
     {% endif %}
   </div>
-  <form method="post" class="theme-editor-form" id="theme-editor-form"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
+  <form method="post" class="theme-editor-form" id="theme-editor-form" data-theme-mode="{{ theme.mode }}" data-theme-slug="{{ theme.slug }}">
   <input type="hidden" name="theme_csrf_token" value="{{ theme_csrf_token }}">
+    <section class="studio-card" aria-labelledby="transfer-heading" style="margin-bottom:20px">
+      <h2 id="transfer-heading">Import and export style</h2>
+      <p>JSON files contain this mode’s style, including unsaved edits. Shared logo and welcome settings are excluded. Import changes the editor only; review it before saving. Missing fields keep their current values; null clears a field.</p>
+      <button type="button" id="theme-export">Export {{ theme.mode }} style</button>
+      <label for="theme-import">Import {{ theme.mode }} style (JSON, up to 128 KiB)</label>
+      <input type="file" id="theme-import" accept=".json,application/json">
+      <p id="theme-transfer-status" role="status" aria-live="polite"></p>
+    </section>
     <div class="studio-grid">
       <section class="studio-card studio-code" aria-labelledby="css-heading">
         <div class="studio-card-head"><div><h2 id="css-heading">Custom CSS</h2><p class="card-note">Edit the rules for this Vibe's {{ theme.mode }} view.</p></div><span class="studio-badge">{{ theme.mode }}</span></div>
         <label class="studio-field" for="custom_css" style="position:absolute;clip-path:inset(50%);width:1px;height:1px;overflow:hidden">Custom CSS</label>
         <textarea id="custom_css" name="custom_css" spellcheck="false" aria-label="Custom CSS">{{ theme.custom_css or '' }}</textarea>
-        <p class="card-note">Saved CSS appears on the Vibe page. Use “Save & Preview” to inspect it there.</p>
+        <p class="card-note">The isolated preview updates without saving. Use “Save & Preview” to publish and inspect the Vibe page.</p>
       </section>
       <div class="studio-side">
+        <section class="studio-card" aria-labelledby="live-preview-heading">
+          <h2 id="live-preview-heading">Unsaved {{ theme.mode }} preview</h2>
+          <p class="card-note">Sample content only. External images, fonts, scripts and links are blocked here. The saved Vibe page may differ.</p>
+          <iframe id="theme-live-preview" title="Unsaved {{ theme.mode }} theme preview" sandbox="" referrerpolicy="no-referrer" style="width:100%;height:400px;border:1px solid #647184;border-radius:12px;background:#fff"></iframe>
+        </section>
         <section class="studio-card" aria-labelledby="colors-heading">
           <div class="studio-card-head"><div><h2 id="colors-heading">Colors</h2><p class="card-note">Quick settings for the page. Type a hex value or use the picker.</p></div></div>
           <div class="palette-preview" id="palette-preview" aria-label="Color preview"><strong>#{{ vibe.name if vibe else theme.name }}</strong><span>This is how the selected colors read together.</span></div>
@@ -131,6 +149,17 @@
             </div>
             {% endfor %}
           </div>
+        </section>
+        <section class="studio-card" aria-labelledby="visual-colors-heading">
+          <h2 id="visual-colors-heading">Detailed Vibe colors</h2>
+          <p class="card-note">Optional overrides for the standard Vibe CSS variables. Inherit keeps the value from your existing CSS. These controls update a marked block at the end of Custom CSS.</p>
+          {% for key,label in [('panel','Panel background'),('ink','Panel text'),('accent','Accent'),('glow','Accent glow'),('border','Borders'),('pill','Vibe pill background'),('pill-ink','Vibe pill text')] %}
+          <div class="studio-color-row" data-visual-color="{{ key }}">
+            <label for="visual-{{ key }}">{{ label }}</label>
+            <input data-derived="true" type="color" id="visual-{{ key }}" value="#888888">
+            <label class="unset-checkbox"><input data-derived="true" type="checkbox" checked> Inherit</label>
+          </div>
+          {% endfor %}
         </section>
         <section class="studio-card" aria-labelledby="identity-heading">
           <div class="studio-card-head"><div><h2 id="identity-heading">Vibe identity</h2><p class="card-note">Optional logo sizing and placement. These apply to both modes.</p></div></div>
@@ -150,7 +179,7 @@
             <div class="studio-field full"><label for="blend_mode">Blend mode</label><input type="text" id="blend_mode" name="blend_mode" value="{{ theme.blend_mode or '' }}" placeholder="multiply, overlay"></div>
             <div class="studio-field full"><label for="font_stack">Font stack</label>
               {% set fonts = [("'Roboto', sans-serif", 'Roboto'), ("'Open Sans', sans-serif", 'Open Sans'), ("'Lato', sans-serif", 'Lato'), ("'Montserrat', sans-serif", 'Montserrat'), ("'Raleway', sans-serif", 'Raleway'), ("'Playfair Display', serif", 'Playfair Display'), ("'Merriweather', serif", 'Merriweather'), ("'PT Serif', serif", 'PT Serif'), ("'Bitter', serif", 'Bitter'), ("'Bebas Neue', sans-serif", 'Bebas Neue'), ("'Pacifico', cursive", 'Pacifico'), ("'Great Vibes', cursive", 'Great Vibes'), ("'Orbitron', sans-serif", 'Orbitron'), ("'VT323', monospace", 'VT323'), ("'Space Grotesk', sans-serif", 'Space Grotesk'), ("'Press Start 2P', monospace", 'Press Start 2P'), ("'Space Mono', monospace", 'Space Mono'), ('Georgia, serif', 'Georgia'), ("'Trebuchet MS', sans-serif", 'Trebuchet MS')] %}
-              <select name="font_stack" id="font_stack">
+              <select name="font_stack" id="font_stack"><option value="" {% if not theme.font_stack %}selected{% endif %}>Use inherited font</option>
                 {% if theme.font_stack and theme.font_stack not in fonts|map(attribute=0)|list %}<option value="{{ theme.font_stack }}" selected>{{ theme.font_stack }} (current)</option>{% endif %}
                 {% for value, label in fonts %}<option value="{{ value }}" {% if theme.font_stack == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
               </select>
@@ -159,7 +188,8 @@
         </section>
       </div>
     </div>
-    <div class="studio-actions"><span id="studio-save-hint">Changes affect {{ vibe.name if vibe else theme.name }} · {{ theme.mode|capitalize }} only, except the shared logo.</span><div class="buttons"><button type="submit" name="action" value="save">Save changes</button><button type="submit" class="primary" name="action" value="save_and_preview">Save & Preview ↗</button></div></div>
+    <p>Undo and Redo affect unsaved edits only. Discard returns all fields to the version loaded when this page opened. Save changes publishes the edits; Theme history restores saved styles for this mode.</p>
+    <div class="studio-actions"><span role="status" aria-live="polite" id="studio-save-hint">Changes affect {{ vibe.name if vibe else theme.name }} · {{ theme.mode|capitalize }} only, except the shared logo.</span><div class="buttons"><button type="button" id="theme-undo" disabled>Undo edit</button><button type="button" id="theme-redo" disabled>Redo edit</button><button type="button" id="theme-discard" disabled>Discard unsaved changes</button><button type="submit" name="action" value="save">Save changes</button><button type="submit" class="primary" name="action" value="save_and_preview">Save & Preview ↗</button></div></div>
   <p id="vibe-contrast-warning" role="status" aria-live="polite" style="margin:1rem 0;font-weight:600"></p>
 </form>
 </div>
@@ -194,6 +224,7 @@
     unset.addEventListener('change', () => { if (unset.checked) hex.setCustomValidity(''); });
   });
   paintPreview();
+  form.addEventListener('change', paintPreview);
   form.addEventListener('input', () => { hint.textContent = 'Unsaved changes'; });
   form.addEventListener('change', () => { hint.textContent = 'Unsaved changes'; });
   form.addEventListener('submit', () => { hint.textContent = 'Saving…'; });
@@ -203,7 +234,7 @@
     const field = event.target, start = field.selectionStart, end = field.selectionEnd;
     field.value = field.value.slice(0, start) + '  ' + field.value.slice(end);
     field.selectionStart = field.selectionEnd = start + 2;
-    hint.textContent = 'Unsaved changes';
+    field.dispatchEvent(new Event('input', {bubbles: true}));
   });
 })();
 </script>
@@ -213,10 +244,10 @@
   <p>Restore an earlier day or night style. Restoring saves the current style too, so you can undo it.</p>
   {% if history %}
     <ol>{% for version in history %}
-      <li style="margin:.6rem 0"><time>{{ version['saved_at'] }}</time>
-        <form method="post" style="display:inline;margin-left:.8rem"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
+      <li style="margin:.6rem 0"><time>{{ version['saved_at'] }}</time> · {{ theme.mode|capitalize }} version {{ version['id'] }}
+        <form method="post" style="display:inline;margin-left:.8rem">
     <input type="hidden" name="theme_csrf_token" value="{{ theme_csrf_token }}">
-          <button type="submit" name="action" value="restore:{{ version['id'] }}">Restore</button>
+          <button type="submit" name="action" value="restore:{{ version['id'] }}">Restore {{ theme.mode }} version {{ version['id'] }}</button>
         </form>
       </li>
     {% endfor %}</ol>
@@ -225,7 +256,7 @@
 
 <script>
 (() => {
-  const form = document.querySelector('form');
+  const form = document.getElementById('theme-editor-form');
   const warning = document.getElementById('vibe-contrast-warning');
   if (!form || !warning) return;
   const parse = value => {
@@ -256,4 +287,9 @@
 })();
 </script>
 
+<script src="{{ url_for('static',filename='js/theme-visual-colors.js') }}?v=t21"></script>
+<script src="{{ url_for('static',filename='js/theme-history.js') }}?v=t19"></script>
+<script src="{{ url_for('static',filename='js/theme-transfer.js') }}?v=t20"></script>
+<script src="{{ url_for('static',filename='js/theme-preview.js') }}?v=t21"></script>
 {% endblock %}
+
