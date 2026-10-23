@@ -26,7 +26,7 @@ app=Flask(__name__);app.secret_key='fictional-theme-test'
 app.jinja_loader=DictLoader({'base.html':'{% block content %}{% endblock %}',
     'edit_theme.html':(root/'templates/edit_theme.html').read_text()})
 app.jinja_env.globals['community_token']=lambda:'fixture-token'
-for endpoint in ('edit_theme_index','theme_preview','vibe_page'):
+for endpoint in ('edit_theme_index','theme_preview','vibe_page','theme_gallery','theme_gallery_submit'):
     app.add_url_rule('/'+endpoint,endpoint,lambda:'')
 scope=dict(app=app,get_db=lambda:db,request=request,session=session,abort=abort,
     redirect=redirect,url_for=url_for,render_template=render_template,hmac=hmac,

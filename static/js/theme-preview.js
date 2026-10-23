@@ -24,6 +24,7 @@
   }
   if (typeof module!=='undefined' && module.exports) module.exports={previewDocument};
   if (!root.document) return;
+  root.NeonrestThemePreview = previewDocument;
   const form=root.document.getElementById('theme-editor-form');
   const frame=root.document.getElementById('theme-live-preview');
   if (!form || !frame) return;

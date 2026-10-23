@@ -941,6 +941,8 @@ def register(app, core):
         export['social_connections']=export_connections(db,uid)
         from .reading_tools import export_user as export_reading
         export['reading_tools']=export_reading(db,uid,core.identifiers)
+        from .theme_gallery import export_user as export_theme_gallery
+        export['theme_gallery']=export_theme_gallery(db,uid)
         core.identifiers.export_ids(db,export)
         # Exclude internal case notes, password hashes, tokens and two-factor secrets.
         return Response(json.dumps(export,ensure_ascii=False,indent=2),mimetype='application/json',headers={'Content-Disposition':'attachment; filename="neonrest-data.json"'})
