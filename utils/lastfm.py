@@ -1,44 +1,33 @@
-import requests
+"""Fetch one Last.fm snapshot without blocking profile rendering."""
 import logging
+import os
+import requests
 
-API_KEY = __import__('os').environ.get('LASTFM_API_KEY', '')
+API_KEY = os.environ.get('LASTFM_API_KEY', '')
 
 def get_now_playing(username):
-    logging.warning(f"Now Playing check for {username}")
-
-    url = "https://ws.audioscrobbler.com/2.0/"
-    params = {
-        "method": "user.getrecenttracks",
-        "user": username,
-        "api_key": API_KEY,
-        "format": "json",
-        "limit": 1
-    }
-
+    empty = {'track': None, 'url': None, 'album_art': None, 'is_now_playing': False}
     try:
-        response = requests.get(url, params=params, timeout=5)
+        response = requests.get('https://ws.audioscrobbler.com/2.0/', params={
+            'method': 'user.getrecenttracks', 'user': username,
+            'api_key': API_KEY, 'format': 'json', 'limit': 1}, timeout=5)
         response.raise_for_status()
-        data = response.json()
-        track = data["recenttracks"]["track"][0]
-        logging.warning(f"Raw track data: {track}")  # DEBUG
-
-        artist = track.get("artist", {}).get("#text", "Unknown Artist")
-        title = track.get("name", "Unknown Title")
-
-        image_list = track.get("image", [])
-        album_art = next((img["#text"] for img in reversed(image_list) if img.get("#text")), None)
-
-        now_playing = f"{artist} – {title}"
-
-        return {
-            "track": now_playing,
-            "url": track.get("url"),  # ← add this line!
-            "album_art": album_art
-        }
-
-    except Exception as e:
-        logging.error(f"Last.fm fetch failed: {e}")
-        return {
-            "now_playing": None,
-            "album_art": None
-        }
+        tracks = response.json().get('recenttracks', {}).get('track', [])
+        if not isinstance(tracks, list) or not tracks or not isinstance(tracks[0], dict):
+            return empty
+        track = tracks[0]
+        artist = track.get('artist', {})
+        artist = artist.get('#text') if isinstance(artist, dict) else None
+        title = track.get('name')
+        if not isinstance(title, str) or not title.strip():
+            return empty
+        artist = artist if isinstance(artist, str) and artist.strip() else 'Unknown Artist'
+        images = track.get('image', [])
+        art = next((image.get('#text') for image in reversed(images)
+            if isinstance(image, dict) and isinstance(image.get('#text'), str) and image['#text']), None) if isinstance(images, list) else None
+        attributes = track.get('@attr', {})
+        return {'track': f'{artist} – {title}', 'url': track.get('url'),
+            'album_art': art, 'is_now_playing': isinstance(attributes, dict) and attributes.get('nowplaying') == 'true'}
+    except (requests.RequestException, ValueError, TypeError, AttributeError):
+        logging.warning('Last.fm music snapshot unavailable')
+        return empty
