@@ -1,0 +1,43 @@
+/* Theme tools share the Studio palette; saved Vibe CSS remains independent. */
+.theme-workspace .studio-related { display:flex; flex-wrap:wrap; gap:10px; margin:0 0 18px; }
+.theme-workspace .studio-related a { display:inline-flex; align-items:center; padding:10px 14px; border:1px solid #4d7978; border-radius:10px; background:#243b3c; color:#d4f5ef; font-weight:700; text-decoration:none; }
+.theme-workspace .studio-related a:hover { background:#315052; color:#fff; }
+.theme-workspace .studio-sharing-note { margin:0 0 22px; padding:14px 18px; border:1px solid #3a475a; border-radius:12px; background:#1a222e; color:#bdc7d5; font-size:.88rem; line-height:1.6; }
+.theme-workspace .studio-sharing-note p { margin:0; color:inherit; }
+.theme-workspace .studio-transfer-controls { display:flex; align-items:end; flex-wrap:wrap; gap:16px; margin-top:18px; }
+.theme-workspace .studio-import-field { flex:1 1 280px; min-width:0; }
+.theme-workspace .studio-import-field label { display:block; margin-bottom:8px; color:#c4cedc; font-size:.86rem; font-weight:700; }
+.theme-workspace .studio-import-field input { display:block; width:100%; max-width:100%; padding:9px; border:1px solid #4a586d; border-radius:10px; background:#111722; color:#f2f5fa; font:inherit; }
+.theme-workspace .studio-card button, .theme-workspace .studio-card input::file-selector-button { padding:10px 14px; border:1px solid #6a8e87; border-radius:9px; background:#253d38; color:#e9f7f2; font:inherit; font-weight:700; cursor:pointer; }
+.theme-workspace .studio-card input::file-selector-button { margin-right:10px; padding:7px 10px; }
+.theme-workspace #theme-transfer-status { margin:14px 0 0; color:#bff0d8; font-size:.88rem; line-height:1.5; }
+.theme-workspace #theme-transfer-status:empty { display:none; }
+.theme-workspace .studio-related a:focus-visible, .theme-workspace .studio-card button:focus-visible, .theme-workspace .studio-import-field input:focus-visible { outline:2px solid #8de2d2; outline-offset:3px; }
+.theme-tools-page.user-page { color:#eef1f6; background:#151a23; border:1px solid #394356; border-radius:20px; box-shadow:0 20px 60px #03071266; font-family:'Space Grotesk',sans-serif; text-align:left; line-height:1.6; }
+.theme-tools-page h1, .theme-tools-page h2, .theme-tools-page h3 { color:#f8fafc; line-height:1.25; }
+.theme-tools-page h1 { margin:0 0 18px; font-size:clamp(1.8rem,4vw,2.7rem); letter-spacing:-.035em; }
+.theme-tools-page h2 { font-size:1.2rem; }
+.theme-tools-page p, .theme-tools-page li { color:#bdc7d5; }
+.theme-tools-page a, .theme-tools-page a:visited { color:#9ee4d6; text-decoration:underline; text-underline-offset:3px; }
+.theme-tools-page a:hover { color:#fff; }
+.theme-tools-page form { display:block; width:100%; margin:22px 0; }
+.theme-tools-page label { display:block; color:#d8e2ee; font-weight:600; }
+.theme-tools-page input:not([type='hidden']):not([type='checkbox']), .theme-tools-page textarea, .theme-tools-page select { display:block; width:100%; margin-top:8px; padding:11px 13px; border:1px solid #526079; border-radius:10px; background:#111722; color:#f2f5fa; font:inherit; }
+.theme-tools-page input::placeholder, .theme-tools-page textarea::placeholder { color:#a8b4c5; opacity:1; }
+.theme-tools-page input[type='checkbox'] { width:1.1rem; height:1.1rem; margin:0 8px 0 0; vertical-align:middle; accent-color:#91e4d1; }
+.theme-tools-page button, .theme-tools-page input::file-selector-button { padding:11px 16px; border:1px solid #91e4d1; border-radius:10px; background:#91e4d1; color:#102820; font:inherit; font-weight:700; cursor:pointer; }
+.theme-tools-page input::file-selector-button { margin-right:10px; padding:7px 10px; }
+.theme-tools-page button:hover { background:#b4f1e4; }
+.theme-tools-page article, .theme-tools-page details { margin:20px 0; padding:18px; border:1px solid #3a475a; border-radius:14px; background:#202734; }
+.theme-tools-page article h2 { margin-top:0; }
+.theme-tools-page summary { color:#d4f5ef; font-weight:700; cursor:pointer; }
+.theme-tools-page pre { color:#d8e2ee; font-size:.85rem; }
+.theme-tools-page [role='alert'] { padding:12px 16px; border:1px solid #dc918c; border-radius:10px; background:#3d2428; color:#ffd8d3; }
+.theme-tools-page [role='status'] { color:#bff0d8; }
+.theme-tools-page :is(a,button,input,textarea,select,summary):focus-visible { outline:2px solid #8de2d2; outline-offset:3px; }
+.site-help-links { box-sizing:border-box; display:flex; flex-wrap:wrap; justify-content:center; gap:12px 20px; width:fit-content; max-width:calc(100% - 24px); margin:24px auto 12px; padding:12px 20px; border:1px solid #4a586d; border-radius:14px; background:#151a23; color:#bdc7d5; font:500 .9rem/1.5 sans-serif; }
+.site-help-links a, .site-help-links a:visited { color:#b7eee2; text-decoration:underline; text-underline-offset:3px; }
+.site-help-links a:hover { color:#fff; }
+.site-help-links a:focus-visible { outline:2px solid #8de2d2; outline-offset:4px; }
+@media(max-width:620px) { .theme-workspace .studio-transfer-controls { align-items:stretch; } .theme-workspace .studio-transfer-controls > button { width:100%; } .theme-workspace .studio-related a { flex:1 1 160px; justify-content:center; text-align:center; } }
+@media(forced-colors:active) { .theme-tools-page.user-page, .theme-tools-page article, .theme-tools-page details, .theme-workspace .studio-sharing-note, .site-help-links { border-color:CanvasText; } }
