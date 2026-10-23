@@ -1,0 +1,12 @@
+const assert=require('node:assert/strict');
+const {previewDocument}=require('../static/js/theme-preview.js');
+const css='body{background:url(https://example.invalid/tracker)} </style><script>bad()</script>';
+const html=previewDocument('fixture','night',{custom_css:css,bg_color:'#112233'});
+assert.equal(html.includes('<script>'),false);
+assert.equal((html.match(/<\/style>/g)||[]).length,1,'CSS cannot close the style element');
+assert.match(html,/default-src &apos;none&apos;/);
+assert.match(html,/base-uri &apos;none&apos;/);
+assert.match(html,/class="vibe-fixture--night"/);
+assert.match(html,/background-color:#112233/);
+assert.match(previewDocument('fixture','day',{}),/vibe-fixture--day/);
+console.log('Preview CSS containment, remote-blocking CSP and Day/Night scope passed');
