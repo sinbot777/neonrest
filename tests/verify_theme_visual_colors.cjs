@@ -1,0 +1,13 @@
+const assert=require('node:assert/strict');
+const {setVisualColor:set,readVisualColors:read}=require('../static/js/theme-visual-colors.js');
+const original='body { font-size: 16px; }';
+let css=set(original,'fixture','day','panel','#112233');
+css=set(css,'fixture','day','ink','#eeeeee');
+assert.deepEqual(read(css),{panel:'#112233',ink:'#eeeeee'});
+assert.equal((css.match(/neonrest-visual-start/g)||[]).length,1);
+assert.ok(css.startsWith(original));assert.match(css,/body.vibe-fixture--day/);
+css=set(css,'fixture','day','panel',null);assert.deepEqual(read(css),{ink:'#eeeeee'});
+css=set(css,'fixture','day','ink',null);assert.equal(css,original);
+assert.throws(()=>set(original,'fixture','day','bad','#123456'));
+assert.throws(()=>set(original,'fixture','day','ink','red'));
+console.log('Semantic colors: preserve CSS, independent overrides, inheritance and validation passed');
