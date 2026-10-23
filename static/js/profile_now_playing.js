@@ -1,6 +1,7 @@
 (() => {
   'use strict';
   const text = document.getElementById('now-playing-text');
+  const label = document.getElementById('now-playing-label');
   const art = document.getElementById('album-art');
   if (!text?.dataset.nowPlayingUrl) return;
   const endpoint = new URL(text.dataset.nowPlayingUrl, location.origin);
@@ -24,6 +25,7 @@
         text.textContent = 'No recent track available.';
         return;
       }
+      if (label) label.textContent = data.is_now_playing === true ? 'Now playing' : 'Last played';
       const title = data.track.slice(0, 500);
       const link = safeURL(data.url);
       if (link) {
@@ -36,9 +38,12 @@
       if (art && source) {
         const image = document.createElement('img');
         image.src = source; image.alt = 'Album art'; image.loading = 'lazy';
-        image.style.maxWidth = '85%'; art.replaceChildren(image);
+        image.style.maxWidth = '100%'; image.style.width = '160px'; image.style.height = 'auto';
+        image.addEventListener('error', () => art.replaceChildren(), {once: true});
+        art.replaceChildren(image);
       }
     })
     .catch(() => { text.textContent = 'Music temporarily unavailable.'; })
     .finally(() => clearTimeout(timer));
 })();
+
