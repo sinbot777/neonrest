@@ -1,0 +1,9 @@
+[data-vibe-logo-motion="float"] .vibe-logo-moving { animation: neonrest-logo-float 6s ease-in-out infinite; }
+[data-vibe-logo-motion="pulse"] .vibe-logo-moving { animation: neonrest-logo-glow 6s ease-in-out infinite; }
+.vibe-logo-group { min-width:0; max-width:100%; }
+.vibe-logo-pause { margin-top:.5rem; font:inherit; color:inherit; background:transparent; border:1px solid currentColor; border-radius:.5rem; padding:.4rem .6rem; }
+.vibe-logo-status { display:block; font-size:.8rem; }
+.vibe-background-midi { grid-column:1 / -1; min-width:0; max-width:100%; }
+@keyframes neonrest-logo-float { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-2px); } }
+@keyframes neonrest-logo-glow { 0%,100% { filter:drop-shadow(0 0 0 transparent); } 50% { filter:drop-shadow(0 0 3px var(--vibe-glow,currentColor)); } }
+@media (prefers-reduced-motion:reduce) { [data-vibe-logo-motion] .vibe-logo { animation:none !important; transform:none !important; filter:none !important; } }

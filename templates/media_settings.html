@@ -4,7 +4,7 @@
 <main class="user-page media-settings-page">
   {% include 'partials/account_navigation.html' %}
   <h1>Media playback</h1>
-  <p>Set how music and animated GIFs behave throughout Neonrest. Every post still has its own controls.</p>
+  <p>Set how music and animated GIFs behave throughout Neonrest. Posts, profile music and Vibe background MIDI use your sound preference and keep their own controls.</p>
   <form method="post" enctype="multipart/form-data" action="{{ url_for('media_settings') }}"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <section class="user-section">
@@ -12,7 +12,7 @@
       <label for="midi_autoplay">MIDI autoplay</label>
       <select id="midi_autoplay" name="midi_autoplay" class="glow-input">
         <option value="0" {% if not prefs.midi_autoplay %}selected{% endif %}>Off — play when I click</option>
-        <option value="1" {% if prefs.midi_autoplay %}selected{% endif %}>On — play when a MIDI post comes into view</option>
+        <option value="1" {% if prefs.midi_autoplay %}selected{% endif %}>On — play when MIDI comes into view</option>
       </select>
       <p><small>Your browser may require one click to enable sound. Only one MIDI plays at a time.</small></p>
     </section>
@@ -38,6 +38,13 @@
     </section>
     <button type="submit">Save media settings</button>
   </form>
+  <section class="user-section"><h2>Vibe logo animation</h2>
+    {% set atmosphere_pref=atmosphere_preferences() %}
+    <form method="post" action="{{ url_for('atmosphere_preferences_save') }}"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
+      <label for="logo-motion-pref">Logo animation</label><select id="logo-motion-pref" name="logo_motion"><option value="system"{% if atmosphere_pref.logo_motion=='system' %} selected{% endif %}>Follow device preference</option><option value="off"{% if atmosphere_pref.logo_motion=='off' %} selected{% endif %}>Off</option></select>
+      <p>Reduced motion and “Don’t play automatically” for GIFs also stop Vibe logo animation.</p><button type="submit">Save logo animation preference</button>
+    </form>
+  </section>
   <p><a class="button" href="{{ url_for('account') }}">Back to account</a></p>
 </main>
 <style>
@@ -46,3 +53,4 @@
 .media-settings-page form { width: 100%; min-width: 0; }
 </style>
 {% endblock %}
+

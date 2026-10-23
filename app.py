@@ -2698,3 +2698,6 @@ register_reading_tools(app,sys.modules[__name__])
 
 from .theme_gallery import register as register_theme_gallery
 register_theme_gallery(app,sys.modules[__name__])
+
+from .vibe_atmosphere import register as register_vibe_atmosphere
+register_vibe_atmosphere(app,sys.modules[__name__])

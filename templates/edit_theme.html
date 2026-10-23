@@ -79,7 +79,7 @@
   }
 </style>
 <div class="user-page theme-workspace">
-  <p><a href="{{ url_for('theme_gallery') }}">Free theme gallery</a> · <a href="{{ url_for('theme_gallery_submit') }}">Submit a style for review</a></p>
+  <p><a href="{{ url_for('theme_gallery') }}">Free theme gallery</a> · <a href="{{ url_for('vibe_atmosphere_edit',slug=theme.slug) }}">Vibe logos and music</a> · <a href="{{ url_for('theme_gallery_submit') }}">Submit a style for review</a></p>
   <p>Use only theme code and assets you have permission to publish. Fonts, images and music retain their own licenses. Saving here does not grant an MIT license. Sharing through the gallery requires a separate, explicit theme-sharing agreement and staff review.</p>
   {% if request.args.get('restored') %}<p role="status" class="studio-status">Saved {{ theme.mode }} version restored. The style it replaced is retained in Theme history. Shared logo and welcome settings were unchanged.</p>{% endif %}
   {% if request.args.get('saved') %}<p role="status" class="studio-status">Changes saved for {{ vibe.name if vibe else theme.name }} ({{ theme.mode }}).</p>{% endif %}
