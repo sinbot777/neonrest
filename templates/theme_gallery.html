@@ -1,5 +1,5 @@
 {% extends 'base.html' %}{% block content %}
-<main class="user-page"><h1>Free theme gallery</h1>
+{% include 'partials/theme_tools_layout.html' %}<main class="user-page theme-tools-page"><h1>Free theme gallery</h1>
 <p>Browse reviewed Day and Night styles. Download and remix independent copies for free. Nothing is applied to your Vibe automatically.</p>
 {% if may_review %}<p><a href="{{ url_for('theme_gallery_review') }}">Review gallery submissions</a></p>{% endif %}<p><a href="{{ url_for('theme_gallery_submit') }}">Submit a theme</a> · <a href="{{ url_for('theme_gallery_mine') }}">My submissions</a></p>
 {% for item in entries %}<article><h2><a href="{{ url_for('theme_gallery_detail',public_id=item.public_id) }}">{{ item.title }}</a></h2><p>{{ item.mode|capitalize }} · Credit: {{ item.credit }}</p><p>{{ item.description }}</p></article>{% else %}<p>No approved themes yet.</p>{% endfor %}

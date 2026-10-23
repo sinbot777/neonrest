@@ -1,9 +1,5 @@
 {% extends 'base.html' %}
-{% block title %}Vibe Studio — {{ vibe.name if vibe else theme.name }}<script src="{{ url_for('static',filename='js/theme-visual-colors.js') }}?v=t21"></script>
-<script src="{{ url_for('static',filename='js/theme-history.js') }}?v=t19"></script>
-<script src="{{ url_for('static',filename='js/theme-transfer.js') }}?v=t20"></script>
-<script src="{{ url_for('static',filename='js/theme-preview.js') }}?v=t21"></script>
-{% endblock %}
+{% block title %}Vibe Studio — {{ vibe.name if vibe else theme.name }}{% endblock %}
 {% block content %}
 <style>
   .theme-workspace.user-page {

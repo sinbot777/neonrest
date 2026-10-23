@@ -1,4 +1,4 @@
-{% extends 'base.html' %}{% block content %}<main class="user-page">
+{% extends 'base.html' %}{% block content %}{% include 'partials/theme_tools_layout.html' %}<main class="user-page theme-tools-page">
 <h1>{{ vibe.name }} — logos and music</h1>
 {% if request.args.get('saved') %}<p role="status">Vibe logos and music saved.</p>{% endif %}
 <p>These settings belong to this Vibe. Existing shared logo and theme styles stay available as fallbacks. Music follows each visitor’s playback settings.</p>
