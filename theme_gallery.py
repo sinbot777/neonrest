@@ -103,9 +103,11 @@ def downloadable(entry, target=None):
     notice = '/*! Neonrest theme — MIT License\n' + '\n'.join(credits) + '\n\n' + MIT + '\nExternal fonts, images and music retain their own licenses.\n*/\n'
     css = data['style'].get('custom_css') or ''
     if target and target != entry['scope_slug']:
-        # Only rewrite the exact documented Vibe class; never arbitrary substrings.
-        css = re.sub(r'(?<![\w-])vibe-' + re.escape(entry['scope_slug']) + r'--' + entry['mode'] + r'(?![\w-])',
-                     lambda _: 'vibe-' + target + '--' + entry['mode'], css)
+        # The pattern is fixed; user-controlled values are compared as literal text.
+        source_class = 'vibe-' + entry['scope_slug'] + '--' + entry['mode']
+        target_class = 'vibe-' + target + '--' + entry['mode']
+        css = re.sub(r'(?<![\w-])vibe-[\w-]+',
+                     lambda match: target_class if match.group(0) == source_class else match.group(0), css)
     data['style']['custom_css'] = notice + css
     return data
 
