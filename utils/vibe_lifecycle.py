@@ -37,6 +37,14 @@ def init_vibe_tables(db):
     ''')
 
 
+def capitalized_vibe_name(name):
+    """Capitalize the first letter, preserving all subsequent characters."""
+    for index, character in enumerate(name):
+        if character.isalpha():
+            return name[:index] + character.upper() + name[index + 1:]
+    return name
+
+
 def vibe_slug(name):
     import re
     return re.sub(r'[^a-z0-9-]+', '-', name.strip().lower()).strip('-')
@@ -97,7 +105,7 @@ def add_post_vibes(db, post_id, names, threshold=None, allow_archived=()):
     """Attach names to a post and promote pending Vibes at the threshold."""
     threshold = minimum_users() if threshold is None else threshold
     for raw_name in names:
-        name = raw_name.strip().lstrip('#').strip()
+        name = capitalized_vibe_name(raw_name.strip().lstrip('#').strip())
         if not name:
             continue
         slug = vibe_slug(name)
@@ -141,3 +149,4 @@ def approve_vibe(db, vibe_id):
     return db.execute(
         'DELETE FROM pending_vibes WHERE vibe_id = ?', (vibe_id,)
     ).rowcount > 0
+
