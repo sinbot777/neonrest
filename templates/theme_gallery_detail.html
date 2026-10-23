@@ -1,5 +1,5 @@
 {% extends 'base.html' %}{% block content %}
-<main class="user-page"><h1>{{ item.title }}</h1><p>{{ item.mode|capitalize }} · {{ item.description }}</p>
+{% include 'partials/theme_tools_layout.html' %}<main class="user-page theme-tools-page"><h1>{{ item.title }}</h1><p>{{ item.mode|capitalize }} · {{ item.description }}</p>
 {% include 'partials/theme_gallery_preview.html' %}
 <h2>Attribution</h2><ul>{% for credit in credits %}<li>{{ credit }}</li>{% endfor %}</ul>
 {% if parent %}<p>Independent remix of <a href="{{ url_for('theme_gallery_detail',public_id=parent.public_id) }}">{{ parent.title }}</a>.</p>{% elif item.parent_id %}<p>Independent remix; the source is no longer listed. Its notices are retained.</p>{% endif %}

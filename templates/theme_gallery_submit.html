@@ -1,5 +1,5 @@
 {% extends 'base.html' %}{% block content %}
-<main class="user-page"><h1>{{ 'Submit an independent remix' if parent else 'Submit a theme' }}</h1>
+{% include 'partials/theme_tools_layout.html' %}<main class="user-page theme-tools-page"><h1>{{ 'Submit an independent remix' if parent else 'Submit a theme' }}</h1>
 <p>Submit a saved snapshot for staff review. Only approved submissions appear publicly. Your credit name, title, description and style will be public; account email and profile details are excluded.</p>
 {% if parent %}<p>Remixing <a href="{{ url_for('theme_gallery_detail',public_id=parent.public_id) }}">{{ parent.title }}</a>. Its credits are retained. Later changes to the source will not change this copy.</p>{% endif %}
 {% if error %}<p role="alert">{{ error }}</p>{% endif %}
