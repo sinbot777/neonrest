@@ -6,6 +6,7 @@ import struct
 from pathlib import Path
 from flask import abort, request, session, render_template, redirect, url_for, send_from_directory
 from PIL import Image, UnidentifiedImageError
+from werkzeug.security import safe_join
 from .media_features import MIDI_LIMIT, _limited_bytes, validate_midi, media_folder
 from .vibe_tools import find_vibe, permissions
 
@@ -41,7 +42,10 @@ def logo_asset(static_folder, value):
     if value.startswith('/static/'): value=value[8:]
     if not re.fullmatch(r'[A-Za-z0-9_./-]{1,200}',value) or '..' in value.split('/'):
         abort(400,description='Choose a local static PNG, JPEG or WebP logo.')
-    root=Path(static_folder).resolve();path=(root/value).resolve()
+    root=Path(static_folder).resolve()
+    joined=safe_join(str(root),value)
+    if joined is None: abort(400,description='Choose a local static logo.')
+    path=Path(joined).resolve()
     if not path.is_relative_to(root) or path.suffix.lower() not in ('.png','.jpg','.jpeg','.webp') or not path.is_file() or path.stat().st_size>2*1024*1024:
         abort(400,description='Choose an existing local static logo up to 2 MiB.')
     try:
