@@ -14,6 +14,7 @@ try {
   const dom = new JSDOM(fs.readFileSync(html,'utf8'),
     {runScripts:'dangerously',url:'https://fixture.invalid/themes/edit/fixture/day'});
   const w=dom.window, d=w.document;
+  assert.doesNotMatch(d.title, /<script|theme-history|theme-preview/, 'Studio tab title contains only its title');
   w.eval(fs.readFileSync(path.join(__dirname,'../static/js/theme-visual-colors.js'),'utf8'));
   w.eval(fs.readFileSync(path.join(__dirname,'../static/js/theme-history.js'),'utf8'));
   const css=d.getElementById('custom_css'), original=css.value;

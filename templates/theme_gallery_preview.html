@@ -1,3 +1,3 @@
-{% extends 'base.html' %}{% block content %}<main class="user-page"><h1>{{ item.title }} — {{ item.mode }} review preview</h1><p>{{ item.status|capitalize }} snapshot. This preview does not approve or apply it.</p>
+{% extends 'base.html' %}{% block content %}{% include 'partials/theme_tools_layout.html' %}<main class="user-page theme-tools-page"><h1>{{ item.title }} — {{ item.mode }} review preview</h1><p>{{ item.status|capitalize }} snapshot. This preview does not approve or apply it.</p>
 {% include 'partials/theme_gallery_preview.html' %}
 <h2>Recent review history</h2><ul>{% for event in events %}<li>{{ event.created_at }} · {{ event.action }} · {{ event.reason }}</li>{% endfor %}</ul><p><a href="{{ url_for('theme_gallery_review') }}">Back to review queue</a></p></main>{% endblock %}

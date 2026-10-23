@@ -6,6 +6,9 @@
 
 {% block content %}
 {% set vm_state = vibe_management_state(vibe_name) %}
+{% set atmosphere = vibe_atmosphere(vibe.id,theme_mode) %}
+<link rel="stylesheet" href="{{ url_for('static',filename='css/vibe-atmosphere.css') }}?v=t23">
+<script defer src="{{ url_for('static',filename='js/vibe-atmosphere.js') }}?v=t23"></script>
 <div class="page-wrapper vibe-page-wrapper">
   <nav class="vibe-mode-switch" aria-label="Theme mode">
     {% set share_kind='vibe' %}{% set share_ref=vibe_name %}{% set share_url=url_for('vibe_page',vibe_name=vibe_name) %}{% set share_label='Share Vibe' %}{% set share_notice='Posts in this Vibe keep their own audiences. Each reader sees only posts they may access.' %}{% include 'partials/share_button.html' %}
@@ -49,27 +52,10 @@
     </aside>
     <main class="user-page vibe-feed">
     <div class="user-header vibe-masthead">
-    {% if vibe.logo_url %}
-      <img
-        src="{% if vibe.logo_url.startswith('http') %}{{ vibe.logo_url }}{% else %}{{ url_for('static', filename=vibe.logo_url) }}{% endif %}"
-        alt="{{ vibe.name }} logo"
-        class="vibe-logo"
-        style="
-          {% if vibe.logo_width %}width: {{ vibe.logo_width }};{% endif %}
-          {% if vibe.logo_height %}height: {{ vibe.logo_height }};{% else %}height: auto;{% endif %}
-          max-width: 100%;
-          object-fit: contain;
-          box-sizing: border-box;
-          {% if vibe.logo_padding %}padding: {{ vibe.logo_padding }};{% endif %}
-          display: block;
-          margin-left: {% if vibe.logo_align == 'left' %}0{% elif vibe.logo_align == 'right' %}auto{% else %}auto{% endif %};
-          margin-right: {% if vibe.logo_align == 'left' %}auto{% elif vibe.logo_align == 'right' %}0{% else %}auto{% endif %};
-        ">
-    {% else %}
-      <div class="glow large">#{{ vibe.name }}</div>
-    {% endif %}
+    {% include 'partials/vibe_atmosphere_logo.html' %}
 
       <div class="vibe-post-action">{% if not vm_state.archived %}<a href="{{ url_for('create_post', vibe=vibe_name) }}" class="vibe-post-button">Post to this Vibe</a>{% endif %}{% if can_manage_vibe or vibe_management_can_manage(vibe.id) %}<a href="{{ url_for('manage_vibe', slug=vibe_slug) }}" class="vibe-manage-button">Manage Vibe</a>{% endif %}</div>
+    {% include 'partials/vibe_background_midi.html' %}
     <div class="vibe-intro"><p>{{ vibe['welcome_message'] or ('Welcome to the ' ~ vibe_name ~ ' vibe space.') }}</p></div>{% if vm_state.archived %}<div class="vibe-intro"><strong>This Vibe is archived.</strong><p>Existing posts remain available under their usual permissions. New posts cannot be added.</p></div>{% endif %}{% if vm_state.rules %}<details class="vibe-intro"><summary>Vibe rules</summary><p style="white-space:pre-wrap">{{ vm_state.rules }}</p></details>{% endif %}
     </div>
 
@@ -207,3 +193,4 @@
 <script>window.addEventListener('load',()=>{document.querySelectorAll('.vibe-post-button').forEach(b=>{let s=getComputedStyle(b),p=c=>c.match(/\d+/g).slice(0,3).map(Number),L=a=>a.map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4}).reduce((t,v,i)=>t+v*[.2126,.7152,.0722][i],0),x=L(p(s.backgroundColor)),y=L(p(s.color)),r=(Math.max(x,y)+.05)/(Math.min(x,y)+.05);if(r<4.5)b.style.setProperty('color',1.05/(x+.05)>=(x+.05)/(L([24,27,29])+.05)?'#fff':'#181b1d','important')});});</script>
 <style>.vibe-post-author{display:flex;align-items:center;gap:.7rem;margin-bottom:.65rem}.vibe-post-author h3{margin:0}.vibe-post-byline{min-width:0}.vibe-post-date{display:block;font-size:.8rem;line-height:1.4;opacity:.8;margin-top:.15rem}.vibe-post-avatar{display:block;width:42px;height:42px;border-radius:50%;object-fit:cover;border:1px solid currentColor;background:rgba(0,0,0,.25)}</style>
 {% endblock %}
+

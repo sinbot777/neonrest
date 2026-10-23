@@ -1,0 +1,7 @@
+{% if atmosphere.midi_filename %}
+<section class="vibe-background-midi" aria-label="Vibe background music">
+{% with midi_src=url_for('vibe_atmosphere_music',vibe_id=vibe.id,filename=atmosphere.midi_filename), midi_title=atmosphere.midi_title %}
+  {% include 'midi_player.html' %}
+{% endwith %}
+</section>
+{% endif %}
