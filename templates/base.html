@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+<link rel="stylesheet" href="{{ url_for('static',filename='css/theme-tools.css',v='20261023-polish1') }}">
 <link rel="icon" href="{{ url_for('site_favicon') }}" sizes="any">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/vibe-artwork.css', v='20261018-art1') }}">
@@ -169,7 +170,7 @@ body > .session-info > a:focus-visible { outline:2px solid currentColor; outline
 {% endif %}
 
   <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile.css') }}">
-  <nav class="site-help-links" aria-label="Help"><a href="{{ url_for('theme_gallery') }}">Theme gallery</a> · <a href="{{ url_for('advertising_policy') }}">Advertising</a> · <a href="{{ url_for('user_guide') }}">User guide</a></nav>
+  <nav class="site-help-links" aria-label="Help"><a href="{{ url_for('theme_gallery') }}">Theme gallery</a> <a href="{{ url_for('advertising_policy') }}">Advertising</a> <a href="{{ url_for('user_guide') }}">User guide</a></nav>
 <footer id="footer-tagline">✨ Stay human, stay weird ✨</footer>
 
 <button type="button" id="footer-motion-toggle" hidden>Pause footer messages</button>
