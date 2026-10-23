@@ -162,6 +162,21 @@ with export_client.session_transaction() as sess:sess['user_id']=1
 check(export_client.post('/account/export').json['theme_gallery']=={'submissions':[]},'Actual account export cannot include another author gallery data')
 print(checks,'total gallery checks including account route passed')
 
+# Download retargeting never turns stored slugs/modes into regular expressions.
+def retarget(css, slug='fixture', mode='day', target='remix'):
+    style=json.loads(original);style['style']['custom_css']=css
+    return gallery.downloadable({'style_json':json.dumps(style),'credits_json':'[]',
+        'scope_slug':slug,'mode':mode},target)['style']['custom_css'].split('*/\n',1)[1]
+check(retarget('.vibe-fixture--day { color:red }')=='.vibe-remix--day { color:red }','Exact class retargeted')
+for text in ['.vibe-fixture--night', '.vibe-fixture-extra--day', '.vibe-fixture--day-extra',
+             '.xvibe-fixture--day', '.vibe-fixture--dayé', '.évibe-fixture--day']:
+    check(retarget(text)==text,'Unrelated or partial class remains literal: '+text)
+check(retarget('.vibe-fixture--day:hover,.vibe-fixture--day{a:b}')=='.vibe-remix--day:hover,.vibe-remix--day{a:b}','Multiple exact classes retargeted')
+check(retarget('.vibe-fixture--day',mode='day)|.*(')=='.vibe-fixture--day','Malformed stored mode never becomes regex')
+check(retarget('.vibe-fixtureXYZ--day',slug='fixture.*')=='.vibe-fixtureXYZ--day','Stored regex metacharacters remain literal')
+check(retarget('.vibe-fixture--day',target=r'remix\1')==r'.vibe-remix\1--day','Replacement never interprets backreferences')
+print(checks,'total gallery checks including literal retargeting passed')
+
 if os.environ.get('NEONREST_GALLERY_TEST_OUTPUT'):
     out=Path(os.environ['NEONREST_GALLERY_TEST_OUTPUT']);out.mkdir(exist_ok=True)
     (out/'detail.html').write_bytes(detail_html)
