@@ -1,0 +1,17 @@
+{% extends 'base.html' %}{% block content %}
+<main class="user-page"><h1>{{ 'Submit an independent remix' if parent else 'Submit a theme' }}</h1>
+<p>Submit a saved snapshot for staff review. Only approved submissions appear publicly. Your credit name, title, description and style will be public; account email and profile details are excluded.</p>
+{% if parent %}<p>Remixing <a href="{{ url_for('theme_gallery_detail',public_id=parent.public_id) }}">{{ parent.title }}</a>. Its credits are retained. Later changes to the source will not change this copy.</p>{% endif %}
+{% if error %}<p role="alert">{{ error }}</p>{% endif %}
+<form method="post"><input type="hidden" name="theme_csrf_token" value="{{ token }}"><input type="hidden" name="agreement_version" value="{{ agreement }}">
+{% if parent %}<input type="hidden" name="parent" value="{{ parent.public_id }}">{% endif %}
+<p><label>Title <input name="title" maxlength="80" value="{{ values.get('title','') }}" required></label></p>
+<p><label>Description <textarea name="description" maxlength="1000">{{ values.get('description','') }}</textarea></label></p>
+<p><label>Public copyright credit or alias <input name="credit" maxlength="120" value="{{ values.get('credit','') }}" required></label></p>
+<p><label>Vibe CSS slug used in this file <input name="scope_slug" value="{{ values.get('scope_slug','') }}" pattern="[a-z0-9][a-z0-9_-]{0,99}" placeholder="fresh-starts" maxlength="100" required></label></p>
+<p>In Theme Studio, export the mode you want to share, then paste that JSON below. For a remix, import the source download, edit it and export your changes. Existing copyright comments must stay.</p>
+<p><label>Theme JSON <textarea name="theme_json" rows="12" required maxlength="131072" style="width:100%;font-family:monospace">{{ values.get('theme_json','') }}</textarea></label></p>
+<details><summary>MIT License and sharing terms</summary><p>{{ agreement_text }}</p><pre style="white-space:pre-wrap">{{ license_text }}</pre></details>
+<p><label><input type="checkbox" name="accept_license" value="yes" required> {{ agreement_text }}</label></p>
+<button type="submit">Submit for review</button></form>
+<p><a href="{{ url_for('theme_gallery') }}">Back to gallery</a></p></main>{% endblock %}

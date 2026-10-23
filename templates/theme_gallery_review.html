@@ -1,0 +1,10 @@
+{% extends 'base.html' %}{% block content %}<main class="user-page"><h1>Theme gallery review</h1>
+<nav aria-label="Submission status">{% for value in ['pending','approved','rejected','withdrawn'] %}<a href="{{ url_for('theme_gallery_review',status=value) }}">{{ value|capitalize }}</a> {% endfor %}</nav>
+<p>Review code, notices, resource URLs and the submitter's rights assertion. Approval does not verify ownership of external assets.</p>
+{% for item in entries %}<article><h2>{{ item.title }}</h2><p>{{ item.mode }} · {{ item.credit }} · {{ item.status }}</p><p>{{ item.description }}</p>
+<p><a href="{{ url_for('theme_gallery_review_preview',public_id=item.public_id) }}">Open isolated sample preview</a></p><details><summary>Retained credits</summary><pre style="white-space:pre-wrap">{{ item.credits_json }}</pre></details><details><summary>Snapshot JSON</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere">{{ item.style_json }}</pre></details>
+<form method="post"><input type="hidden" name="theme_csrf_token" value="{{ token }}"><input type="hidden" name="public_id" value="{{ item.public_id }}">
+<label>Decision <select name="decision">{% if item.status=='pending' %}<option value="approved">Approve</option><option value="rejected">Reject</option>{% endif %}<option value="withdrawn">Remove gallery availability</option></select></label>
+<p><label>Review reason (shown to the author) <textarea name="reason" required maxlength="1000"></textarea></label></p>
+<p><label><input type="checkbox" name="review_checked" value="yes"> I checked the code, attribution, resource URLs and sharing scope.</label></p>
+<button type="submit">Record decision</button></form></article>{% else %}<p>No {{ status }} submissions.</p>{% endfor %}{% if next_before %}<p><a href="{{ url_for('theme_gallery_review',status=status,before=next_before) }}">More {{ status }} submissions</a></p>{% endif %}</main>{% endblock %}
