@@ -30,7 +30,4 @@ Audio device output is subjective and is not certified by browser status alone.
 Device/reduced-motion changes and audio-blocked behavior also have fixture DOM
 and mocked-audio coverage. The unchanged existing MIDI player is reused.
 
-Release gates still to record: database backup integrity and additive migration
-rehearsal, exact reviewed-file hashes, source installation, normal PythonAnywhere
-reload, authenticated live smoke checks and temporary-preview retirement.
-These test results alone do not claim deployment or mark roadmap tasks complete.
+Deployment complete: Production merged through 4940fd8de44d9b99a429e049c1320a782fc60b79 and Sandbox through c622271b52d90ffcfa0c47596678a0a44f93ca5f. All 41 installed files per app match the merged Git blobs. Fresh source and online database backups preceded the five-table additive initialization. Migration was idempotent and disposable restores matched every original row across 119 Production and 124 Sandbox tables. The actual Web reload completed. Both galleries and case-insensitive Day/Night Vibe routes pass live checks; Sandbox submission and media-preference screens render under the ordinary test account. Production Studio correctly demands fresh owner authentication, which is left for the owner; no credential or factor was bypassed. New tables remain empty, and only routine active_sessions/mail_worker_health records differ from pre-install backups. Public fixture previews were retired. Final CodeQL and both language analyses pass with no new alerts after safe_join plus resolved-path validation; 49 atmosphere checks per baseline include absolute-path and outside-static symlink rejection.
