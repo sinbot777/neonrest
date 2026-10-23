@@ -1,3 +1,10 @@
+# Security maintenance — October 23, 2026 (Pacific)
+
+- Pillow 13.0.0 addresses five image-processing advisories reported in both dependency manifests (GHSA-8g5g-8vmr-9782, GHSA-58r4-6rv3-gfh8, GHSA-pchr-8j38-3x4p, GHSA-65qm-jvmh-6pqg, GHSA-462x-pgg6-55fp).
+- certifi 2026.10.19 removes the compromised emSign ECC Root CA - G3 chain (GHSA-6q48-6c7w-9gw2). Pin it in both manifests, verify the bad root is absent, and verify requests/urllib HTTPS using the patched bundle.
+- Theme downloads use a fixed token pattern with literal source/target comparisons instead of constructing regexes from stored fields (CodeQL #28). Exact class boundaries, Day/Night isolation, Unicode/metacharacter and replacement-backreference cases are covered.
+- Hosted candidates passed 78 gallery and 49 atmosphere checks per environment, Circle/recovery/network/Vibe-case regressions, 52 full-app disposable checks per environment, and 16 real image/QR checks per environment. Official wheel hashes are verified against PyPI metadata; runtime changes have offline rollback wheels and private source/database checkpoints. No user content or authentication changes are part of this maintenance.
+
 # T19–T23 — October 23, 2026 (Pacific)
 
 Deployed Vibe Studio unsaved Undo/Redo/Discard, style-only JSON transfer, isolated current-mode preview, inherited fonts and semantic colors; free approved-only theme gallery with explicit versioned sharing agreement, attribution-preserving independent remixes, withdrawal/review audit and own-data exports; local Day/Night logo variants, gentle motion and visitor controls, and Vibe-owned MIDI using existing default-silent playback.
