@@ -2713,3 +2713,7 @@ register_social_connections(app,sys.modules[__name__])
 
 from .reading_tools import register as register_reading_tools
 register_reading_tools(app,sys.modules[__name__])
+
+
+from .theme_gallery import register as register_theme_gallery
+register_theme_gallery(app,sys.modules[__name__])

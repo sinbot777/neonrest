@@ -1,0 +1,6 @@
+{% extends 'base.html' %}{% block content %}<main class="user-page"><h1>My theme submissions</h1>
+<p>Snapshots cannot be edited after submission. Submit a revised copy for a new review. Withdrawal removes gallery availability and cannot revoke earlier MIT grants.</p>
+{% for item in entries %}<article><h2>{{ item.title }}</h2><p>{{ item.mode|capitalize }} · {{ item.status }}</p>{% if item.review_reason %}<p>Review note: {{ item.review_reason }}</p>{% endif %}
+{% if item.status=='approved' %}<a href="{{ url_for('theme_gallery_detail',public_id=item.public_id) }}">View theme</a>{% endif %}
+{% if item.status!='withdrawn' %}<form method="post" action="{{ url_for('theme_gallery_withdraw',public_id=item.public_id) }}"><input type="hidden" name="theme_csrf_token" value="{{ token }}"><button type="submit">Withdraw from gallery</button></form>{% endif %}
+</article>{% else %}<p>No submissions yet.</p>{% endfor %}{% if next_before %}<p><a href="{{ url_for('theme_gallery_mine',before=next_before) }}">Older submissions</a></p>{% endif %}<p><a href="{{ url_for('theme_gallery_submit') }}">Submit a theme</a> · <a href="{{ url_for('theme_gallery') }}">Gallery</a></p></main>{% endblock %}
