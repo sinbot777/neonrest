@@ -126,7 +126,7 @@
             </dd>
           </div>
           <div class="profile-detail-row">
-            <dt>Now playing</dt>
+            <dt id="now-playing-label">Music</dt>
             <dd><span id="now-playing-text" aria-live="polite"{% if user.lastfm_username %} data-now-playing-url="{{ url_for('now_playing', username=user.lastfm_username) }}"{% endif %}>{{ 'Loading music…' if user.lastfm_username else '—' }}</span><div id="album-art"></div></dd>
           </div>
         </dl>
@@ -164,7 +164,7 @@
         </div>
         {% endif %}
 
-{% if user.lastfm_username %}<script src="{{ url_for('static', filename='js/profile_now_playing.js', v='20261019-1') }}" defer></script>{% endif %}
+{% if user.lastfm_username %}<script src="{{ url_for('static', filename='js/profile_now_playing.js', v='20261023-t24') }}" defer></script>{% endif %}
 
       </div>
     </div>
@@ -390,3 +390,4 @@ document.addEventListener('click', function (e) {
 
 
 {% endblock %}
+
