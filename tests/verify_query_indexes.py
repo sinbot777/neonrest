@@ -2,7 +2,8 @@
 from pathlib import Path
 import importlib.util,json,sqlite3,time,statistics
 spec=importlib.util.spec_from_file_location('query_indexes_under_test',Path(__file__).resolve().parents[1]/'query_indexes.py');policy=importlib.util.module_from_spec(spec);spec.loader.exec_module(policy)
-SCHEMA='''CREATE TABLE posts(id INTEGER PRIMARY KEY,user_id INTEGER,target_user_id INTEGER,created_at TEXT);
+SCHEMA='''CREATE TABLE post_reactions(post_id INTEGER,user_id INTEGER,emoji TEXT);
+CREATE TABLE posts(id INTEGER PRIMARY KEY,user_id INTEGER,target_user_id INTEGER,created_at TEXT);
 CREATE TABLE comments(id INTEGER PRIMARY KEY,post_id INTEGER,user_id INTEGER,created_at TEXT);
 CREATE TABLE post_vibes(post_id INTEGER,vibe_id INTEGER,PRIMARY KEY(post_id,vibe_id));
 CREATE TABLE follows(id INTEGER PRIMARY KEY,follower_id INTEGER,followed_id INTEGER,revoked INTEGER DEFAULT 0);
@@ -20,6 +21,7 @@ def main():
     db.executemany('INSERT INTO follows VALUES (?,?,?,0)',((i,i%1000,i//1000) for i in range(1,20001)))
     db.executemany('INSERT INTO friend_requests VALUES (?,?,?)',((i%1000,i//1000,'pending' if i%2 else 'accepted') for i in range(20000)));db.commit()
     batch=tuple(range(count-19,count+1));queries={
+      'reaction_counts':('SELECT post_id,emoji,COUNT(*) FROM post_reactions WHERE post_id=? GROUP BY post_id,emoji',(1,)),
       'profile_author':('SELECT id FROM posts WHERE user_id=? ORDER BY created_at DESC,id DESC LIMIT 20',(99,)),
       'profile_target':('SELECT id FROM posts WHERE target_user_id=? ORDER BY created_at DESC,id DESC LIMIT 20',(99,)),
       'profile_combined':('SELECT id FROM posts WHERE user_id=? OR target_user_id=? ORDER BY created_at DESC,id DESC',(99,99)),
@@ -45,3 +47,4 @@ def main():
     report={'passed':True,'checks':checks,'fictional_posts':count,'fictional_comments':2*count,'added_index_bytes':after_bytes-before_bytes,'queries':{k:{'before_ms':before[k]['median_ms'],'after_ms':after[k]['median_ms'],'before_plan':before[k]['plan'],'after_plan':after[k]['plan']} for k in queries}}
     print(json.dumps(report),flush=True)
 if __name__=='__main__':main()
+

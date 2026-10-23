@@ -112,7 +112,7 @@ def comment_windows(db, post_ids, identifiers, single=False):
             if row is None:abort(404)
             predicate=' AND (c.created_at,c.id) '+('<' if before else '>=' if target else '>')+' (?,?)'
             args.extend((row['created_at'],row['id']))
-        rows=db.execute('SELECT c.id,c.post_id,c.user_id,c.content,c.parent_comment_id,c.last_edited,c.created_at,u.handle,u.avatar_path FROM comments c JOIN users u ON u.id=c.user_id WHERE c.post_id=? AND '+visible+predicate+' ORDER BY c.created_at '+('DESC,c.id DESC' if descending else 'ASC,c.id ASC')+' LIMIT ?',args+[size+1]).fetchall()
+        rows=db.execute('SELECT c.id,c.post_id,c.user_id,c.content,c.parent_comment_id,c.last_edited,c.created_at,u.handle,u.avatar_path,CASE WHEN parent.id IS NULL THEN NULL WHEN parent.post_id=c.post_id AND NOT EXISTS(SELECT 1 FROM moderated_comments pm WHERE pm.comment_id=parent.id) AND community_member_visible(parent.user_id)=1 AND age_comment_visible(parent.id)=1 THEN recipient.handle END AS reply_to_handle FROM comments c JOIN users u ON u.id=c.user_id LEFT JOIN comments parent ON parent.id=c.parent_comment_id LEFT JOIN users recipient ON recipient.id=parent.user_id WHERE c.post_id=? AND '+visible+predicate+' ORDER BY c.created_at '+('DESC,c.id DESC' if descending else 'ASC,c.id ASC')+' LIMIT ?',args+[size+1]).fetchall()
         more=len(rows)>size;rows=rows[:size]
         if descending:rows.reverse()
         public=identifiers.public(db,'post',pid)
@@ -127,3 +127,4 @@ def install(db):
     db.execute('CREATE INDEX IF NOT EXISTS idx_comments_post_created ON comments(post_id,created_at,id)')
     db.execute('CREATE INDEX IF NOT EXISTS idx_post_vibes_vibe_post ON post_vibes(vibe_id,post_id)')
     db.commit()
+

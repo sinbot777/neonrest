@@ -793,33 +793,10 @@ def user_page_test(user_id):
         post_ids.append(raw_id)
         base62_map[raw_id] = b62
 
-    # -- Reactions & Reactors --
-    reaction_map = {}
-    if post_ids:
-        placeholders = ','.join(['?'] * len(post_ids))
-        reaction_rows = db.execute(f'''
-            SELECT post_id, emoji, COUNT(*) AS count
-            FROM post_reactions
-            WHERE post_id IN ({placeholders})
-            GROUP BY post_id, emoji
-        ''', post_ids).fetchall()
-        for r in reaction_rows:
-            reaction_map.setdefault(r['post_id'], {})[r['emoji']] = r['count']
-    for post in posts_with_html:
-        post['reaction_counts'] = reaction_map.get(post['id'], {})
-
-    post_reactors = {}
-    if post_ids:
-        placeholders = ','.join(['?'] * len(post_ids))
-        reactor_rows = db.execute(f'''
-            SELECT pr.post_id, pr.emoji, u.handle
-            FROM post_reactions pr
-            JOIN users u ON pr.user_id = u.id
-            WHERE pr.post_id IN ({placeholders})
-        ''', post_ids).fetchall()
-        for r in reactor_rows:
-            b62 = base62_map.get(r['post_id'])
-            post_reactors.setdefault(b62, {}).setdefault(r['emoji'], []).append(r['handle'])
+    # Counts and this viewer's choices only; names are loaded on demand.
+    from .reaction_queries import hydrate_reactions
+    hydrate_reactions(db, posts_with_html, session.get('user_id'))
+    post_reactors = {}  # Legacy template context; no eager handle hydration.
 
     # -- Comments threaded --
     from .growth_queries import comment_windows
@@ -838,6 +815,7 @@ def user_page_test(user_id):
             'avatar': c['avatar_path'] or '/static/default-avatar.png',
             'content': c['content'],
             'last_edited': c['last_edited'],
+            'reply_to_handle': c['reply_to_handle'],
             'replies': []
         }
         post_comments.setdefault(comment['post_id'], []).append(comment)
@@ -1280,34 +1258,10 @@ def feed(post_id=None, circle_context=None):
         post_ids.append(raw_id)
         base62_map[raw_id] = b62
 
-    # --- Reaction counts ---
-    reaction_map = {}
-    if post_ids:
-        ph = ','.join('?'*len(post_ids))
-        for r in db.execute(f'''
-            SELECT post_id, emoji, COUNT(*) AS count
-            FROM post_reactions
-            WHERE post_id IN ({ph})
-            GROUP BY post_id, emoji
-        ''', post_ids):
-            reaction_map.setdefault(r['post_id'], {})[r['emoji']] = r['count']
-    for post in posts_with_html:
-        post['reaction_counts'] = reaction_map.get(post['id'], {})
-
-    # --- Reactors (who reacted) ---
-    post_reactors = {}
-    if post_ids:
-        ph = ','.join('?'*len(post_ids))
-        for r in db.execute(f'''
-            SELECT pr.post_id, pr.emoji, u.handle
-            FROM post_reactions pr
-            JOIN users u ON u.id = pr.user_id
-            WHERE pr.post_id IN ({ph})
-        ''', post_ids):
-            b62 = base62_map[r['post_id']]
-            post_reactors.setdefault(b62, {})\
-                         .setdefault(r['emoji'], [])\
-                         .append(r['handle'])
+    # Counts and this viewer's choices only; names are loaded on demand.
+    from .reaction_queries import hydrate_reactions
+    hydrate_reactions(db, posts_with_html, session.get('user_id'))
+    post_reactors = {}  # Legacy template context; no eager handle hydration.
 
     # -- Comments threaded --
     from .growth_queries import comment_windows
@@ -1326,6 +1280,7 @@ def feed(post_id=None, circle_context=None):
             'avatar': c['avatar_path'] or '/static/default-avatar.png',
             'content': c['content'],
             'last_edited': c['last_edited'],
+            'reply_to_handle': c['reply_to_handle'],
             'replies': []
         }
         post_comments.setdefault(comment['post_id'], []).append(comment)
@@ -2227,6 +2182,37 @@ def edit_theme(slug, mode):
         editable_modes=editable_modes, vibe=vibe, theme_csrf_token=theme_csrf_token()
     )
 
+@app.route('/posts/<string:post_id>/reactions')
+def post_reaction_people(post_id):
+    db = get_db()
+    # The same audience, age and moderation gate as timeline hydration.
+    if not db.execute('SELECT 1 FROM posts p WHERE p.id=? AND NOT EXISTS '
+                      '(SELECT 1 FROM moderated_posts m WHERE m.post_id=p.id) '
+                      'AND community_post_visible(p.id)=1', (post_id,)).fetchone():
+        abort(404)
+    emoji = request.args.get('emoji', '')
+    if emoji not in VALID_REACTS:
+        abort(400)
+    from .reaction_queries import reactor_window
+    signer = itsdangerous.URLSafeSerializer(app.secret_key, salt='reaction-people-v1')
+    after = None
+    token = request.args.get('after')
+    if token:
+        try:
+            if len(token)>1536:
+                raise ValueError()
+            scope, selected, viewer, after = signer.loads(token)
+            if scope!=post_id or selected!=emoji or viewer!=session.get('user_id') or type(after) is not int:
+                raise ValueError()
+        except (itsdangerous.BadData, ValueError, TypeError):
+            abort(400)
+    people, next_id = reactor_window(db, post_id, emoji, after)
+    next_token = signer.dumps([post_id, emoji, session.get('user_id'), next_id]) if next_id else None
+    return render_template('reaction_people.html', people=people, emoji=emoji,
+        post_ref=identifiers.public(db, 'post', post_id),
+        next_url=url_for('post_reaction_people', post_id=post_id, emoji=emoji, after=next_token) if next_token else None)
+
+
 @app.route("/react/<string:post_id>", methods=["POST"])
 def react_to_post(post_id):
     if 'user_id' not in session:
@@ -2713,3 +2699,4 @@ register_social_connections(app,sys.modules[__name__])
 
 from .reading_tools import register as register_reading_tools
 register_reading_tools(app,sys.modules[__name__])
+
