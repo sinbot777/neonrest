@@ -1,0 +1,17 @@
+{% extends 'base.html' %}{% block content %}<main class="user-page">
+<h1>{{ vibe.name }} — logos and music</h1>
+{% if request.args.get('saved') %}<p role="status">Vibe logos and music saved.</p>{% endif %}
+<p>These settings belong to this Vibe. Existing shared logo and theme styles stay available as fallbacks. Music follows each visitor’s playback settings.</p>
+<form method="post" enctype="multipart/form-data"><input type="hidden" name="theme_csrf_token" value="{{ token }}"><input type="hidden" name="revision" value="{{ settings.revision }}">
+<p><label>Day logo path <input name="day_logo" value="{{ settings.day_logo or '' }}" maxlength="200" placeholder="optimized/day-logo.webp"></label></p>
+<p><label>Night logo path <input name="night_logo" value="{{ settings.night_logo or '' }}" maxlength="200" placeholder="optimized/night-logo.webp"></label></p>
+<p>Use existing local static PNG, JPEG or still WebP files up to 2 MiB and 4096 pixels per side. Empty uses the existing shared logo. Only use assets you have permission to publish.</p>
+<p><label>Logo motion <select name="logo_motion">{% for value,label in [('none','Still'),('float','Gentle movement'),('pulse','Gentle glow')] %}<option value="{{ value }}"{% if settings.logo_motion==value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label></p>
+<p>Reduced-motion settings and each visitor’s animation preference take priority. Visitors can pause animation on the page.</p>
+{% if settings.midi_filename %}<p>Current background music: {{ settings.midi_title }}</p><p><label><input type="checkbox" name="remove_midi" value="yes"> Remove this Vibe’s music</label></p>{% endif %}
+<p><label>Background MIDI <input type="file" name="background_midi" accept=".mid,.midi,audio/midi,audio/x-midi"></label></p>
+<p><label>Track title <input name="midi_title" value="{{ settings.midi_title }}" maxlength="100"></label></p>
+<p>Standard MIDI, up to 256 KiB and 10 minutes. Uploads here are Vibe-owned public assets while the Vibe is approved and active. Private post/profile tracks are not reused. Playback defaults to click-to-play.</p>
+<button type="submit">Save logos and music</button></form>
+<p><a href="{{ url_for('edit_theme',slug=slug,mode='day') }}">Theme Studio</a></p>
+</main>{% endblock %}

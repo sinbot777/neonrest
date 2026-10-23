@@ -1,0 +1,22 @@
+    {% if atmosphere.logo or vibe.logo_url %}
+      <div class="vibe-logo-group"{% if atmosphere.logo_motion!='none' %} data-vibe-logo-motion="{{ atmosphere.logo_motion }}"{% endif %}>
+      <img
+        src="{% if atmosphere.logo %}{{ url_for('static',filename=atmosphere.logo) }}{% elif vibe.logo_url.startswith('http') %}{{ vibe.logo_url }}{% elif vibe.logo_url.startswith('/static/') %}{{ url_for('static',filename=vibe.logo_url[8:]) }}{% else %}{{ url_for('static', filename=vibe.logo_url) }}{% endif %}"
+        alt="{{ vibe.name }} logo"
+        class="vibe-logo"
+        style="
+          {% if vibe.logo_width %}width: {{ vibe.logo_width }};{% endif %}
+          {% if vibe.logo_height %}height: {{ vibe.logo_height }};{% else %}height: auto;{% endif %}
+          max-width: 100%;
+          object-fit: contain;
+          box-sizing: border-box;
+          {% if vibe.logo_padding %}padding: {{ vibe.logo_padding }};{% endif %}
+          display: block;
+          margin-left: {% if vibe.logo_align == 'left' %}0{% elif vibe.logo_align == 'right' %}auto{% else %}auto{% endif %};
+          margin-right: {% if vibe.logo_align == 'left' %}auto{% elif vibe.logo_align == 'right' %}0{% else %}auto{% endif %};
+        ">
+      {% if atmosphere.logo_motion!='none' %}<button type="button" class="vibe-logo-pause" aria-pressed="false">Pause logo animation</button><span class="vibe-logo-status" role="status"></span>{% endif %}
+      </div>
+    {% else %}
+      <div class="glow large">#{{ vibe.name }}</div>
+    {% endif %}
