@@ -25,3 +25,6 @@ Private configuration per environment: NEONREST_PRODUCTION_STRIPE_MODE / SECRET_
 ## Reference audit
 
 Production's 56 original violations comprise 45 post_vibes references to a removed posts_old table, nine comments whose posts are missing and two comments whose parent comments are missing. Forty-four post/Vibe mappings still match current posts. The repair rebuilds only post_vibes to point at current posts, preserving every row, index and trigger and restoring the caller's foreign-key setting. One genuinely orphaned post/Vibe mapping and eleven orphaned comment references remain for reviewed disposition. No comment or mapping is deleted or reassigned. Sandbox has no violations. Back up and rehearse before applying the repair to live data.
+
+
+Stripe test product created in the existing Neonrest account: Neonrest Business Page (Test), USD $5 every three months. This is test data only; no live product/subscription/charge has been created. Private configuration may also be read from an owner-only (0600) stripe.json in /home/sinbot/private/neonrest_production or /home/sinbot/private/neonrest_sandbox. Never export its contents.

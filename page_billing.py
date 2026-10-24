@@ -4,6 +4,7 @@ Pinned REST contract: 2024-06-20. Stripe-signed notifications are re-fetched
 server-side; browser return URLs never grant entitlement.
 """
 import hashlib,hmac,json,os,re,secrets,time
+from pathlib import Path
 import requests
 from flask import Blueprint,abort,current_app,redirect,render_template,request,session,url_for
 from . import identity_pages as pages
@@ -24,12 +25,20 @@ def initialize(db):
 
 def config():
     prefix='NEONREST_SANDBOX' if request.script_root.startswith('/sandbox') else 'NEONREST_PRODUCTION'
-    mode=current_app.config.get('PAGE_BILLING_MODE',os.getenv(prefix+'_STRIPE_MODE','off'))
-    key=current_app.config.get('PAGE_STRIPE_KEY',os.getenv(prefix+'_STRIPE_SECRET_KEY',''))
-    secret=current_app.config.get('PAGE_STRIPE_WEBHOOK',os.getenv(prefix+'_STRIPE_WEBHOOK_SECRET',''))
-    price=current_app.config.get('PAGE_STRIPE_PRICE',os.getenv(prefix+'_STRIPE_PRICE_ID',''))
+    private={}
+    path=Path(os.getenv(prefix+'_STRIPE_CONFIG','/home/sinbot/private/'+('neonrest_sandbox' if prefix=='NEONREST_SANDBOX' else 'neonrest_production')+'/stripe.json'))
+    if path.is_file():
+        try:
+            if path.stat().st_mode & 0o077:return None
+            private=json.loads(path.read_text())
+            if not isinstance(private,dict):return None
+        except (OSError,ValueError):return None
+    mode=current_app.config.get('PAGE_BILLING_MODE',os.getenv(prefix+'_STRIPE_MODE',private.get('mode','off')))
+    key=current_app.config.get('PAGE_STRIPE_KEY',os.getenv(prefix+'_STRIPE_SECRET_KEY',private.get('secret_key','')))
+    secret=current_app.config.get('PAGE_STRIPE_WEBHOOK',os.getenv(prefix+'_STRIPE_WEBHOOK_SECRET',private.get('webhook_secret','')))
+    price=current_app.config.get('PAGE_STRIPE_PRICE',os.getenv(prefix+'_STRIPE_PRICE_ID',private.get('price_id','')))
     if mode not in ('test','live'):return None
-    if mode=='live' and (request.script_root.startswith('/sandbox') or os.getenv('NEONREST_STRIPE_LIVE_CONFIRMED')!='1'):return None
+    if mode=='live' and (request.script_root.startswith('/sandbox') or not (os.getenv('NEONREST_STRIPE_LIVE_CONFIRMED')=='1' or private.get('live_confirmed') is True)):return None
     if not key.startswith('sk_'+mode+'_') or not secret.startswith('whsec_') or not re.fullmatch(r'price_[A-Za-z0-9]+',price):return None
     return {'mode':mode,'key':key,'webhook':secret,'price':price}
 
@@ -181,8 +190,9 @@ def register(app,core):
         if not verify_signature(raw,request.headers.get('Stripe-Signature',''),cfg['webhook']):abort(400)
         try:event=json.loads(raw)
         except ValueError:abort(400)
+        if not isinstance(event,dict):abort(400)
         ref=event.get('id','')
-        if not re.fullmatch(r'evt_[A-Za-z0-9]+',ref):abort(400)
+        if not isinstance(ref,str) or not re.fullmatch(r'evt_[A-Za-z0-9]+',ref):abort(400)
         verified=api(cfg,'GET','events/'+ref)
         with core.get_db():sync_event(core.get_db(),cfg,verified)
         return '',204
