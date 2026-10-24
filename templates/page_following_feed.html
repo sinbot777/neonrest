@@ -1,0 +1,4 @@
+{% extends 'base.html' %}{% block title %}Followed page updates - Neonrest{% endblock %}{% block content %}{% include 'partials/identity_page_styles.html' %}
+<main class="identity-page"><h1>Followed page updates</h1>{% include 'partials/page_social_navigation.html' %}
+{% for post in posts %}<article><h2><a href="{{ page_link(post) }}">{{ post.handle }}</a></h2><p>{{ post.created_at|community_time }}</p><div class="page-description">{{ post.body }}</div></article>{% else %}<p>No updates from your followed pages are available.</p>{% endfor %}
+{% if older_url %}<a href="{{ older_url }}">Older updates</a>{% endif %}</main>{% endblock %}
