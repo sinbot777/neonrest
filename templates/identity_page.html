@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block title %}{{ page.handle }} - Neonrest{% endblock %}
+{% block content %}
+{% include 'partials/identity_page_styles.html' %}
+<main class="identity-page">
+  <h1>{{ page.name }}</h1>
+  <p class="page-handle">{{ page.handle }} · {{ page.kind|capitalize }} page</p>
+  {% if page.state!='published' %}<p>{{ page.state|capitalize }} — visible only to eligible page managers.</p>{% endif %}
+  <div class="page-description">{{ page.description }}</div>
+  {% if page_role %}<p><a href="{{ url_for('identity_pages.manage', page_id=page.id) }}">Manage this page</a></p>{% endif %}
+</main>
+{% endblock %}
