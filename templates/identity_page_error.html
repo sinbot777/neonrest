@@ -1,0 +1,6 @@
+{% extends 'base.html' %}
+{% block title %}Page change unavailable - Neonrest{% endblock %}
+{% block content %}
+{% include 'partials/identity_page_styles.html' %}
+<main class="identity-page"><h1>Page change unavailable</h1><p role="alert">{{ message }}</p><p><a href="{{ url_for('identity_pages.mine') }}">Your pages</a></p></main>
+{% endblock %}

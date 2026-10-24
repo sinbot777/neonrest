@@ -1,3 +1,11 @@
+# Creative pages — October 23, 2026 (Pacific)
+
+- Free `_handle` page creation, drafts, publication, text updates and archiving; preserve `@handle` personal identity and separate `$handle` private business drafts. URLs are case-insensitive.
+- Add private page/update reports, immutable evidence snapshots, staff permission/2FA/fresh-auth review, hide/restore decisions and review history. Retain existing account, age, consent, block and author restrictions.
+- Own-data exports include pages and authored updates; future erasure refuses orphaned page dependencies. Permanent erasure remains disabled.
+- 28 focused tests and 55 real-app disposable checks per environment passed. Additive migration/restore rehearsal preserves existing tables and starts seven empty page tables. No real charge, business activation, new release version or live fixture content is introduced.
+- Following, wider feed/search, delegate invitations/transfer and recurring payment integration remain separate.
+
 # Security maintenance — October 23, 2026 (Pacific)
 
 - Pillow 13.0.0 addresses five image-processing advisories reported in both dependency manifests (GHSA-8g5g-8vmr-9782, GHSA-58r4-6rv3-gfh8, GHSA-pchr-8j38-3x4p, GHSA-65qm-jvmh-6pqg, GHSA-462x-pgg6-55fp).
