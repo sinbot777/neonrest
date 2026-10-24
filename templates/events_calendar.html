@@ -1,0 +1,5 @@
+{% extends 'base.html' %}{% block title %}Events and calendar - Neonrest{% endblock %}{% block content %}{% include 'partials/identity_page_styles.html' %}
+<main class="identity-page"><h1>Events and calendar</h1>{% include 'partials/page_social_navigation.html' %}<p><a href="{{ url_for('events.new') }}">Create an event</a></p>
+<form method="get"><label for="event-month">Calendar month (UTC)</label><input id="event-month" type="month" name="month" value="{{ month }}"><button>Show month</button></form>
+<p>Private Circle events appear only while you are an eligible current member. RSVP choices are private.</p>
+{% for event in events %}<article><h2><a href="{{ url_for('events.detail',ref=event.id) }}">{{ event.title }}</a></h2><p>{{ event.starts_at|community_time }} — {{ event.ends_at|community_time }} · {{ event.audience }}{% if event.canceled %} · Canceled{% endif %}</p><p>{{ event.location }}</p></article>{% else %}<p>No events available for this month.</p>{% endfor %}{% if truncated %}<p>The first 200 events are shown.</p>{% endif %}</main>{% endblock %}

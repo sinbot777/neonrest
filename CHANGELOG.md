@@ -1,3 +1,11 @@
+# Pages, events and test billing — October 24, 2026 (Pacific)
+
+- Add page discovery and search, follows and a dedicated followed-page update feed with current visibility and account restrictions.
+- Creative-page owners can invite editors/managers and offer ownership transfer; recipients must accept, and revoked access stops immediately. Business transfers remain unavailable while billing ownership policy is pending.
+- Add events and calendar, private Circle events, private Going/Interested responses, calendar downloads and staff report review. Current membership and access rules apply on every request.
+- Stripe business billing is test-only in Sandbox at $5 USD every three calendar months. Hosted checkout, signed notifications and period-end cancellation are implemented; Production charges and business publication remain disabled pending complete payment acceptance.
+- 115 disposable app checks per environment, related regressions, and migration/restore rehearsals pass. Repair the obsolete post mapping reference without deleting rows; 12 pre-existing orphan references remain for separate review.
+
 # Creative pages — October 23, 2026 (Pacific)
 
 - Free `_handle` page creation, drafts, publication, text updates and archiving; preserve `@handle` personal identity and separate `$handle` private business drafts. URLs are case-insensitive.

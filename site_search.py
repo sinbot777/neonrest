@@ -3,8 +3,8 @@ import json
 from flask import abort, make_response, redirect, render_template, request, session, url_for
 from neonrest import age_policy as ages, circles, community_features as community
 
-SCOPES = ('username', 'posts', 'circles', 'city')
-LABELS = {'username': 'Username', 'posts': 'Posts', 'circles': 'Circles', 'city': 'City'}
+SCOPES = ('username', 'posts', 'circles', 'city', 'pages')
+LABELS = {'username': 'Username', 'posts': 'Posts', 'circles': 'Circles', 'city': 'City', 'pages': 'Pages'}
 
 
 def selections():
@@ -72,6 +72,11 @@ def register(app, core):
                     candidate, match_args = candidates('posts','content',query,'p',db)
                     rows = db.execute("SELECT p.id,p.content,p.created_at,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.content LIKE ? ESCAPE '!' AND community_post_visible(p.id)=1 AND NOT EXISTS(SELECT 1 FROM moderated_posts mp WHERE mp.post_id=p.id)"+candidate+" ORDER BY p.created_at DESC,p.id DESC LIMIT 21 OFFSET ?", [pattern(query)]+match_args+[offset]).fetchall()
                     items = [{'title':'Post by '+row['handle'], 'url':url_for('post_detail',post_id=row['id']), 'text':row['content'][:240]+('…' if len(row['content'])>240 else ''), 'date':row['created_at']} for row in rows[:20]]
+                elif kind == 'pages':
+                    from . import page_social,identity_pages
+                    db.create_function('page_search_visible',1,lambda pid:int(page_social.public_read(db,identity_pages.get(db,pid),uid)))
+                    rows=db.execute("SELECT * FROM identity_pages WHERE (handle LIKE ? ESCAPE '!' OR name LIKE ? ESCAPE '!' OR description LIKE ? ESCAPE '!') AND page_search_visible(id)=1 ORDER BY name COLLATE NOCASE,id LIMIT 21 OFFSET ?",[pattern(query)]*3+[offset]).fetchall()
+                    items=[{'title':row['handle']+' · '+row['name'],'url':url_for('identity_pages.creative' if row['kind']=='creative' else 'identity_pages.business',slug=row['handle'][1:]),'text':row['description'][:240]} for row in rows[:20]]
                 else:
                     candidate, match_args = candidates('circles',None,query,'circles',db)
                     rows = db.execute("SELECT * FROM circles WHERE (name LIKE ? ESCAPE '!' OR description LIKE ? ESCAPE '!') AND search_circle_visible(id)=1"+candidate+" ORDER BY name COLLATE NOCASE,id LIMIT 21 OFFSET ?", [pattern(query),pattern(query)]+match_args+[offset]).fetchall()

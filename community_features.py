@@ -944,6 +944,12 @@ def register(app, core):
         export['vibe_atmosphere']=export_atmosphere(db,uid)
         from .identity_pages import export_user as export_pages
         export['identity_pages']=export_pages(db,uid)
+        from .page_social import export_user as export_page_social
+        from .events import export_user as export_events
+        export['page_social']=export_page_social(db,uid)
+        export['events']=export_events(db,uid)
+        billing=db.execute('SELECT status,paid_until,cancel_at_period_end,review_required FROM page_subscriptions WHERE owner_id=?',(uid,)).fetchall()
+        export['business_subscriptions']=[dict(row) for row in billing]
         core.identifiers.export_ids(db,export)
         # Exclude internal case notes, password hashes, tokens and two-factor secrets.
         return Response(json.dumps(export,ensure_ascii=False,indent=2),mimetype='application/json',headers={'Content-Disposition':'attachment; filename="neonrest-data.json"'})

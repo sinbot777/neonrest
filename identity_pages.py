@@ -196,7 +196,7 @@ def set_state(db, uid, page_id, revision, state):
     require_role(db, page, uid, ('owner',))
     if state not in ('draft', 'published', 'archived'):
         raise PageError('Choose a valid page state.')
-    if state == 'published' and page['kind'] == 'business':
+    if state == 'published' and page['kind'] == 'business' and not business_entitled(db,page):
         # No client form, staff checkbox or forged checkout return can activate it.
         # Replace only when provider-verified recurring entitlement is implemented.
         raise PageError('Business activation awaits subscription setup.', 409)
@@ -238,7 +238,7 @@ def visible(db, page, viewer):
         return True
     if hidden(db, page['id']):
         return False
-    if page['state'] != 'published' or page['kind'] == 'business':
+    if page['state'] != 'published' or (page['kind'] == 'business' and not business_entitled(db,page)):
         return False
     from . import age_policy
     from .community_features import blocked
@@ -261,7 +261,7 @@ def export_user(db, uid):
 def write_post(db, uid, page_id, body):
     page = get(db, page_id)
     require_role(db, page, uid, ('owner', 'manager', 'editor'))
-    if page['state'] != 'published' or page['kind'] != 'creative':
+    if page['state'] != 'published' or (page['kind'] == 'business' and not business_entitled(db,page)):
         raise PageError('Publish a creative page before adding updates.', 409)
     if hidden(db, page_id):
         raise PageError('This page is restricted by staff.', 403)
@@ -312,6 +312,12 @@ def erasure_dependencies(db, uid):
         'SELECT 1 FROM identity_page_reports WHERE reporter_id=? LIMIT 1',
         'SELECT 1 FROM identity_page_reports WHERE reviewed_by=? LIMIT 1',
         'SELECT 1 FROM identity_page_reviews WHERE actor_id=? LIMIT 1'))
+
+
+def business_entitled(db,page):
+    if not db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='page_subscriptions'").fetchone():return False
+    from .page_billing import entitled
+    return entitled(db,page)
 
 
 def hidden(db, page_id, post_id=0):
@@ -548,7 +554,7 @@ def register(app, core):
                     raise PageError('Choose a page action.')
             flash('Page updated.', 'success')
             return redirect(url_for('identity_pages.manage', page_id=page_id))
-        return render_template('identity_page_edit.html', page=page, page_role=role(db, page, uid), page_url=page_url)
+        return render_template('identity_page_edit.html', page=page, page_role=role(db, page, uid), page_url=page_url,business_ready=business_entitled(db,page) if page['kind']=='business' else False)
 
     def show(kind, slug):
         db = core.get_db()

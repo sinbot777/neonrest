@@ -3,7 +3,8 @@
 {% block content %}
 {% include 'partials/identity_page_styles.html' %}
 <main class="identity-page">
-  <h1>Manage {{ page.handle }}</h1>
+  <h1>Manage {{ page.handle }}</h1>{% include 'partials/page_social_navigation.html' %}
+{% if page_role=='owner' %}<p><a href="{{ url_for('page_social.team',page_id=page.id) }}">Team and ownership</a>{% if page.kind=='business' %} · <a href="{{ url_for('page_billing.manage',page_id=page.id) }}">Subscription and billing</a>{% endif %}</p>{% endif %}
   <nav aria-label="Pages"><a href="{{ url_for('identity_pages.mine') }}">Your pages</a><a href="{{ page_url(page) }}">View page</a></nav>
   <p>{{ page.kind|capitalize }} · {{ page.state|capitalize }} · Your role: {{ page_role }}</p>
   {% if page.kind=='business' %}<p>Business activation requires a recurring subscription. The launch price is $5 USD per business page every three months, with no setup fee. Cancel anytime; the page stays active through the paid period. Checkout is not available yet. This draft incurs no charge.</p>{% endif %}
@@ -22,7 +23,7 @@
     <input type="hidden" name="revision" value="{{ page.revision }}"><input type="hidden" name="action" value="state">
     <label for="page-state">Visibility</label><select name="state" id="page-state">
       <option value="draft" {% if page.state=='draft' %}selected{% endif %}>Private draft</option>
-      {% if page.kind=='creative' %}<option value="published" {% if page.state=='published' %}selected{% endif %}>Published — existing age and block rules apply</option>{% endif %}
+      {% if page.kind=='creative' or business_ready %}<option value="published" {% if page.state=='published' %}selected{% endif %}>Published — existing age and block rules apply</option>{% endif %}
       <option value="archived" {% if page.state=='archived' %}selected{% endif %}>Archived — keep the handle reserved</option>
     </select>
     <button>Update visibility</button>

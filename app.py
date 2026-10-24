@@ -2724,3 +2724,15 @@ register_vibe_atmosphere(app,sys.modules[__name__])
 
 from .identity_pages import register as register_identity_pages
 register_identity_pages(app,sys.modules[__name__])
+
+
+from .reference_integrity import repair_post_vibes
+with app.app_context():
+    repair_post_vibes(get_db())
+from .page_social import register as register_page_social
+register_page_social(app,sys.modules[__name__])
+from .events import register as register_events
+register_events(app,sys.modules[__name__])
+from .page_billing import register as register_page_billing
+register_page_billing(app,sys.modules[__name__])
+

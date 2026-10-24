@@ -3,7 +3,7 @@
 {% block content %}
 {% include 'partials/identity_page_styles.html' %}
 <main class="identity-page">
-  <h1>Your pages</h1>
+  <h1>Your pages</h1>{% include 'partials/page_social_navigation.html' %}
   <p>Your personal account uses <strong>@handle</strong>. Creative pages use <strong>_handle</strong> and business pages use <strong>$handle</strong>.</p>
   <nav aria-label="Pages"><a href="{{ url_for('identity_pages.new') }}">Create a page</a><a href="{{ url_for('identity_pages.my_reports') }}">Your page reports</a><a href="{{ url_for('account') }}">Account</a></nav>
   {% for page in pages %}

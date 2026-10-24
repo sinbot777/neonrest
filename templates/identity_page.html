@@ -4,13 +4,14 @@
 {% include 'partials/identity_page_styles.html' %}
 <main class="identity-page">
   <h1>{{ page.name }}</h1>
+{% if session.get('user_id') and page.state=='published' and not page_hidden %}<form method="post" action="{{ url_for('page_social.following',page_id=page.id) }}"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}"><button name="state" value="{{ 'unfollow' if page_is_followed(page) else 'follow' }}">{{ 'Unfollow page' if page_is_followed(page) else 'Follow page' }}</button></form>{% endif %}
   <p class="page-handle">{{ page.handle }} · {{ page.kind|capitalize }} page</p>
   {% if page_hidden %}<p role="status">Staff have hidden this page from other readers. Contact <a href="mailto:ToS@neonrest.com">ToS@neonrest.com</a> to request review.</p>{% endif %}
   {% if page.state!='published' %}<p>{{ page.state|capitalize }} — visible only to eligible page managers.</p>{% endif %}
   <div class="page-description">{{ page.description }}</div>
   {% if page_role %}<p><a href="{{ url_for('identity_pages.manage', page_id=page.id) }}">Manage this page</a></p>{% endif %}
   {% if session.get('user_id') and page.state=='published' and not page_hidden %}<p><a href="{{ url_for('identity_pages.report_page',page_id=page.id) }}">Report page</a></p>{% endif %}
-  {% if page_role and page.state=='published' and page.kind=='creative' and not page_hidden %}
+  {% if page_role and page.state=='published' and not page_hidden %}
   <form method="post" action="{{ url_for('identity_pages.updates',page_id=page.id) }}">
     <input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
     <label for="page-update">Write an update as {{ page.handle }}</label>
