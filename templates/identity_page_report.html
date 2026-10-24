@@ -1,0 +1,7 @@
+{% extends 'base.html' %}{% block title %}Report {{ page.handle }} - Neonrest{% endblock %}
+{% block content %}{% include 'partials/identity_page_styles.html' %}
+<main class="identity-page"><h1>Report {{ 'update' if post_id else 'page' }}: {{ page.handle }}</h1>
+<p>Staff review reports. Your identity and report text are not shared with the page owner.</p>
+<form method="post"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}"><input type="hidden" name="post_id" value="{{ post_id }}">
+<label for="page-report-reason">Describe the concern</label><textarea id="page-report-reason" name="reason" maxlength="1000" required></textarea><button>Send report</button></form>
+<p><a href="{{ url_for('identity_pages.my_reports') }}">Your page reports</a></p></main>{% endblock %}
