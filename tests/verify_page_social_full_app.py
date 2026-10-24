@@ -8,6 +8,7 @@ if len(sys.argv)==2:
   results[package]={'code':r.returncode,'out':r.stdout[-2000:],'err':r.stderr[-5000:] if r.returncode else ''};print(package,json.dumps(results[package]),flush=True)
  Path(manifest['root'],'next-full-app-results.json').write_text(json.dumps(results));raise SystemExit(0 if all(r['code']==0 for r in results.values()) else 1)
 exec(compile(Path(__file__).with_name('verify_identity_pages_full_app.py').read_text(),'creative regression','exec'))
+app.config['PAGE_BILLING_MODE']='off'
 social=importlib.import_module(package+'.page_social');events=importlib.import_module(package+'.events');billing=importlib.import_module(package+'.page_billing')
 from unittest.mock import patch
 from datetime import datetime,timezone,timedelta
