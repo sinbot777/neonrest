@@ -1058,4 +1058,3 @@ def register(app, core):
     app.jinja_env.globals["authorization_post_draft"]=welcome.post_draft
     ages.register(app,core,fresh)
 
-

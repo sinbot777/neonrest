@@ -348,4 +348,3 @@ def register(app,core):
             response.headers['X-Content-Type-Options']='nosniff'
             response.headers['X-Neonrest-Privacy-Revision']='2026-10-14.7'
         return response
-

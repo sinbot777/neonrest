@@ -212,6 +212,35 @@ class PagesTests(unittest.TestCase):
         self.assertEqual(len(pages.export_user(self.db, 2)['own_page_posts']), 1)
         self.assertEqual(len(pages.export_user(self.db, 1)['own_page_posts']), 0)
 
+    def test_reports_hide_restore_and_private_immutable_evidence(self):
+        pages.set_state(self.db,1,self.page,0,'published')
+        post_id=pages.write_post(self.db,1,self.page,'Evidence body')
+        rid=pages.report(self.db,2,self.page,post_id,'Concern')
+        self.assertEqual(rid,pages.report(self.db,2,self.page,post_id,'Duplicate'))
+        with self.assertRaises(sqlite3.IntegrityError):
+            self.db.execute("UPDATE identity_page_reports SET snapshot='tampered' WHERE id=?",(rid,))
+        self.assertNotIn('snapshot',pages.export_user(self.db,2)['own_reports'][0])
+        self.assertEqual(pages.export_user(self.db,1)['own_reports'],[])
+        pages.review_report(self.db,3,rid,'hide-update','Restricted')
+        post=self.db.execute('SELECT * FROM identity_page_posts WHERE id=?',(post_id,)).fetchone()
+        self.assertFalse(pages.post_visible(self.db,pages.get(self.db,self.page),post,2))
+        pages.review_report(self.db,3,rid,'restore-update','Cleared')
+        self.assertTrue(pages.post_visible(self.db,pages.get(self.db,self.page),post,2))
+        pages.review_report(self.db,3,rid,'hide-page','Page restricted')
+        self.assertFalse(pages.visible(self.db,pages.get(self.db,self.page),2))
+        self.error(409,pages.set_state,1,self.page,1,'published')
+        self.error(403,pages.write_post,1,self.page,'Bypass')
+        pages.review_report(self.db,3,rid,'restore-page','Cleared')
+        self.assertTrue(pages.visible(self.db,pages.get(self.db,self.page),2))
+        self.assertEqual(self.db.execute('SELECT COUNT(*) FROM identity_page_reviews').fetchone()[0],4)
+
+    def test_report_requires_read_access_and_valid_target(self):
+        self.error(404,pages.report,2,self.page,0,'Private draft')
+        pages.set_state(self.db,1,self.page,0,'published')
+        self.error(404,pages.report,2,self.page,999,'Missing post')
+        self.db.execute('INSERT INTO user_blocks VALUES (1,2)')
+        self.error(404,pages.report,2,self.page,0,'Blocked')
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -77,6 +77,27 @@ with app.app_context():
 check(app.config['RETENTION_ENABLED'] is False,'Permanent erasure stays disabled')
 check(send('Regular','/pages/'+ref+'/updates/'+str(post['id'])+'/remove').status_code==302,'Author removes update')
 check(b'&lt;script&gt;fictional' not in get('Writer','/_pagefixture').data,'Removed update unavailable')
+check(send('Regular','/pages/'+ref+'/updates',body='Moderation fixture').status_code==302,'New reportable update')
+update=query('SELECT id FROM identity_page_posts WHERE page_id=? ORDER BY id DESC LIMIT 1',(ref,))[0][0]
+check(get('Writer','/pages/'+ref+'/report',post_id=update).status_code==200,'Report form available to eligible reader')
+check(send('Writer','/pages/'+ref+'/report',post_id=str(update),reason='Fixture concern').status_code==302,'Report submitted')
+rid=query('SELECT id FROM identity_page_reports ORDER BY id DESC LIMIT 1')[0][0]
+check(get('Regular','/manage/pages/reports').status_code==403,'Ordinary owner cannot read staff reports')
+check(b'Fixture concern' not in get('Regular','/pages/reports/mine').data,'Reporter identity and report private from owner')
+check(get('Admin','/manage/pages/reports').status_code==200,'Staff can review restricted evidence')
+with clients['Admin'].session_transaction() as s:s['factor_at']=0
+check(get('Admin','/manage/pages/reports').status_code==302,'Staff report access requires fresh factor')
+with clients['Admin'].session_transaction() as s:s['factor_at']=now
+check(send('Admin','/manage/pages/reports',report_id=str(rid),decision='hide-update',reason='Fixture decision').status_code==302,'Staff hides update')
+check(b'Moderation fixture' not in get('Writer','/_pagefixture').data,'Staff-hidden update absent')
+check(send('Admin','/manage/pages/reports',report_id=str(rid),decision='hide-page',reason='Fixture page restriction').status_code==302,'Staff hides page')
+check(get('Writer','/_pagefixture').status_code==404,'Staff-hidden page inaccessible')
+check(send('Regular',path,action='state',state='published',revision='1').status_code==409,'Owner cannot override staff hide')
+check(send('Admin','/manage/pages/reports',report_id=str(rid),decision='restore-page',reason='Fixture restoration').status_code==302,'Staff restores page')
+check(get('Writer','/_pagefixture').status_code==200,'Page restored')
+check(send('Admin','/manage/pages/reports',report_id=str(rid),decision='restore-update',reason='Fixture restoration').status_code==302,'Staff restores update')
+check(b'Moderation fixture' in get('Writer','/_pagefixture').data,'Update restored')
+check(b'Fixture decision' in get('Writer','/pages/reports/mine').data or b'Fixture restoration' in get('Writer','/pages/reports/mine').data,'Reporter can see decision')
 check(send('Regular',path,action='state',state='archived',revision='1').status_code==302,'Archive page')
 check(get('Writer','/_pagefixture').status_code==404,'Archived page hidden')
 print(json.dumps({'checks':checks,'passed':True,'scope':'real app; disposable DB; no network'}))

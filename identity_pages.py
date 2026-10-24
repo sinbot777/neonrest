@@ -4,6 +4,7 @@ Business activation needs the separately reviewed subscription provider
 integration. Page posting preserves both actor and owner eligibility.
 """
 import re
+import json
 import secrets
 import sqlite3
 import time
@@ -60,6 +61,25 @@ def initialize(db):
             body TEXT NOT NULL, revision INTEGER NOT NULL DEFAULT 0,
             removed INTEGER NOT NULL DEFAULT 0 CHECK(removed IN (0,1)),
             created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL)''',
+        '''CREATE TABLE IF NOT EXISTS identity_page_reports(
+            id INTEGER PRIMARY KEY, page_id TEXT NOT NULL REFERENCES identity_pages(id),
+            post_id INTEGER NOT NULL DEFAULT 0, reporter_id INTEGER NOT NULL REFERENCES users(id),
+            reason TEXT NOT NULL, snapshot TEXT NOT NULL, created_at INTEGER NOT NULL,
+            status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open','closed')),
+            reviewed_by INTEGER, decision TEXT, decision_reason TEXT, reviewed_at INTEGER)''',
+        '''CREATE TABLE IF NOT EXISTS identity_page_hides(
+            page_id TEXT NOT NULL REFERENCES identity_pages(id), post_id INTEGER NOT NULL DEFAULT 0,
+            actor_id INTEGER NOT NULL, reason TEXT NOT NULL, created_at INTEGER NOT NULL,
+            PRIMARY KEY(page_id,post_id))''',
+        '''CREATE TABLE IF NOT EXISTS identity_page_reviews(
+            id INTEGER PRIMARY KEY,report_id INTEGER NOT NULL REFERENCES identity_page_reports(id),
+            actor_id INTEGER NOT NULL,decision TEXT NOT NULL,reason TEXT NOT NULL,created_at INTEGER NOT NULL)''',
+        '''CREATE UNIQUE INDEX IF NOT EXISTS identity_page_report_open
+            ON identity_page_reports(page_id,post_id,reporter_id) WHERE status='open' ''',
+        'CREATE INDEX IF NOT EXISTS identity_page_reports_queue ON identity_page_reports(status,id DESC)',
+        '''CREATE TRIGGER IF NOT EXISTS identity_page_report_snapshot_immutable
+            BEFORE UPDATE OF snapshot,page_id,post_id,reporter_id,reason,created_at ON identity_page_reports
+            BEGIN SELECT RAISE(ABORT,'Report evidence is immutable'); END''',
         'CREATE INDEX IF NOT EXISTS identity_page_owner ON identity_pages(owner_id,id)',
         'CREATE INDEX IF NOT EXISTS identity_page_member ON identity_page_members(user_id,page_id)',
         'CREATE INDEX IF NOT EXISTS identity_page_history ON identity_page_events(page_id,id)',
@@ -180,6 +200,8 @@ def set_state(db, uid, page_id, revision, state):
         # No client form, staff checkbox or forged checkout return can activate it.
         # Replace only when provider-verified recurring entitlement is implemented.
         raise PageError('Business activation awaits subscription setup.', 409)
+    if state == 'published' and hidden(db, page_id):
+        raise PageError('Staff must clear the page restriction before publishing.', 409)
     result = db.execute('''UPDATE identity_pages SET state=?,revision=revision+1,updated_at=?
         WHERE id=? AND revision=?''', (state, int(time.time()), page_id, revision))
     if result.rowcount != 1:
@@ -214,6 +236,8 @@ def visible(db, page, viewer):
         return False
     if role(db, page, viewer):
         return True
+    if hidden(db, page['id']):
+        return False
     if page['state'] != 'published' or page['kind'] == 'business':
         return False
     from . import age_policy
@@ -228,6 +252,9 @@ def export_user(db, uid):
         'delegations': [dict(r) for r in db.execute('SELECT * FROM identity_page_members WHERE user_id=? ORDER BY page_id', (uid,))],
         'own_actions': [dict(r) for r in db.execute('SELECT * FROM identity_page_events WHERE actor_id=? ORDER BY id', (uid,))],
         'own_page_posts': [dict(r) for r in db.execute('SELECT * FROM identity_page_posts WHERE author_id=? ORDER BY id', (uid,))],
+        # Do not export staff-only snapshots or another reporter's identity.
+        'own_reports': [dict(r) for r in db.execute('''SELECT id,page_id,post_id,reason,created_at,status,
+            decision,decision_reason,reviewed_at FROM identity_page_reports WHERE reporter_id=? ORDER BY id''', (uid,))],
     }
 
 
@@ -236,6 +263,8 @@ def write_post(db, uid, page_id, body):
     require_role(db, page, uid, ('owner', 'manager', 'editor'))
     if page['state'] != 'published' or page['kind'] != 'creative':
         raise PageError('Publish a creative page before adding updates.', 409)
+    if hidden(db, page_id):
+        raise PageError('This page is restricted by staff.', 403)
     body = body.strip() if isinstance(body, str) else ''
     if not 1 <= len(body) <= 5000:
         raise PageError('Write an update of 1–5,000 characters.')
@@ -260,7 +289,7 @@ def remove_post(db, uid, page_id, post_id):
 
 
 def post_visible(db, page, post, viewer):
-    if post['removed'] or not visible(db, page, viewer):
+    if post['removed'] or hidden(db, page['id'], post['id']) or not visible(db, page, viewer):
         return False
     if not eligible(db, post['author_id'], page['kind']):
         return False
@@ -279,7 +308,63 @@ def erasure_dependencies(db, uid):
         'SELECT 1 FROM identity_pages WHERE owner_id=? LIMIT 1',
         'SELECT 1 FROM identity_page_members WHERE user_id=? LIMIT 1',
         'SELECT 1 FROM identity_page_posts WHERE author_id=? LIMIT 1',
-        'SELECT 1 FROM identity_page_events WHERE actor_id=? LIMIT 1'))
+        'SELECT 1 FROM identity_page_events WHERE actor_id=? LIMIT 1',
+        'SELECT 1 FROM identity_page_reports WHERE reporter_id=? LIMIT 1',
+        'SELECT 1 FROM identity_page_reports WHERE reviewed_by=? LIMIT 1',
+        'SELECT 1 FROM identity_page_reviews WHERE actor_id=? LIMIT 1'))
+
+
+def hidden(db, page_id, post_id=0):
+    return bool(db.execute('SELECT 1 FROM identity_page_hides WHERE page_id=? AND post_id=?', (page_id, post_id)).fetchone())
+
+
+def report(db, uid, page_id, post_id, reason):
+    page = get(db, page_id)
+    require_eligible(db, uid, 'creative')
+    from . import age_policy
+    from .community_features import blocked
+    if page['state'] != 'published' or hidden(db, page_id) or blocked(db, page['owner_id'], uid) or not age_policy.can_read(db, page['owner_id'], uid):
+        raise PageError('Page unavailable.', 404)
+    if not isinstance(post_id, int) or not 0 <= post_id < 2**63:
+        raise PageError('Update unavailable.', 404)
+    snapshot = {'handle': page['handle'], 'name': page['name'], 'description': page['description'], 'owner_id': page['owner_id']}
+    if post_id:
+        post = db.execute('SELECT * FROM identity_page_posts WHERE id=? AND page_id=?', (post_id, page_id)).fetchone()
+        if not post or not post_visible(db, page, post, uid):
+            raise PageError('Update unavailable.', 404)
+        snapshot['post'] = dict(post)
+    reason = reason.strip() if isinstance(reason, str) else ''
+    if not 1 <= len(reason) <= 1000:
+        raise PageError('Describe the concern in up to 1,000 characters.')
+    existing = db.execute("SELECT id FROM identity_page_reports WHERE page_id=? AND post_id=? AND reporter_id=? AND status='open'", (page_id, post_id, uid)).fetchone()
+    if existing:
+        return existing['id']
+    result = db.execute('''INSERT INTO identity_page_reports(page_id,post_id,reporter_id,reason,snapshot,created_at)
+        VALUES (?,?,?,?,?,?)''', (page_id, post_id, uid, reason, json.dumps(snapshot, ensure_ascii=False), int(time.time())))
+    return result.lastrowid
+
+
+def review_report(db, staff_id, report_id, decision, reason):
+    # Only call after require_staff_permission + staff factor/fresh-auth + CSRF.
+    row = db.execute('SELECT * FROM identity_page_reports WHERE id=?', (report_id,)).fetchone()
+    if not row:
+        raise PageError('Report unavailable.', 404)
+    reason = reason.strip() if isinstance(reason, str) else ''
+    if decision not in ('hide-page','hide-update','restore-page','restore-update','dismiss') or not 1 <= len(reason) <= 1000:
+        raise PageError('Choose a decision and record a reason of up to 1,000 characters.')
+    if decision.endswith('update') and not row['post_id']:
+        raise PageError('This report does not identify an update.')
+    target = row['post_id'] if decision.endswith('update') else 0
+    now = int(time.time())
+    if decision.startswith('hide-'):
+        db.execute('''INSERT INTO identity_page_hides VALUES (?,?,?,?,?)
+            ON CONFLICT(page_id,post_id) DO UPDATE SET actor_id=excluded.actor_id,reason=excluded.reason,created_at=excluded.created_at''',
+            (row['page_id'], target, staff_id, reason, now))
+    elif decision.startswith('restore-'):
+        db.execute('DELETE FROM identity_page_hides WHERE page_id=? AND post_id=?', (row['page_id'], target))
+    db.execute("UPDATE identity_page_reports SET status='closed',reviewed_by=?,decision=?,decision_reason=?,reviewed_at=? WHERE id=?", (staff_id, decision, reason, now, report_id))
+    db.execute('INSERT INTO identity_page_reviews(report_id,actor_id,decision,reason,created_at) VALUES (?,?,?,?,?)', (report_id, staff_id, decision, reason, now))
+    event(db, row['page_id'], staff_id, 'staff:' + decision + ':' + str(report_id))
 
 
 def register(app, core):
@@ -317,6 +402,68 @@ def register(app, core):
     def page_url(page):
         endpoint = 'identity_pages.creative' if page['kind'] == 'creative' else 'identity_pages.business'
         return url_for(endpoint, slug=page['handle'][1:])
+
+    def staff_actor(permission):
+        uid = core.require_staff_permission(permission)
+        safety = core.get_db().execute('SELECT totp_secret FROM account_safety WHERE user_id=?', (uid,)).fetchone()
+        if not safety or not safety['totp_secret']:
+            return uid, redirect(url_for('community_security'))
+        if not app.extensions['community_auth_helpers']['fresh']():
+            return uid, redirect(url_for('community_reauth', next=request.path))
+        return uid, None
+
+    @bp.route('/pages/<page_id>/report', methods=['GET','POST'])
+    def report_page(page_id):
+        uid = actor()
+        db = core.get_db()
+        page = get(db, page_id)
+        if not visible(db, page, uid) or page['state'] != 'published':
+            abort(404)
+        post_id = request.values.get('post_id', 0, type=int)
+        if post_id is None or not 0 <= post_id < 2**63:
+            abort(404)
+        if request.method == 'POST':
+            app.extensions['community_auth_helpers']['csrf']()
+            limit = app.extensions['community_auth_helpers']['limited']('page-report', 15)
+            if limit is not None:
+                return limit
+            with db:
+                db.execute('BEGIN IMMEDIATE')
+                report(db, uid, page_id, post_id, request.form.get('reason',''))
+            flash('Report sent to staff. Your identity is not shown to the page owner.', 'success')
+            return redirect(url_for('identity_pages.my_reports'))
+        return render_template('identity_page_report.html', page=page, post_id=post_id)
+
+    @bp.get('/pages/reports/mine')
+    def my_reports():
+        uid = actor()
+        rows = core.get_db().execute('''SELECT id,reason,status,decision,decision_reason,created_at
+            FROM identity_page_reports WHERE reporter_id=? ORDER BY id DESC LIMIT 100''', (uid,)).fetchall()
+        return render_template('identity_page_reports.html', reports=rows, staff=False)
+
+    @bp.route('/manage/pages/reports', methods=['GET','POST'])
+    def review_reports():
+        uid, response = staff_actor('review_reports')
+        if response is not None:
+            return response
+        db = core.get_db()
+        if request.method == 'POST':
+            core.require_staff_permission('moderate_posts')
+            app.extensions['community_auth_helpers']['csrf']()
+            report_id = request.form.get('report_id', type=int)
+            if report_id is None or not 0 < report_id < 2**63:
+                abort(400)
+            with db:
+                db.execute('BEGIN IMMEDIATE')
+                review_report(db, uid, report_id, request.form.get('decision'), request.form.get('reason'))
+            flash('Page report reviewed. The decision is recorded.', 'success')
+            return redirect(url_for('identity_pages.review_reports'))
+        before = request.args.get('before', 2**63-1, type=int)
+        if before is None or not 0 < before < 2**63:
+            abort(400)
+        rows = db.execute('SELECT * FROM identity_page_reports WHERE id<? ORDER BY id DESC LIMIT 51', (before,)).fetchall()
+        return render_template('identity_page_reports.html', reports=rows[:50], staff=True,
+            older_url=url_for('identity_pages.review_reports', before=rows[49]['id']) if len(rows)>50 else None)
 
     @bp.get('/pages')
     def mine():
@@ -426,7 +573,7 @@ def register(app, core):
         older = rows[49]['id'] if len(rows) > 50 else None
         endpoint = 'identity_pages.creative' if kind == 'creative' else 'identity_pages.business'
         return render_template('identity_page.html', page=page, page_role=role(db, page, viewer),
-            posts=posts, older_url=url_for(endpoint, slug=canonical[1:], before=older) if older else None)
+            posts=posts, page_hidden=hidden(db,page['id']), older_url=url_for(endpoint, slug=canonical[1:], before=older) if older else None)
 
     @bp.get('/_<slug>')
     def creative(slug):

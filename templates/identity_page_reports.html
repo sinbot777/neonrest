@@ -1,0 +1,13 @@
+{% extends 'base.html' %}{% block title %}Page reports - Neonrest{% endblock %}
+{% block content %}{% include 'partials/identity_page_styles.html' %}
+<main class="identity-page"><h1>{{ 'Review page reports' if staff else 'Your page reports' }}</h1>
+<p><a href="{{ url_for('identity_pages.mine') }}">Your pages</a></p>
+{% for report in reports %}<article><h2>Report #{{ report.id }} · {{ report.status|capitalize }}</h2><p class="page-description">{{ report.reason }}</p>
+{% if report.decision %}<p>{{ report.decision }}: {{ report.decision_reason }}</p>{% endif %}
+{% if staff %}<h3>Restricted evidence snapshot</h3><pre class="page-description">{{ report.snapshot }}</pre>
+<p>Page ID: {{ report.page_id }} · Update ID: {{ report.post_id }} · Reporter account #{{ report.reporter_id }}</p>
+<form method="post"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}"><input type="hidden" name="report_id" value="{{ report.id }}">
+<label for="decision-{{ report.id }}">Decision</label><select name="decision" id="decision-{{ report.id }}"><option value="dismiss">Dismiss</option><option value="hide-page">Hide page</option><option value="restore-page">Restore page</option>{% if report.post_id %}<option value="hide-update">Hide update</option><option value="restore-update">Restore update</option>{% endif %}</select>
+<label for="reason-{{ report.id }}">Decision reason (shown to reporter)</label><textarea name="reason" id="reason-{{ report.id }}" maxlength="1000" required></textarea><button>Record decision</button></form>{% endif %}
+</article>{% else %}<p>No page reports.</p>{% endfor %}
+{% if older_url %}<a href="{{ older_url }}">Older reports</a>{% endif %}</main>{% endblock %}

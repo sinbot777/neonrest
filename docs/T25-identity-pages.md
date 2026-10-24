@@ -1,6 +1,6 @@
 # T25 identity pages — first implementation increment
 
-Status: integrated frontend/backend draft, not merged or deployed. T25 remains incomplete. The candidate now registers its routes in the app and links Your pages from account navigation.
+Status: creative-page rollout candidate. T25 remains incomplete because business billing and broader social integration remain separate. The candidate now registers its routes in the app and links Your pages from account navigation.
 
 ## Confirmed product rules
 
@@ -19,16 +19,21 @@ A page-scoped export function includes only owned pages, the account's delegatio
 
 ## Validation boundaries
 
-Seventeen policy/state tests and nine additional isolated Flask route/template tests pass (26 unique tests). A separate full-app harness passed 38 checks against each currently deployed Production and Sandbox baseline, staged with this candidate and disposable online-backup databases. It exercised the real active-session, origin, CSRF, fresh-auth, verification, birthday/consent, blocking and posting-restriction guards, plus namespace routes, text updates, archiving, own-data export and future-erasure dependencies. External provider calls were forbidden; no live account/content/subscription was created.
+Nineteen policy/state tests and nine additional isolated Flask route/template tests pass (28 unique tests). A separate full-app harness passed 55 checks against each currently deployed Production and Sandbox baseline, staged with this candidate and disposable online-backup databases. It exercised the real active-session, origin, CSRF, fresh-auth, verification, birthday/consent, blocking and posting-restriction guards, plus namespace routes, text updates, archiving, own-data export and future-erasure dependencies. External provider calls were forbidden; no live account/content/subscription was created.
 
-The full-app fixtures include actual global application guards; the smaller policy harness still uses mocked age/contact callbacks. Browser review of the actual rendered templates covered dashboard, creation, editing and public page at 390px and 1,280px (eight page/viewport combinations), with no horizontal overflow, 16px body text, labeled controls, readable links/buttons and a visible keyboard focus outline. Temporary fictional preview files were removed after review. Broader reporting/social integration and provider subscription lifecycle remain outside this initial frontend/backend increment.
+The full-app fixtures include actual global application guards; the smaller policy harness still uses mocked age/contact callbacks. Browser review of the actual rendered templates covered dashboard, creation, editing and public page at 390px and 1,280px (eight page/viewport combinations), with no horizontal overflow, 16px body text, labeled controls, readable links/buttons and a visible keyboard focus outline. Temporary fictional preview files were removed after review. Broader social integration and provider subscription lifecycle remain outside this initial frontend/backend increment.
 
 ## Remaining before rollout
 
-1. Hosted full-app validation passed 38 checks per baseline. Initial desktop/narrow layout and keyboard focus checks passed. Rehearse additive live migration/backup before deployment; broader device/assistive-technology acceptance remains separate. Page-specific reporting/moderation still needs integration.
+1. Hosted full-app validation passed 55 checks per baseline. Initial desktop/narrow layout and keyboard focus checks passed. Rehearse additive live migration/backup before deployment; broader device/assistive-technology acceptance remains separate. Page/update reporting, private immutable evidence snapshots, staff 2FA/fresh-auth review, hide/restore and recorded decisions are implemented. Owners cannot override staff restrictions; reporters can privately track decisions.
 2. Delegate invitation/acceptance and ownership-transfer flows. This draft's delegate storage API is not a public invitation endpoint. No invitations are sent and users do not receive page permissions on either live site.
-3. Extend the implemented page update identity/attribution/audits into follow/unfollow, reporting, moderation and search/feed integration. Pages must never bypass the underlying actor's restrictions or expose a private owner's personal information. Initial page text updates are implemented in separate storage; feed/search/social integration, richer media and reporting remain pending. Neither the private actor ID nor the owner's personal profile is displayed publicly.
+3. Extend the implemented page update identity/attribution/audits into follow/unfollow, search/feed integration. Page/update report and staff hide/restore flows are included in the creative rollout. Pages must never bypass the underlying actor's restrictions or expose a private owner's personal information. Initial page text updates are implemented in separate storage; feed/search/social integration, and richer media remain pending. Neither the private actor ID nor the owner's personal profile is displayed publicly.
 4. Connect a payment provider to the approved $5 USD / three-calendar-month recurring plan (500 USD cents; interval month, count 3; no setup fee). Disclose the full recurring amount before purchase; cancel at period end, retain paid access until then, and do not grant unpaid future periods. Advertising is separate. Add disclosed checkout, provider-verified entitlement, idempotent event processing, cancellation/renewal/failure/refund behavior, account closure handling and reconciliation. Browser return URLs must never grant paid access. Decide whether public business pages follow owner age rules or a separately reviewed business-content policy before exposing them to minors.
 5. Account navigation and app registration are implemented in this candidate. Merge/deploy only after the remaining integration and acceptance work. Candidate source is not a claim of live availability.
 
 No business activation, real charge, live fixture account, notification, or change to existing personal social behavior is performed by this draft.
+
+
+## Creative rollout boundary
+
+Creative pages include creation, publishing, text updates, report submission and private tracking, staff-factor-protected review with immutable evidence and hide/restore decisions. Reporting does not require fresh login, but staff review does. Existing account disabling and age/consent protections remain authoritative. Business pages stay private drafts; no payment provider, subscription, charge or business activation is enabled. Page follows, cross-feed/search discovery, delegate invitations/transfer and richer media remain follow-up scope. No new release version is declared.
