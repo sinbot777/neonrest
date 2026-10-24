@@ -25,8 +25,8 @@ class RouteTests(foundation.PagesTests):
         self.db.commit()
         self.app = Flask(__name__, template_folder=str(Path(__file__).parents[1] / 'templates'))
         self.app.config.update(SECRET_KEY='fictional-fixture-secret', TESTING=True)
-        self.app.jinja_loader = ChoiceLoader([self.app.jinja_loader, DictLoader({
-            'base.html': '<!doctype html><html><head><title>{% block title %}{% endblock %}</title></head><body>{% block content %}{% endblock %}</body></html>'})])
+        self.app.jinja_loader = ChoiceLoader([DictLoader({
+            'base.html': '<!doctype html><html><head><title>{% block title %}{% endblock %}</title></head><body>{% block content %}{% endblock %}</body></html>'}), self.app.jinja_loader])
         self.app.add_url_rule('/account', 'account', lambda: 'Account')
         self.app.add_url_rule('/reauth', 'community_reauth', lambda: 'Reauthenticate')
         self.fresh = True
@@ -38,6 +38,7 @@ class RouteTests(foundation.PagesTests):
         self.app.extensions['community_auth_helpers'] = {
             'csrf': csrf, 'fresh': lambda: self.fresh, 'limited': lambda *a: None}
         self.app.jinja_env.globals['community_token'] = lambda: 'fixture-csrf'
+        self.app.jinja_env.filters['community_time'] = lambda stamp: str(stamp)
         core = types.SimpleNamespace(get_db=lambda: self.db)
         pages.register(self.app, core)
         self.client = self.app.test_client()

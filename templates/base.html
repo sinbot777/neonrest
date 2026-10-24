@@ -87,6 +87,7 @@ body > .session-info > a:focus-visible { outline:2px solid currentColor; outline
         <a href="/account" class="account-link">{{ session['user_email'] }}</a>
 <a href="{{ url_for('feed') }}" class="account-link">Feed</a>
 <a href="{{ url_for('reading_drafts') }}" class="account-link">Drafts</a>
+<a href="{{ url_for('identity_pages.mine') }}" class="account-link">Your pages</a>
 <a href="{{ url_for('explore') }}" class="account-link">Vibes</a>
 <a href="/circles" class="account-link">Circles</a>
 <a href="{{ url_for('user_by_handle',handle=session.user_handle.lstrip('@')) }}" class="account-link">Your profile</a>
@@ -202,4 +203,5 @@ body > .session-info > a:focus-visible { outline:2px solid currentColor; outline
 <script defer src="{{ url_for('static',filename='js/accessibility.js',v='20261021-t18') }}"></script>
 </body>
 </html>
+
 

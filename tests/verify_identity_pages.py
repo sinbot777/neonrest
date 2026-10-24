@@ -172,6 +172,46 @@ class PagesTests(unittest.TestCase):
             pages.create(self.db, 1, 'creative', 'page'+str(i), 'Page')
         self.error(409, pages.create, 1, 'creative', 'overlimit', 'Too many')
 
+    def test_updates_require_published_page_and_current_permission(self):
+        self.error(409, pages.write_post, 1, self.page, 'Draft update')
+        pages.set_state(self.db, 1, self.page, 0, 'published')
+        self.error(403, pages.write_post, 2, self.page, 'Impersonation')
+        post_id = pages.write_post(self.db, 1, self.page, 'An update')
+        post = self.db.execute('SELECT * FROM identity_page_posts WHERE id=?', (post_id,)).fetchone()
+        self.assertEqual(post['author_id'], 1)
+        self.assertTrue(pages.post_visible(self.db, pages.get(self.db, self.page), post, None))
+        self.error(400, pages.write_post, 1, self.page, ' ')
+        self.error(400, pages.write_post, 1, self.page, 'a'*5001)
+        pages.remove_post(self.db, 1, self.page, post_id)
+        post = self.db.execute('SELECT * FROM identity_page_posts WHERE id=?', (post_id,)).fetchone()
+        self.assertFalse(pages.post_visible(self.db, pages.get(self.db, self.page), post, None))
+
+    def test_delegate_authorship_does_not_bypass_author_age_or_blocks(self):
+        pages.set_member(self.db, 1, self.page, 2, 'editor')
+        pages.set_state(self.db, 1, self.page, 0, 'published')
+        post_id = pages.write_post(self.db, 2, self.page, 'Delegate update')
+        post = self.db.execute('SELECT * FROM identity_page_posts WHERE id=?', (post_id,)).fetchone()
+        page = pages.get(self.db, self.page)
+        self.db.execute('INSERT INTO user_blocks VALUES (3,2)')
+        self.assertFalse(pages.post_visible(self.db, page, post, 3))
+        self.db.execute('DELETE FROM user_blocks')
+        with patch.object(ages, 'can_read', side_effect=lambda db, author, viewer: author != 2):
+            self.assertFalse(pages.post_visible(self.db, page, post, 3))
+        self.ready.remove(2)
+        self.assertFalse(pages.post_visible(self.db, page, post, 3))
+        self.ready.add(2)
+        pages.remove_post(self.db, 1, self.page, post_id)
+
+    def test_page_dependencies_and_export_authorship(self):
+        self.assertTrue(pages.erasure_dependencies(self.db, 1))
+        self.assertFalse(pages.erasure_dependencies(self.db, 2))
+        pages.set_state(self.db, 1, self.page, 0, 'published')
+        pages.set_member(self.db, 1, self.page, 2, 'editor')
+        pages.write_post(self.db, 2, self.page, 'Accountable')
+        self.assertTrue(pages.erasure_dependencies(self.db, 2))
+        self.assertEqual(len(pages.export_user(self.db, 2)['own_page_posts']), 1)
+        self.assertEqual(len(pages.export_user(self.db, 1)['own_page_posts']), 0)
+
 
 if __name__ == '__main__':
     unittest.main()

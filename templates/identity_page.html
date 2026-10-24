@@ -8,5 +8,27 @@
   {% if page.state!='published' %}<p>{{ page.state|capitalize }} — visible only to eligible page managers.</p>{% endif %}
   <div class="page-description">{{ page.description }}</div>
   {% if page_role %}<p><a href="{{ url_for('identity_pages.manage', page_id=page.id) }}">Manage this page</a></p>{% endif %}
+  {% if page_role and page.state=='published' and page.kind=='creative' %}
+  <form method="post" action="{{ url_for('identity_pages.updates',page_id=page.id) }}">
+    <input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
+    <label for="page-update">Write an update as {{ page.handle }}</label>
+    <textarea name="body" id="page-update" maxlength="5000" required></textarea>
+    <p>The update appears under this page. Your personal account remains accountable for it.</p>
+    <button>Publish page update</button>
+  </form>
+  {% endif %}
+  <section aria-labelledby="page-updates"><h2 id="page-updates">Updates</h2>
+    {% for post in posts %}
+    <article><p><strong>{{ page.handle }}</strong> · <time>{{ post.created_at|community_time }}</time></p>
+      <div class="page-description">{{ post.body }}</div>
+      {% if page_role and (session.get('user_id')==page.owner_id or session.get('user_id')==post.author_id) %}
+      <form method="post" action="{{ url_for('identity_pages.remove_update',page_id=page.id,post_id=post.id) }}">
+        <input type="hidden" name="theme_csrf_token" value="{{ community_token() }}"><button>Remove update</button>
+      </form>
+      {% endif %}
+    </article>
+    {% else %}<p>No updates are available.</p>{% endfor %}
+  </section>
+  {% if older_url %}<nav aria-label="Page updates"><a href="{{ older_url }}">Older updates</a></nav>{% endif %}
 </main>
 {% endblock %}

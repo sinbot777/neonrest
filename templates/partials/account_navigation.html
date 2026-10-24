@@ -1,7 +1,7 @@
 {% if not account_shell_enabled|default(false) %}
 {% if session.get('user_id') %}
 <nav class="account-navigation" aria-label="Account navigation">
-{% for endpoint,label in [('account','Account'),('community_security','Account safety'),('community_privacy','Privacy'),('community_notifications','Notifications'),('community_data','Your data'),('media_settings','Media settings'),('feed','Feed')] %}
+{% for endpoint,label in [('account','Account'),('community_security','Account safety'),('community_privacy','Privacy'),('community_notifications','Notifications'),('community_data','Your data'),('identity_pages.mine','Your pages'),('media_settings','Media settings'),('feed','Feed')] %}
   <a class="button" href="{{ url_for(endpoint) }}" {% if request.endpoint == endpoint %}aria-current="page"{% endif %}>{{ label }}</a>
 {% endfor %}
   <a class="button" href="{{ url_for('user_by_handle', handle=session.user_handle.lstrip('@')) }}">Your Profile</a>
@@ -13,3 +13,4 @@
 {% endif %}
 
 {% endif %}
+

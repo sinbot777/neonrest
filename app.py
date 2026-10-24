@@ -2720,3 +2720,8 @@ register_theme_gallery(app,sys.modules[__name__])
 
 from .vibe_atmosphere import register as register_vibe_atmosphere
 register_vibe_atmosphere(app,sys.modules[__name__])
+
+
+from .identity_pages import register as register_identity_pages
+register_identity_pages(app,sys.modules[__name__])
+

@@ -1,7 +1,7 @@
 """T25 page identities. Personal logins remain users; pages never gain a login.
 
-This foundation is intentionally not registered with the live app yet. Business
-activation needs the separately reviewed subscription provider integration.
+Business activation needs the separately reviewed subscription provider
+integration. Page posting preserves both actor and owner eligibility.
 """
 import re
 import secrets
@@ -54,9 +54,16 @@ def initialize(db):
             id INTEGER PRIMARY KEY, page_id TEXT NOT NULL REFERENCES identity_pages(id),
             actor_id INTEGER NOT NULL REFERENCES users(id),
             action TEXT NOT NULL, created_at INTEGER NOT NULL)''',
+        '''CREATE TABLE IF NOT EXISTS identity_page_posts(
+            id INTEGER PRIMARY KEY, page_id TEXT NOT NULL REFERENCES identity_pages(id),
+            author_id INTEGER NOT NULL REFERENCES users(id),
+            body TEXT NOT NULL, revision INTEGER NOT NULL DEFAULT 0,
+            removed INTEGER NOT NULL DEFAULT 0 CHECK(removed IN (0,1)),
+            created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL)''',
         'CREATE INDEX IF NOT EXISTS identity_page_owner ON identity_pages(owner_id,id)',
         'CREATE INDEX IF NOT EXISTS identity_page_member ON identity_page_members(user_id,page_id)',
         'CREATE INDEX IF NOT EXISTS identity_page_history ON identity_page_events(page_id,id)',
+        'CREATE INDEX IF NOT EXISTS identity_page_post_list ON identity_page_posts(page_id,id DESC)',
     ]
     # No executescript/commit: the caller owns the startup transaction.
     for statement in statements:
@@ -220,11 +227,63 @@ def export_user(db, uid):
         'owned_pages': [dict(r) for r in db.execute('SELECT * FROM identity_pages WHERE owner_id=? ORDER BY id', (uid,))],
         'delegations': [dict(r) for r in db.execute('SELECT * FROM identity_page_members WHERE user_id=? ORDER BY page_id', (uid,))],
         'own_actions': [dict(r) for r in db.execute('SELECT * FROM identity_page_events WHERE actor_id=? ORDER BY id', (uid,))],
+        'own_page_posts': [dict(r) for r in db.execute('SELECT * FROM identity_page_posts WHERE author_id=? ORDER BY id', (uid,))],
     }
 
 
+def write_post(db, uid, page_id, body):
+    page = get(db, page_id)
+    require_role(db, page, uid, ('owner', 'manager', 'editor'))
+    if page['state'] != 'published' or page['kind'] != 'creative':
+        raise PageError('Publish a creative page before adding updates.', 409)
+    body = body.strip() if isinstance(body, str) else ''
+    if not 1 <= len(body) <= 5000:
+        raise PageError('Write an update of 1–5,000 characters.')
+    now = int(time.time())
+    result = db.execute('''INSERT INTO identity_page_posts(page_id,author_id,body,created_at,updated_at)
+        VALUES (?,?,?,?,?)''', (page_id, uid, body, now, now))
+    event(db, page_id, uid, 'post:create:' + str(result.lastrowid))
+    return result.lastrowid
+
+
+def remove_post(db, uid, page_id, post_id):
+    page = get(db, page_id)
+    require_role(db, page, uid, ('owner', 'manager', 'editor'))
+    post = db.execute('SELECT * FROM identity_page_posts WHERE id=? AND page_id=?', (post_id, page_id)).fetchone()
+    if not post:
+        raise PageError('Update unavailable.', 404)
+    if uid != post['author_id'] and uid != page['owner_id']:
+        raise PageError('Only the author or page owner can remove this update.', 403)
+    db.execute('UPDATE identity_page_posts SET removed=1,revision=revision+1,updated_at=? WHERE id=?',
+        (int(time.time()), post_id))
+    event(db, page_id, uid, 'post:remove:' + str(post_id))
+
+
+def post_visible(db, page, post, viewer):
+    if post['removed'] or not visible(db, page, viewer):
+        return False
+    if not eligible(db, post['author_id'], page['kind']):
+        return False
+    from . import age_policy
+    from .community_features import blocked
+    return not blocked(db, post['author_id'], viewer) and age_policy.can_read(db, post['author_id'], viewer)
+
+
+def erasure_dependencies(db, uid):
+    """Do not orphan page ownership, authorship or audit records on account loss.
+
+    Erasure remains disabled globally. Release this dependency only after the
+    page transfer/disposal and billing cancellation policies are implemented.
+    """
+    return any(db.execute(sql, (uid,)).fetchone() for sql in (
+        'SELECT 1 FROM identity_pages WHERE owner_id=? LIMIT 1',
+        'SELECT 1 FROM identity_page_members WHERE user_id=? LIMIT 1',
+        'SELECT 1 FROM identity_page_posts WHERE author_id=? LIMIT 1',
+        'SELECT 1 FROM identity_page_events WHERE actor_id=? LIMIT 1'))
+
+
 def register(app, core):
-    """Register after community/age initialization; live integration is pending."""
+    """Register after community/age initialization."""
     from flask import Blueprint, abort, flash, redirect, render_template, request, session, url_for
     bp = Blueprint('identity_pages', __name__)
     with app.app_context():
@@ -269,6 +328,37 @@ def register(app, core):
         owned = [page for page in rows if role(db, page, uid)]
         return render_template('identity_pages.html', pages=owned,
             creative_allowed=eligible(db, uid, 'creative'), business_allowed=eligible(db, uid, 'business'), page_url=page_url)
+
+    @bp.post('/pages/<page_id>/updates')
+    def updates(page_id):
+        uid = actor()
+        response = writing()
+        if response is not None:
+            return response
+        limited = app.extensions['community_auth_helpers']['limited']('page-update', 30)
+        if limited is not None:
+            return limited
+        db = core.get_db()
+        with db:
+            db.execute('BEGIN IMMEDIATE')
+            write_post(db, uid, page_id, request.form.get('body', ''))
+        flash('Page update published.', 'success')
+        return redirect(page_url(get(db, page_id)))
+
+    @bp.post('/pages/<page_id>/updates/<int:post_id>/remove')
+    def remove_update(page_id, post_id):
+        if not 0 < post_id < 2**63:
+            abort(404)
+        uid = actor()
+        response = writing()
+        if response is not None:
+            return response
+        db = core.get_db()
+        with db:
+            db.execute('BEGIN IMMEDIATE')
+            remove_post(db, uid, page_id, post_id)
+        flash('Page update removed.', 'success')
+        return redirect(page_url(get(db, page_id)))
 
     @bp.route('/pages/new', methods=['GET', 'POST'])
     def new():
@@ -324,7 +414,19 @@ def register(app, core):
             abort(404)
         if slug != canonical[1:]:
             return redirect(page_url(page), code=308)
-        return render_template('identity_page.html', page=page, page_role=role(db, page, session.get('user_id')))
+        viewer = session.get('user_id')
+        before = request.args.get('before', type=int)
+        if before is not None and not 0 < before < 2**63:
+            abort(400)
+        # Bounded work even when most authors are currently hidden from a reader.
+        rows = db.execute('''SELECT * FROM identity_page_posts
+            WHERE page_id=? AND removed=0 AND id<? ORDER BY id DESC LIMIT 51''',
+            (page['id'], before or 2**63-1)).fetchall()
+        posts = [post for post in rows[:50] if post_visible(db, page, post, viewer)]
+        older = rows[49]['id'] if len(rows) > 50 else None
+        endpoint = 'identity_pages.creative' if kind == 'creative' else 'identity_pages.business'
+        return render_template('identity_page.html', page=page, page_role=role(db, page, viewer),
+            posts=posts, older_url=url_for(endpoint, slug=canonical[1:], before=older) if older else None)
 
     @bp.get('/_<slug>')
     def creative(slug):
