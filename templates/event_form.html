@@ -1,0 +1,13 @@
+{% extends 'base.html' %}{% block title %}{{ 'Edit event' if event else 'Create event' }} - Neonrest{% endblock %}{% block content %}{% include 'partials/identity_page_styles.html' %}
+<main class="identity-page"><h1>{{ 'Edit event' if event else 'Create an event' }}</h1><p><a href="{{ url_for('events.calendar') }}">Events and calendar</a></p>
+<form method="post"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">{% if event %}<input type="hidden" name="revision" value="{{ event.revision }}">{% endif %}
+<label for="event-title">Title</label><input id="event-title" name="title" maxlength="100" required value="{{ event.title if event else '' }}">
+<label for="event-description">Description</label><textarea id="event-description" name="description" maxlength="4000">{{ event.description if event else '' }}</textarea>
+<label for="event-location">Location or meeting instructions</label><input id="event-location" name="location" maxlength="200" value="{{ event.location if event else '' }}">
+<label for="event-start">Start (ISO date/time)</label><input id="event-start" name="starts_at" required placeholder="2026-11-01T14:00:00-08:00" value="{{ event.starts_at|event_iso if event else '' }}">
+<label for="event-end">End (ISO date/time)</label><input id="event-end" name="ends_at" required placeholder="2026-11-01T15:00:00-08:00" value="{{ event.ends_at|event_iso if event else '' }}">
+<label for="event-zone">Timezone</label><input id="event-zone" name="zone" required maxlength="80" value="{{ event.zone if event else 'UTC' }}"><p>Use an IANA timezone such as America/Los_Angeles. Explicit UTC offsets resolve repeated daylight-saving hours.</p>
+{% if not event %}<label for="event-audience">Audience</label><select id="event-audience" name="audience"><option value="private">Only me</option><option value="public">Eligible members</option><option value="circle">Private to a Circle</option></select>
+<label for="event-circle">Circle (only for Circle audience)</label><select id="event-circle" name="circle_id"><option value="">None</option>{% for circle in circles %}<option value="{{ circle_public(circle) }}">{{ circle.name }}</option>{% endfor %}</select>
+<label for="event-page">Post under a page (optional)</label><select id="event-page" name="page_id"><option value="">Personal account</option>{% for page in page_choices %}<option value="{{ page.id }}">{{ page.handle }}</option>{% endfor %}</select>{% else %}<p>Audience and posting identity are fixed for this event. Create a separate event to change them.</p>{% endif %}
+<button name="action" value="save">Save event</button>{% if event and not event.canceled %}<button name="action" value="cancel">Cancel event</button>{% endif %}</form></main>{% endblock %}

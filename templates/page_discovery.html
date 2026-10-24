@@ -1,0 +1,5 @@
+{% extends 'base.html' %}{% block title %}Discover pages - Neonrest{% endblock %}{% block content %}{% include 'partials/identity_page_styles.html' %}
+<main class="identity-page"><h1>Discover pages</h1>{% include 'partials/page_social_navigation.html' %}
+<form method="get"><label for="page-query">Search page names, handles and descriptions</label><input name="q" id="page-query" maxlength="120" value="{{ q }}"><button>Search pages</button></form>
+{% for page in pages %}<article><h2><a href="{{ page_link(page) }}">{{ page.name }}</a></h2><p>{{ page.handle }}</p><p class="page-description">{{ page.description }}</p></article>{% else %}<p>No eligible published pages found.</p>{% endfor %}
+{% if older_url %}<a href="{{ older_url }}">More pages</a>{% endif %}</main>{% endblock %}

@@ -135,6 +135,9 @@ def erasure_blockers(db, uid):
         from .identity_pages import erasure_dependencies
         if erasure_dependencies(db,uid):
             result.append('Page ownership, delegation or authorship requires reviewed transfer/disposal')
+    for table,column in [('page_followers','user_id'),('page_invitations','sender_id'),('page_invitations','recipient_id'),('calendar_events','creator_id'),('calendar_responses','user_id'),('calendar_reports','reporter_id'),('calendar_reports','reviewed_by'),('calendar_audit','actor_id'),('page_subscriptions','owner_id')]:
+        if table in ts and db.execute('SELECT 1 FROM '+table+' WHERE '+column+'=? LIMIT 1',(uid,)).fetchone():
+            result.append('Page, billing or calendar dependencies require reviewed disposal')
     pids=[]
     if 'posts' in ts:
         for row in db.execute('SELECT id,user_id,target_user_id FROM posts WHERE user_id=? OR target_user_id=?',(uid,uid)):
