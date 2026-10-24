@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block title %}Manage {{ page.handle }} - Neonrest{% endblock %}
+{% block content %}
+{% include 'partials/identity_page_styles.html' %}
+<main class="identity-page">
+  <h1>Manage {{ page.handle }}</h1>
+  <nav aria-label="Pages"><a href="{{ url_for('identity_pages.mine') }}">Your pages</a><a href="{{ page_url(page) }}">View page</a></nav>
+  <p>{{ page.kind|capitalize }} · {{ page.state|capitalize }} · Your role: {{ page_role }}</p>
+  {% if page.kind=='business' %}<p>Business activation requires a recurring subscription. The launch price is $5 USD per business page every three months, with no setup fee. Cancel anytime; the page stays active through the paid period. Checkout is not available yet. This draft incurs no charge.</p>{% endif %}
+  {% if page.state!='archived' %}
+  <form method="post">
+    <input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
+    <input type="hidden" name="revision" value="{{ page.revision }}"><input type="hidden" name="action" value="edit">
+    <label for="page-name">Page name</label><input name="name" id="page-name" value="{{ page.name }}" maxlength="80" required>
+    <label for="page-description">Description</label><textarea name="description" id="page-description" maxlength="4000">{{ page.description }}</textarea>
+    <button>Save page</button>
+  </form>
+  {% endif %}
+  {% if page_role=='owner' %}
+  <form method="post">
+    <input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
+    <input type="hidden" name="revision" value="{{ page.revision }}"><input type="hidden" name="action" value="state">
+    <label for="page-state">Visibility</label><select name="state" id="page-state">
+      <option value="draft" {% if page.state=='draft' %}selected{% endif %}>Private draft</option>
+      {% if page.kind=='creative' %}<option value="published" {% if page.state=='published' %}selected{% endif %}>Published — existing age and block rules apply</option>{% endif %}
+      <option value="archived" {% if page.state=='archived' %}selected{% endif %}>Archived — keep the handle reserved</option>
+    </select>
+    <button>Update visibility</button>
+  </form>
+  {% endif %}
+</main>
+{% endblock %}

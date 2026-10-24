@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block title %}Create a page - Neonrest{% endblock %}
+{% block content %}
+{% include 'partials/identity_page_styles.html' %}
+<main class="identity-page">
+  <h1>Create a page</h1>
+  <nav aria-label="Pages"><a href="{{ url_for('identity_pages.mine') }}">Your pages</a></nav>
+  <p>Creative pages are free and use <strong>_handle</strong>. Business pages use <strong>$handle</strong> and require an adult owner and a recurring subscription.</p>
+  <p>Business pages can currently be prepared as private drafts. The launch price is $5 USD per business page every three months, with no setup fee. Cancel anytime; the page stays active through the paid period. Checkout is not available yet. Creating a draft incurs no charge and does not activate a subscription.</p>
+  {% if creative_allowed or business_allowed %}
+  <form method="post">
+    <input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
+    <label for="page-kind">Page type</label><select name="kind" id="page-kind" required>
+      {% if creative_allowed %}<option value="creative">Creative — _handle — free</option>{% endif %}
+      {% if business_allowed %}<option value="business">Business — $handle — subscription required before activation</option>{% endif %}
+    </select>
+    <label for="page-handle">Handle</label><input name="handle" id="page-handle" maxlength="31" required aria-describedby="handle-help" autocomplete="off">
+    <p id="handle-help">Use 3–30 letters, numbers, underscores or hyphens, starting with a letter or number. You may include the matching _ or $ prefix. Handles are not case-sensitive. Each prefix has its own namespace.</p>
+    <label for="page-name">Page name</label><input name="name" id="page-name" maxlength="80" required>
+    <label for="page-description">Description</label><textarea name="description" id="page-description" maxlength="4000"></textarea>
+    <button type="submit">Create private draft</button>
+  </form>
+  {% else %}<p>Your account is not currently eligible to create a page. Check account verification and age setup.</p>{% endif %}
+</main>
+{% endblock %}

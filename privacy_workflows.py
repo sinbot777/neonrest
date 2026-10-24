@@ -131,6 +131,10 @@ def erasure_blockers(db, uid):
     result=blockers(db,uid); ts=table_columns(db); related=set()
     if 'privacy_submission_documents' in ts and db.execute('SELECT 1 FROM privacy_submission_documents d JOIN family_data_requests r ON r.id=d.request_id WHERE d.purged_at IS NULL AND (r.parent_id=? OR r.child_id=?)',(uid,uid)).fetchone():
         result.append('Private verification documents require reviewed disposal')
+    if 'identity_pages' in ts:
+        from .identity_pages import erasure_dependencies
+        if erasure_dependencies(db,uid):
+            result.append('Page ownership, delegation or authorship requires reviewed transfer/disposal')
     pids=[]
     if 'posts' in ts:
         for row in db.execute('SELECT id,user_id,target_user_id FROM posts WHERE user_id=? OR target_user_id=?',(uid,uid)):

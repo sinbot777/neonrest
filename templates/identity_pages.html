@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}Your pages - Neonrest{% endblock %}
+{% block content %}
+{% include 'partials/identity_page_styles.html' %}
+<main class="identity-page">
+  <h1>Your pages</h1>
+  <p>Your personal account uses <strong>@handle</strong>. Creative pages use <strong>_handle</strong> and business pages use <strong>$handle</strong>.</p>
+  <nav aria-label="Pages"><a href="{{ url_for('identity_pages.new') }}">Create a page</a><a href="{{ url_for('identity_pages.my_reports') }}">Your page reports</a><a href="{{ url_for('account') }}">Account</a></nav>
+  {% for page in pages %}
+  <article><h2>{{ page.name }}</h2><p>{{ page.handle }} · {{ page.kind|capitalize }} · {{ page.state|capitalize }}</p>
+    <a href="{{ url_for('identity_pages.manage', page_id=page.id) }}">Manage {{ page.handle }}</a> · <a href="{{ page_url(page) }}">View page</a>
+  </article>
+  {% else %}<p>You have no pages available to manage.</p>{% endfor %}
+</main>
+{% endblock %}
