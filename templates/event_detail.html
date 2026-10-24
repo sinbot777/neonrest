@@ -1,0 +1,7 @@
+{% extends 'base.html' %}{% block title %}{{ event.title }} - Neonrest{% endblock %}{% block content %}{% include 'partials/identity_page_styles.html' %}
+<main class="identity-page"><h1>{{ event.title }}</h1><p><a href="{{ url_for('events.calendar') }}">Events and calendar</a></p>
+{% if event.canceled %}<p role="status">This event is canceled.</p>{% endif %}{% if event.staff_hidden %}<p role="status">Staff have hidden this event. Contact ToS@neonrest.com for review.</p>{% endif %}
+<p>{{ event.starts_at|community_time }} — {{ event.ends_at|community_time }} · Timezone: {{ event.zone }}</p><p>{{ event.location }}</p><div class="page-description">{{ event.description }}</div>
+<p><a href="{{ url_for('events.download',ref=event.id) }}">Download calendar event (.ics)</a> · <a href="{{ url_for('events.report_event',ref=event.id) }}">Report event</a></p>
+{% if can_manage %}<p><a href="{{ url_for('events.manage',ref=event.id) }}">Edit or cancel event</a></p>{% endif %}
+{% if not event.canceled and not event.staff_hidden %}<form method="post" action="{{ url_for('events.response',ref=event.id) }}"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}"><p>Your private response: {{ response or 'None' }}</p><button name="response" value="going">Going</button><button name="response" value="interested">Interested</button><button name="response" value="remove">Remove response</button></form>{% endif %}</main>{% endblock %}

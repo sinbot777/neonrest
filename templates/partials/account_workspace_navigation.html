@@ -20,7 +20,7 @@
       {% if can_access_manage() or family_review_allowed %}
       <section class="workspace-navigation-group" aria-label="Staff tools">
         <h2>Staff tools</h2><div class="workspace-links">
-          {% if can_access_manage() %}{{ workspace_link('manage_home','Management') }}{{ workspace_link('identity_pages.review_reports','Page reports') }}{% endif %}
+          {% if can_access_manage() %}{{ workspace_link('manage_home','Management') }}{{ workspace_link('identity_pages.review_reports','Page reports') }}{{ workspace_link('events.review','Event reports') }}{% endif %}
           {% if family_review_allowed %}{{ workspace_link('family_review','Family consent review') }}{% endif %}
         </div>
       </section>
