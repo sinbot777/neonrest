@@ -6,7 +6,7 @@
   <h1>Create a page</h1>
   <nav aria-label="Pages"><a href="{{ url_for('identity_pages.mine') }}">Your pages</a></nav>
   <p>Creative pages are free and use <strong>_handle</strong>. Business pages use <strong>$handle</strong> and require an adult owner and a recurring subscription.</p>
-  <p>Business pages can currently be prepared as private drafts. Pricing and checkout are not available yet. Creating a draft incurs no charge and does not activate a subscription.</p>
+  <p>Business pages can currently be prepared as private drafts. The launch price is $5 USD per business page every three months, with no setup fee. Cancel anytime; the page stays active through the paid period. Checkout is not available yet. Creating a draft incurs no charge and does not activate a subscription.</p>
   {% if creative_allowed or business_allowed %}
   <form method="post">
     <input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">

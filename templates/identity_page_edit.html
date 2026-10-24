@@ -6,7 +6,7 @@
   <h1>Manage {{ page.handle }}</h1>
   <nav aria-label="Pages"><a href="{{ url_for('identity_pages.mine') }}">Your pages</a><a href="{{ page_url(page) }}">View page</a></nav>
   <p>{{ page.kind|capitalize }} · {{ page.state|capitalize }} · Your role: {{ page_role }}</p>
-  {% if page.kind=='business' %}<p>Business activation requires a recurring subscription. Pricing and checkout are not available yet. This draft incurs no charge.</p>{% endif %}
+  {% if page.kind=='business' %}<p>Business activation requires a recurring subscription. The launch price is $5 USD per business page every three months, with no setup fee. Cancel anytime; the page stays active through the paid period. Checkout is not available yet. This draft incurs no charge.</p>{% endif %}
   {% if page.state!='archived' %}
   <form method="post">
     <input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
