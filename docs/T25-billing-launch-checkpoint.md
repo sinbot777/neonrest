@@ -15,3 +15,9 @@ Remaining: adult Sandbox sign-in for browser checkout success/decline/abandon/re
 An owner-authorized fictional adult Sandbox account completed actual hosted Stripe test checkout. Verified abandonment without entitlement, retry reusing the same session, declined-card recovery, successful payment with signed-webhook paid-through confirmation, invoice display, adding a replacement default test payment method, and period-end renewal cancellation preserving paid time. The business page remained unpublishable in test mode. The provider test subscription was canceled after acceptance and the test page archived. No live charge occurred.
 
 Remaining launch work: Production private credentials and signed webhook, customer-facing support/policy details, Production deployment and controlled live acceptance. Browser checkout is no longer awaiting an adult account.
+
+## Production deployment checkpoint
+
+PR #78 merged at cc070f6b274a6be766bede039126545b4077f0a6; Sandbox #79 merged at b6e8f11edfe70e316ca7e55e423e9074359d49bc. Tested source installed separately in both environments with verified source/database rollback checkpoints and normal web-app reload. Production page creation renders correctly.
+
+Stripe public business information now includes the www site URL, existing support email, guide, terms and privacy links. The live destination form is prepared for /billing/stripe/webhook with nine selected events. It has not been submitted. Stripe requires owner verification before revealing the existing live API key. No live key installed, no live destination created and no live billing enabled at this checkpoint.
