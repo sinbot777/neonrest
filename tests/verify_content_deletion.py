@@ -65,4 +65,4 @@ with patch.object(core,'get_db',side_effect=strict_db):
  check(not query("SELECT 1 FROM public_ids WHERE kind='post' AND internal_id=?",(pid,)),'Deleted post opaque ID retired by existing trigger')
  check(violations()==baseline,'Post deletion introduces no FK violations')
 check(app.config.get('RETENTION_ENABLED') is False,'Automatic account erasure remains disabled')
-print(json.dumps({'checks':checks,'passed':True,'scope':'real deletion routes; FK on; disposable copy; no live writes'}))
+print(json.dumps({'checks':checks,'passed':True,'scope':'real deletion routes; disposable copy; no live writes','foreign_keys':os.environ.get('DELETION_FIXTURE_FK','on')}))
