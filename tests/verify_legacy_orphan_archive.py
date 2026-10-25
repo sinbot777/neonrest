@@ -36,7 +36,9 @@ for table in ['comments','post_vibes','public_ids','public_id_aliases','moderate
  for r in archived:
   if r['table_name']!=table:continue
   assert table in allowed;value=json.loads(r['payload']);columns={c[1] for c in db.execute('PRAGMA table_info('+table+')')};assert set(value)<=columns
-  names=list(value);quoted=','.join('"'+n+'"' for n in names)
+  names=list(value)
+  if r['source_rowid'] is not None:value['rowid']=r['source_rowid'];names.insert(0,'rowid')
+  quoted=','.join('"'+n+'"' for n in names)
   db.execute('INSERT INTO '+table+' ('+quoted+') VALUES ('+','.join('?' for n in names)+')',[value[n] for n in names])
 assert [dict(r) for r in db.execute('SELECT * FROM comments ORDER BY id')]==original
 for n in tables:assert db.execute('SELECT COUNT(*) FROM "'+n.replace('"','""')+'"').fetchone()[0]==counts[n],n
