@@ -62,16 +62,16 @@ def archive_legacy_orphans(db, batch, comment_ids, post_vibes):
     tables={r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     db.execute("""CREATE TABLE IF NOT EXISTS reference_repair_archive(
         batch TEXT NOT NULL,table_name TEXT NOT NULL,record_key TEXT NOT NULL,
-        payload TEXT NOT NULL,sha256 TEXT NOT NULL,reason TEXT NOT NULL,
+        source_rowid INTEGER,payload TEXT NOT NULL,sha256 TEXT NOT NULL,reason TEXT NOT NULL,
         archived_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY(batch,table_name,record_key))""")
-    def save(table, records):
+    def save(table, records, source_rowid=None):
         for row in records:
             value=dict(row)
             payload=json.dumps(value,sort_keys=True,ensure_ascii=False)
             digest=hashlib.sha256(payload.encode()).hexdigest()
-            db.execute('INSERT INTO reference_repair_archive(batch,table_name,record_key,payload,sha256,reason) VALUES (?,?,?,?,?,?)',
-                (batch,table,digest,payload,digest,'Owner-reviewed legacy test orphan; archived without reconstructing missing parents'))
+            db.execute('INSERT INTO reference_repair_archive(batch,table_name,record_key,source_rowid,payload,sha256,reason) VALUES (?,?,?,?,?,?,?)',
+                (batch,table,digest,source_rowid,payload,digest,'Owner-reviewed legacy test orphan; archived without reconstructing missing parents'))
     save('comments',rows)
     for row in rows:
         cid=row['id']
@@ -91,7 +91,7 @@ def archive_legacy_orphans(db, batch, comment_ids, post_vibes):
         row=db.execute('SELECT * FROM post_vibes WHERE post_id=? AND vibe_id=?',(pid,vid)).fetchone()
         if not row or db.execute('SELECT 1 FROM posts WHERE id=?',(pid,)).fetchone():
             raise ValueError('Reviewed orphan mapping changed')
-        save('post_vibes',[row])
+        save('post_vibes',[row],db.execute('SELECT rowid FROM post_vibes WHERE post_id=? AND vibe_id=?',(pid,vid)).fetchone()[0])
         db.execute('DELETE FROM post_vibes WHERE post_id=? AND vibe_id=?',(pid,vid))
     return {'comments':len(rows),'post_vibes':len(post_vibes),
             'archived_records':db.execute('SELECT COUNT(*) FROM reference_repair_archive WHERE batch=?',(batch,)).fetchone()[0]}
