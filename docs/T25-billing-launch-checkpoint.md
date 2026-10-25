@@ -1,3 +1,11 @@
+## Current state — live configuration enabled October 24, 2026 (Pacific)
+
+This section supersedes the earlier disabled/pending configuration checkpoints below. Production's existing live API key and a new nine-event live webhook are installed in the private owner-only configuration; live mode and the explicit live-confirmed gate are enabled. Both webhook and REST contracts use 2024-06-20. No credentials or signing secrets are in this repository.
+
+Verified live account Payments/Payouts, exact USD $5 per three-calendar-month price, enabled endpoint/event set, private file permissions and live customer portal features. Bad/expired webhook signatures return 400. An unpaid live hosted Checkout session was created and expired; no live customer, payment or subscription was created. The browser test-mode lifecycle acceptance and disposable app regressions remain passed. Stripe customer-facing support/www/terms/privacy details are configured.
+
+The first actual paid subscription and public business-page activation remain unperformed owner/customer acceptance. No real payment has been executed by the agent.
+
 # Business billing launch checkpoint — October 24, 2026 (Pacific)
 
 Live billing is disabled. Stripe's live account status shows Payments and Payouts active with no active account tasks. A live Neonrest Business Page product at USD $5 every three calendar months is prepared; no live subscription or charge was created.
