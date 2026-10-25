@@ -148,12 +148,22 @@ def register(app,core):
             response=writing()
             if response is not None:return response
             if not cfg:raise pages.PageError('Stripe account configuration is not complete. No charge was made.',503)
-            if request.form.get('action')=='cancel':
+            action=request.form.get('action','checkout')
+            if action=='portal':
+                if not row or not row['customer_id']:raise pages.PageError('No billing account is available yet.',409)
+                portal=api(cfg,'POST','billing_portal/sessions',{'customer':row['customer_id'],'return_url':'https://www.neonrest.com'+url_for('page_billing.manage',page_id=page_id)})
+                target=portal.get('url','')
+                if not target.startswith('https://billing.stripe.com/'):raise pages.PageError('Billing management is unavailable.',503)
+                return redirect(target,code=303)
+            if action not in ('checkout','cancel'):raise pages.PageError('Choose a billing action.')
+            if action=='cancel':
                 if not row or not row['subscription_id']:raise pages.PageError('No active subscription to cancel.',409)
+                if row['status'] in ('canceled','incomplete_expired'):return redirect(url_for('page_billing.manage',page_id=page_id))
                 api(cfg,'POST','subscriptions/'+row['subscription_id'],{'cancel_at_period_end':'true'},'neonrest-cancel-'+row['subscription_id'])
                 with db:db.execute('UPDATE page_subscriptions SET cancel_at_period_end=1,updated_at=? WHERE page_id=?',(int(time.time()),page_id))
                 return redirect(url_for('page_billing.manage',page_id=page_id))
             if request.form.get('accept_terms')!='yes':raise pages.PageError('Accept the recurring $5 USD charge every three months before checkout.')
+            if row and row['review_required']:raise pages.PageError('Contact support to resolve the billing review before starting another subscription.',409)
             check_price(api(cfg,'GET','prices/'+cfg['price']))
             if row and row['subscription_id'] and row['status'] not in ('canceled','incomplete_expired'):raise pages.PageError('Manage the existing subscription instead of creating another.',409)
             if row and row['paid_until']>time.time():raise pages.PageError('Your paid period has not ended. Manage the current subscription.',409)
@@ -180,7 +190,8 @@ def register(app,core):
             if not url.startswith('https://checkout.stripe.com/'):raise pages.PageError('Checkout is unavailable.',503)
             with db:db.execute('UPDATE page_subscriptions SET checkout_id=?,updated_at=? WHERE page_id=?',(checkout['id'],int(time.time()),page_id))
             return redirect(url,code=303)
-        return render_template('page_billing.html',page=page,billing=row,configured=bool(cfg),mode=cfg['mode'] if cfg else 'off',entitled=entitled(db,page))
+        can_checkout=not row or not row['subscription_id'] or (row['status'] in ('canceled','incomplete_expired') and row['paid_until']<=time.time() and not row['review_required'])
+        return render_template('page_billing.html',page=page,billing=row,configured=bool(cfg),mode=cfg['mode'] if cfg else 'off',entitled=entitled(db,page),can_checkout=can_checkout)
     @bp.post('/billing/stripe/webhook')
     def webhook():
         cfg=config()
@@ -199,3 +210,4 @@ def register(app,core):
     @bp.after_request
     def private(response):response.headers['Cache-Control']='private, no-store';return response
     app.register_blueprint(bp)
+
