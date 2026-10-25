@@ -7,7 +7,7 @@
 {% if page_role=='owner' %}<p><a href="{{ url_for('page_social.team',page_id=page.id) }}">Team and ownership</a>{% if page.kind=='business' %} · <a href="{{ url_for('page_billing.manage',page_id=page.id) }}">Subscription and billing</a>{% endif %}</p>{% endif %}
   <nav aria-label="Pages"><a href="{{ url_for('identity_pages.mine') }}">Your pages</a><a href="{{ page_url(page) }}">View page</a></nav>
   <p>{{ page.kind|capitalize }} · {{ page.state|capitalize }} · Your role: {{ page_role }}</p>
-  {% if page.kind=='business' %}<p>Business activation requires a recurring subscription. The launch price is $5 USD per business page every three months, with no setup fee. Cancel anytime; the page stays active through the paid period. Checkout is not available yet. This draft incurs no charge.</p>{% endif %}
+  {% if page.kind=='business' %}<p>Business activation requires a recurring subscription. The launch price is $5 USD per business page every three months, with no setup fee. Cancel anytime; the page stays active through the paid period. Open Subscription and billing from page management to check payment availability. This draft incurs no charge.</p>{% endif %}
   {% if page.state!='archived' %}
   <form method="post">
     <input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
@@ -31,3 +31,4 @@
   {% endif %}
 </main>
 {% endblock %}
+
