@@ -43,7 +43,7 @@ def archive_legacy_orphans(db, batch, comment_ids, post_vibes):
     from .content_deletion import _preserved
     if not db.in_transaction:
         raise RuntimeError('Archiving requires an explicit transaction')
-    if not batch or len(batch)>100 or len(comment_ids)>100:
+    if not batch or len(batch)>100 or len(comment_ids)>100 or len(post_vibes)>100:
         raise ValueError('Invalid repair batch')
     if len(set(comment_ids))!=len(comment_ids):
         raise ValueError('Duplicate comment selection')
