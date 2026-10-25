@@ -1222,8 +1222,13 @@ def delete_comment(comment_id):
         flash("Unauthorized or comment not found.", "error")
         return redirect('/feed')
 
-    db.execute('DELETE FROM comments WHERE id = ?', (real_id,))
-    db.commit()
+    from .content_deletion import remove_comment, DeletionBlocked
+    try:
+        with db:
+            db.execute('BEGIN IMMEDIATE')
+            remove_comment(db, real_id, session.get('user_id'))
+    except DeletionBlocked as error:
+        abort(409, description=str(error))
     flash("Comment deleted.", "success")
     return redirect(url_for('feed'))
 
@@ -1460,9 +1465,13 @@ def delete_post(post_id):
         flash("You do not have permission to delete this post.", "error")
         return redirect('/feed')
 
-    db.execute('DELETE FROM post_vibes WHERE post_id = ?', (post_id,))
-    db.execute('DELETE FROM posts WHERE id = ?', (post_id,))
-    db.commit()
+    from .content_deletion import remove_post, DeletionBlocked
+    try:
+        with db:
+            db.execute('BEGIN IMMEDIATE')
+            remove_post(db, post_id, session['user_id'])
+    except DeletionBlocked as error:
+        abort(409, description=str(error))
     flash("Post deleted successfully.", "success")
     return redirect('/feed')
 
