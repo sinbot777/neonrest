@@ -180,8 +180,10 @@ def register(app, core):
     app.config.setdefault('STORAGE_ENVIRONMENT', environment)
     path = Path(os.environ.get('NEONREST_STORAGE_POLICY', '/home/sinbot/private/storage-policy.json'))
     expected_db=Path('/home/sinbot/db')/('neonrest_sandbox.db' if environment=='sandbox' else 'neonrest.db')
-    expected_instance=Path('/home/sinbot/private')/('neonrest_sandbox' if environment=='sandbox' else 'neonrest_production')/'instance'
-    deployed=(Path(app.config.get('DATABASE','')).absolute()==expected_db and Path(app.instance_path).absolute()==expected_instance)
+    expected_source=Path('/home/sinbot')/('neonrest_sandbox' if environment=='sandbox' else 'neonrest')
+    # Sandbox retains Flask's legacy default instance directory. Match the
+    # deployed source and database rather than assuming an instance location.
+    deployed=(Path(app.config.get('DATABASE','')).absolute()==expected_db and Path(app.root_path).absolute()==expected_source)
     # A disposable database/instance must never inherit the live accounting
     # ledger, including when regression suites run after activation.
     if deployed and path.is_file():
