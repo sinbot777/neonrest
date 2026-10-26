@@ -44,6 +44,16 @@ check(own==expected+':user:'+str(users['Regular']),'Charge accountable uploader'
 app.config['STORAGE_POLICY']['per_owner']=8192
 response=avatar();check(response.status_code==413,'Quota denies replacement')
 check(query('SELECT avatar_path FROM users WHERE id=?',(users['Regular'],))[0][0]==old and oldpath.read_bytes()==raw,'Denial preserves prior avatar bytes and reference')
+draft='UNSAVED <script>kept</script>'
+before_posts=query('SELECT COUNT(*) FROM posts')[0][0]
+def denied_post(headers=None):
+ return clients['Regular'].post('/create_post',data={'content':draft,'vibes':'VM Fixture One','circle':'public','target_user_id':str(users['Regular']),'theme_csrf_token':token,'post_image':(png(),'draft.png'),'image_alt':'Fixture'},headers=headers or {},environ_overrides=env)
+response=denied_post()
+check(response.status_code==413 and b'&lt;script&gt;kept&lt;/script&gt;' in response.data and b'<script>kept</script>' not in response.data,'Quota failure preserves post text as escaped selectable content')
+check(query('SELECT COUNT(*) FROM posts')[0][0]==before_posts,'Denied post is not partially published')
+response=denied_post({'Accept':'application/json'})
+check(response.status_code==413 and response.json.get('draft_text')==draft,'JSON recovery returns only submitted draft text')
+check('no-store' in response.headers.get('Cache-Control','') and token not in response.get_data(as_text=True),'Recovery cannot expose a CSRF token or become cacheable')
 app.config['STORAGE_POLICY']['per_owner']=300000
 with patch.object(storage,'allocated_tree',return_value=1024*1024*1024):response=avatar()
 check(response.status_code==507,'Provider headroom fails with recoverable response')
@@ -98,6 +108,9 @@ import fcntl
 with ledgerpath.with_suffix('.upload-lock').open('a+b') as lock:
  fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB);response=avatar()
 check(response.status_code==503,'Concurrent uploader receives retry guidance')
+with ledgerpath.with_suffix('.upload-lock').open('a+b') as lock:
+ fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB);blocked=denied_post()
+check(blocked.status_code==503 and b'&lt;script&gt;kept&lt;/script&gt;' in blocked.data,'Busy upload preserves selectable post text')
 with patch.object(storage,'allocated_tree',side_effect=OSError(errno.EIO,'uncertain')):response=avatar()
 check(response.status_code==503,'Incomplete capacity scan cannot admit output')
 with sqlite3.connect(ledgerpath) as busy:
