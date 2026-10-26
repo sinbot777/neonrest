@@ -11,6 +11,9 @@ from pathlib import Path
 from flask import abort, current_app, flash, g, redirect, render_template, request, send_from_directory, session, url_for
 from PIL import Image, ImageOps, ImageSequence, UnidentifiedImageError
 
+from . import storage_uploads as storage
+from .storage_writers import OutputTooLarge
+
 IMAGE_LIMIT = 25 * 1024 * 1024
 GIF_LIMIT = 5 * 1024 * 1024
 MIDI_LIMIT = 256 * 1024
@@ -99,28 +102,27 @@ def _save_image(upload, alt, filter_name, title):
             if sum(durations) > 90_000:
                 abort(400, description='Animated GIFs must be 90 seconds or shorter.')
             poster = name + '.jpg'
-            frames[0].save(folder / poster, 'JPEG', quality=85)
             once = name + '-once.gif'
             loop = name + '-loop.gif'
-            frames[0].save(folder / once, 'GIF', save_all=True, append_images=frames[1:],
-                           duration=durations, optimize=True, disposal=2)
-            frames[0].save(folder / loop, 'GIF', save_all=True, append_images=frames[1:],
-                           duration=durations, optimize=True, disposal=2, loop=0)
+            poster_data = storage.encode_image(frames[0], 4*1024*1024, 'JPEG', quality=85)
+            once_data = storage.encode_image(frames[0], 16*1024*1024, 'GIF', save_all=True, append_images=frames[1:], duration=durations, optimize=True, disposal=2)
+            loop_data = storage.encode_image(frames[0], 16*1024*1024, 'GIF', save_all=True, append_images=frames[1:], duration=durations, optimize=True, disposal=2, loop=0)
+            storage.write([(folder/poster,poster_data),(folder/once,once_data),(folder/loop,loop_data)], 'media')
             return dict(kind='gif', filename=once, poster=poster, loop_filename=loop,
                         alt_text=alt, filter_name=filter_name, title=title)
         image = ImageOps.exif_transpose(image)
         image.thumbnail((2200, 2200))
         filename = name + '.webp'
         if image.mode in {'RGBA', 'LA'} or 'transparency' in image.info:
-            image.convert('RGBA').save(folder / filename, 'WEBP', lossless=True, method=4)
+            storage.image(folder / filename, image.convert('RGBA'), 20*1024*1024, 'WEBP', 'media', lossless=True, method=4)
         else:
-            image.convert('RGB').save(folder / filename, 'WEBP', quality=88, method=4)
+            storage.image(folder / filename, image.convert('RGB'), 20*1024*1024, 'WEBP', 'media', quality=88, method=4)
         return dict(kind='image', filename=filename, poster=None, loop_filename=None,
                     alt_text=alt, filter_name=filter_name, title=title)
+    except OutputTooLarge:
+        abort(413, description='The processed animation is too large. Choose a smaller animation.')
     except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError) as error:
         from .resource_errors import discard_files, raise_if_storage_full
-        if folder is not None and name:
-            discard_files(*(folder / (name + suffix) for suffix in ('.jpg', '.webp', '-once.gif', '-loop.gif')))
         raise_if_storage_full(error)
         abort(400, description='The selected image could not be read.')
 
@@ -221,7 +223,7 @@ def _save_midi(upload, title):
     except (ValueError, IndexError, struct.error) as exc:
         abort(400, description=str(exc))
     filename = secrets.token_hex(20) + '.mid'
-    (media_folder() / filename).write_bytes(raw)
+    storage.write([(media_folder() / filename, raw)], 'media')
     return filename
 
 
@@ -230,18 +232,19 @@ def prepare_post_media():
     midi = request.files.get('post_midi')
     has_image = bool(image and image.filename)
     has_midi = bool(midi and midi.filename)
-    media = []
-    if has_image:
-        chosen = request.form.get('image_filter', 'original')
-        if chosen not in FILTERS:
-            abort(400, description='Invalid image filter.')
-        media.append(_save_image(image, request.form.get('image_alt', '').strip(), chosen,
-                                 request.form.get('image_title', '')))
-    if has_midi:
-        title = _media_title(midi, request.form.get('midi_title', ''))
-        media.append(dict(kind='midi', filename=_save_midi(midi, title), poster=None,
-                          loop_filename=None, alt_text='', filter_name='original', title=title))
-    return media
+    with storage.batch():
+        media = []
+        if has_image:
+            chosen = request.form.get('image_filter', 'original')
+            if chosen not in FILTERS:
+                abort(400, description='Invalid image filter.')
+            media.append(_save_image(image, request.form.get('image_alt', '').strip(), chosen,
+                                     request.form.get('image_title', '')))
+        if has_midi:
+            title = _media_title(midi, request.form.get('midi_title', ''))
+            media.append(dict(kind='midi', filename=_save_midi(midi, title), poster=None,
+                              loop_filename=None, alt_text='', filter_name='original', title=title))
+        return media
 
 
 def attach_post_media(db, post_id, media):

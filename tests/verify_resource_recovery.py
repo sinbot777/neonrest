@@ -17,7 +17,7 @@ package=sys.argv[1];stage=Path(sys.argv[2]);_fixture_directory=tempfile.Temporar
 src=sqlite3.connect('file:/home/sinbot/db/'+package+'.db?mode=ro',uri=True);dst=sqlite3.connect(w/'fixture.db');src.backup(dst);src.close();dst.close()
 with sqlite3.connect(w/'fixture.db') as before_db:initial_counts={r[0]:before_db.execute('SELECT COUNT(*) FROM "'+r[0]+'"').fetchone()[0] for r in before_db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
 prefix='NEONREST_PRODUCTION' if package=='neonrest' else 'NEONREST_SANDBOX'
-for k,v in {'DATABASE':str(w/'fixture.db'),'SECRET_FILE':str(w/'secret'),'INSTANCE':str(w/'instance'),'MAIL_QUEUE_DIR':str(w/'mail'),'MAIL_QUEUE':'0'}.items():os.environ[prefix+'_'+k]=v
+for k,v in {'DATABASE':str(w/'fixture.db'),'SECRET_FILE':str(w/'secret'),'INSTANCE':str(w/'instance'),'MAIL_QUEUE_DIR':str(w/'mail'),'MAIL_QUEUE':'0','STATISTICS_DATABASE':str(w/'statistics.sqlite')}.items():os.environ[prefix+'_'+k]=v
 os.environ['NEONREST_STATISTICS_DATABASE']=str(w/'statistics.sqlite')
 sys.path.insert(0,str(stage.parent))
 with contextlib.redirect_stdout(io.StringIO()):core=importlib.import_module(package+'.app')
@@ -119,23 +119,32 @@ check(r.status_code==302 and bool(query("SELECT 1 FROM posts WHERE content='DISP
 # Deliberately leave a partial file before ENOSPC; only that upload must be removed.
 buffer=io.BytesIO();image=Image.new('RGB',(10,10),'blue');image.save(buffer,'PNG');raw=buffer.getvalue();image.close()
 media_dir=Path(app.instance_path)/'media';media_dir.mkdir(parents=True,exist_ok=True);sentinel=media_dir/'existing-user-upload.webp';sentinel.write_bytes(b'existing user content')
-def full_save(image,target,*args,**kwargs):
-    Path(target).write_bytes(b'partial fixture image')
-    raise OSError(errno.ENOSPC,'Sensitive fixture path must not leak')
+upload_writers=importlib.import_module(package+'.storage_writers')
+original_fdopen=upload_writers.os.fdopen
+class PartialOutput:
+    def __init__(self,handle,number):self.handle=handle;self.number=number
+    def __enter__(self):return self
+    def __exit__(self,*args):self.handle.close()
+    def write(self,data):
+        self.handle.write(data[:4]);raise OSError(self.number,'Sensitive fixture path must not leak')
+def partial_fdopen(descriptor,mode='r',*args,**kwargs):
+    handle=original_fdopen(descriptor,mode,*args,**kwargs)
+    return PartialOutput(handle,number) if mode=='wb' else handle
 for number in {errno.ENOSPC,getattr(errno,'EDQUOT',errno.ENOSPC)}:
-    def quota_save(image,target,*args,**kwargs):
-        Path(target).write_bytes(b'partial fixture image');raise OSError(number,'Sensitive fixture path must not leak')
-    with patch.object(Image.Image,'save',quota_save):
+    with patch.object(upload_writers.os,'fdopen',partial_fdopen):
         r=clients['Regular'].post('/resource-test/image',data={'image':(io.BytesIO(raw),'fixture.png'),'theme_csrf_token':token},headers={'Accept':'application/json'},environ_overrides=env)
     check(r.status_code==507 and r.json['error']=='storage_full','Filesystem full/quota reaches storage response');check(set(media_dir.iterdir())=={sentinel},'Partial upload removed without deleting existing content');assert_private(r)
 # Invalid image behavior stays a validation error.
 r=clients['Regular'].post('/resource-test/image',data={'image':(io.BytesIO(b'not an image'),'bad.png'),'theme_csrf_token':token},environ_overrides=env)
 check(r.status_code==400,'Invalid image remains 400')
 r=clients['Regular'].post('/upload_avatar',data={'avatar':(io.BytesIO(raw),'avatar.png'),'profile_edit_token':token,'theme_csrf_token':token},environ_overrides=env);check(r.status_code==302,'Normal avatar still saves')
-avatar=Path(app.config['UPLOAD_FOLDER'])/'avatars'/('user_'+str(users['Regular'])+'_avatar.png');before_avatar=avatar.read_bytes()
-with patch.object(Image.Image,'save',full_save):
+from urllib.parse import urlsplit
+avatar_url=query('SELECT avatar_path FROM users WHERE id=?',(users['Regular'],))[0][0]
+avatar=Path(app.config['UPLOAD_FOLDER'])/'avatars'/Path(urlsplit(avatar_url).path).name;before_avatar=avatar.read_bytes()
+number=errno.ENOSPC
+with patch.object(upload_writers.os,'fdopen',partial_fdopen):
     r=clients['Regular'].post('/upload_avatar',data={'avatar':(io.BytesIO(raw),'avatar.png'),'profile_edit_token':token,'theme_csrf_token':token},environ_overrides=env)
-check(r.status_code==507,'Avatar storage failure returns 507');check(avatar.read_bytes()==before_avatar,'Existing avatar preserved');check(not list(avatar.parent.glob('*.tmp')),'Avatar temporary file removed')
+check(r.status_code==507,'Avatar storage failure returns 507');check(avatar.read_bytes()==before_avatar,'Existing avatar preserved');check(set(avatar.parent.iterdir())=={avatar},'Failed new avatar file removed')
 # Classification stays narrow: unrelated failures retain the existing diagnostics.
 for code,expected in [(sqlite3.SQLITE_BUSY,'database_busy'),(sqlite3.SQLITE_LOCKED,'database_busy'),(sqlite3.SQLITE_FULL,'storage_full'),(sqlite3.SQLITE_BUSY | 512,'database_busy'),(sqlite3.SQLITE_IOERR,None),(sqlite3.SQLITE_ERROR,None)]:
     error=sqlite3.OperationalError('Internal diagnostic');error.sqlite_errorcode=code;check(recovery.failure_kind(error)==expected,'SQLite primary/extended error classification')

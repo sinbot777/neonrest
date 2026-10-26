@@ -103,7 +103,8 @@ Core.get_db=staticmethod(lambda:db)
 check({p.name for p in media.iterdir()}==before and mod.settings(db,1)['midi_filename']==filename,'Failed DB write removes own new file and preserves previous track')
 from unittest.mock import patch
 import errno
-original_open=Path.open
+from atmosphere_fixture import storage_writers as upload_writers
+original_fdopen=upload_writers.os.fdopen
 class PartialWriter:
     def __init__(self,handle):self.handle=handle
     def __enter__(self):return self
@@ -111,10 +112,10 @@ class PartialWriter:
     def write(self,data):
         self.handle.write(data[:4])
         raise OSError(errno.ENOSPC,'Fictional storage full')
-def failing_open(path,mode='r',*args,**kwargs):
-    handle=original_open(path,mode,*args,**kwargs)
-    return PartialWriter(handle) if mode=='xb' and path.suffix=='.mid' else handle
-with patch.object(Path,'open',failing_open):
+def failing_fdopen(descriptor,mode='r',*args,**kwargs):
+    handle=original_fdopen(descriptor,mode,*args,**kwargs)
+    return PartialWriter(handle) if mode=='wb' else handle
+with patch.object(upload_writers.os,'fdopen',failing_fdopen):
     try:save(revision='1',background_midi=upload())
     except OSError as error:check(error.errno==errno.ENOSPC,'Storage failure propagated')
     else:raise AssertionError('Expected fictional storage failure')
@@ -162,8 +163,9 @@ check(db.execute('SELECT COUNT(*) FROM users').fetchone()[0]==2,'Initialization 
 import ast,time
 from flask import Response
 node=next(n for n in ast.walk(ast.parse((root/'community_features.py').read_text())) if isinstance(n,ast.FunctionDef) and n.name=='community_export')
-for name,fn in [('theme_gallery',lambda db,uid:{}),('social_connections',lambda db,uid:{}),('reading_tools',lambda db,uid,ids:{})]:
+for name,fn in [('theme_gallery',lambda db,uid:{}),('social_connections',lambda db,uid:{}),('reading_tools',lambda db,uid,ids:{}),('identity_pages',lambda db,uid:{}),('page_social',lambda db,uid:{}),('events',lambda db,uid:{})]:
     stub=types.ModuleType('atmosphere_fixture.'+name);stub.export_user=fn;sys.modules[stub.__name__]=stub
+db.execute('CREATE TABLE IF NOT EXISTS page_subscriptions(owner_id INTEGER,status TEXT,paid_until INTEGER,cancel_at_period_end INTEGER,review_required INTEGER)');db.commit()
 export_app=Flask('atmosphere-export');export_app.secret_key='fixture-export'
 Core.identifiers=types.SimpleNamespace(export_ids=lambda db,data:None)
 namespace=dict(app=export_app,core=Core,get_db=lambda:db,current_user=lambda:db.execute('SELECT * FROM users WHERE id=?',(session['user_id'],)).fetchone(),csrf=lambda:None,fresh=lambda:True,session=session,redirect=redirect,url_for=lambda *a,**k:'/',time=time,json=json,Response=Response,__package__='atmosphere_fixture')
