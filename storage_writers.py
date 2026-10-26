@@ -3,6 +3,7 @@
 No Flask imports, database setup, automatic expiry or deletion of old media.
 """
 import io
+import errno
 import os
 from pathlib import Path
 
@@ -55,8 +56,10 @@ def write_outputs(outputs, ledger=None, owner=None, key_prefix='', headroom=None
     paths = [path.absolute() for path, _ in outputs]
     if len(set(paths)) != len(paths):
         raise ValueError('Duplicate output path.')
-    if any(path.is_symlink() or path.exists() or any(p.is_symlink() for p in path.parents) for path in paths):
-        raise ValueError('New media requires unique nonsymlink paths.')
+    if any(path.is_symlink() or any(p.is_symlink() for p in path.parents) for path in paths):
+        raise ValueError('New media requires nonsymlink paths.')
+    if any(path.exists() for path in paths):
+        raise FileExistsError(errno.EEXIST, 'An allocated media name already exists.')
     maximum = sum(charged(len(data)) for _, data in outputs)
     token = None
     if ledger:

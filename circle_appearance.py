@@ -103,7 +103,6 @@ def save_cover(app):
             store_image(allocated, flattened, 4*1024*1024, 'JPEG', 'circle_covers', quality=85, optimize=True)
             return allocated
     except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError) as error:
-        discard_files(allocated)
         raise_if_storage_full(error)
         abort(400, description='Choose a JPEG, PNG or WebP cover up to 5 MB and 16 million pixels.')
 

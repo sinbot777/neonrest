@@ -1,6 +1,7 @@
 # T29: storage admission and growth checkpoint
 
-October 25, 2026 (Pacific). **Foundation draft; no live limits enabled.**
+October 26, 2026 (Pacific). **Initial ordinary-media quota implementation.**
+Hosted audio/video, downloadable-media policy and object storage remain future scope.
 
 ## Implemented foundation
 
@@ -14,7 +15,7 @@ objects plus all pending and started reservations. Prefix owners by environment
 and identity type: Production user 1 and Sandbox user 1 are different owners.
 Both apps must use the same provisioned ledger for a genuinely shared budget.
 Limits are positive configurable byte values; tests use tiny fictional limits.
-No production allowance is selected or enabled by this draft.
+Activation requires the measured private configuration and reconciliation process below.
 
 Reserve the complete hard output bound before any temporary file or derivative
 is written. Mark the reservation started before writing. Application adapters
@@ -57,7 +58,9 @@ owners, file/directory/root symlinks, overlaps, missing roots and bounded scans.
 Python compilation passes. These 26 tests use disposable local fixtures only;
 they do not establish full application integration or hosting capacity.
 
-## Next implementation and acceptance
+## Original foundation checklist
+
+The October 25 checklist below is retained as design context; current implementation and validation follow in the October 26 section.
 
 1. Build reviewed ownership maps from both databases for post media, profile MIDI,
    avatars, legacy post images, Circle icons/covers and Vibe MIDI. Include retained and
@@ -161,11 +164,11 @@ scan. These are dated provisional observations, not an activated seed.
   and preservation review, including hard-linked backups and protected copies;
   deleting a post or losing a delegate role is insufficient evidence.
 
-Hosted candidate checks currently pass 31 real-app assertions per environment,
+Hosted candidate checks currently pass 35 real-app assertions per environment,
 covering auth/privacy, incoming spool behavior, accountable ownership, grouped
 GIFs, invalid second attachments, avatar preservation, quota/headroom denial,
 lock contention, uncertain scans, ledger BUSY and ENOSPC handling. The independent
-foundation/writer/ownership suites total 39 checks. Final related regressions,
-seed/restore rehearsal, rendered UI review and live activation remain required.
+foundation/writer/ownership suites total 39 checks. All eleven related regression runs and the seed/restore rehearsal pass.
+Rendered UI review and exact-source activation follow these checks.
 Hosted audio/video, downloadable-media policy and object-storage migration remain
 separate unfinished T29 scope. Afterglow remains shelved.

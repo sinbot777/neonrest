@@ -995,9 +995,6 @@ def save_post_image():
         from .storage_uploads import image as store_image
         store_image(path, image, 8*1024*1024, 'JPEG', 'legacy_posts', quality=85, optimize=True)
     except OSError:
-        from .resource_errors import discard_files
-        from pathlib import Path
-        discard_files(Path(path))
         raise
     safe_alt = alt.replace(chr(92), "").replace("]", "").replace("[", "")
     return f"![{safe_alt}]({url_for('static', filename='uploads/posts/' + filename)})"

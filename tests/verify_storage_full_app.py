@@ -81,6 +81,15 @@ with app.test_request_context('/create_post',data={'post_image':(png(),'first.pn
  except __import__('werkzeug').exceptions.BadRequest:pass
 check(set((w/'instance/media').iterdir())==before,'Invalid second attachment leaves no first attachment file')
 
+# A generated-name collision must not let an outer cleanup remove old media.
+protected=w/'instance/media/collision.webp';protected.write_bytes(b'KEEP EXISTING')
+with app.test_request_context('/create_post',environ_overrides=env):
+ __import__('flask').session['user_id']=users['Regular']
+ with patch.object(media.secrets,'token_hex',return_value='collision'):
+  try:media._save_image(FileStorage(stream=png(),filename='collision.png'),'Fixture','original','Fixture');raise AssertionError('Collision accepted')
+  except __import__('werkzeug').exceptions.BadRequest:pass
+check(protected.read_bytes()==b'KEEP EXISTING','Outer upload cleanup cannot remove a pre-existing collision')
+
 # Multipart input is memory-backed: no unreserved upload spool file.
 with app.test_request_context('/upload_avatar',data={'avatar':(png(),'input.png')},environ_overrides=env):
  upload=__import__('flask').request.files['avatar'];check(isinstance(upload.stream,writers.BoundedBuffer),'Incoming file parser cannot spool onto disk')
