@@ -64,11 +64,11 @@ fixture_policy=w/'inherited-policy.json';fixture_policy.write_text(json.dumps(ap
 isolated=Flask('storage-isolation',root_path=str(stage),instance_path=str(w/'other-instance'));isolated.config['DATABASE']=str(w/'other-fixture.db')
 with patch.dict(os.environ,{'NEONREST_STORAGE_POLICY':str(fixture_policy)}):storage.register(isolated,object())
 check(isolated.config.get('STORAGE_POLICY') is None,'Inherited policy path cannot connect a disposable app to deployment accounting')
-# Sandbox WSGI relocates instance_path after application registration.
+# Deployed Sandbox may use Flask's legacy default instance location.
 registration=Flask('storage-wsgi-registration',root_path='/home/sinbot/'+package,instance_path=str(w/'pre-wsgi-instance'))
 registration.config['DATABASE']='/home/sinbot/db/'+package+'.db'
 with patch.dict(os.environ,{'NEONREST_STORAGE_POLICY':str(fixture_policy)}):storage.register(registration,object())
-check(registration.config.get('STORAGE_POLICY')==app.config['STORAGE_POLICY'],'Deployed source and DB load policy before WSGI instance relocation')
+check(registration.config.get('STORAGE_POLICY')==app.config['STORAGE_POLICY'],'Deployed source and DB load policy at a legacy instance location')
 wrongdb=Flask('storage-wrong-db',root_path='/home/sinbot/'+package,instance_path=str(w/'other-instance'))
 wrongdb.config['DATABASE']=str(w/'other-fixture.db')
 with patch.dict(os.environ,{'NEONREST_STORAGE_POLICY':str(fixture_policy)}):storage.register(wrongdb,object())
