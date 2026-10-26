@@ -123,8 +123,6 @@ def _save_image(upload, alt, filter_name, title):
         abort(413, description='The processed animation is too large. Choose a smaller animation.')
     except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError) as error:
         from .resource_errors import discard_files, raise_if_storage_full
-        if folder is not None and name:
-            discard_files(*(folder / (name + suffix) for suffix in ('.jpg', '.webp', '-once.gif', '-loop.gif')))
         raise_if_storage_full(error)
         abort(400, description='The selected image could not be read.')
 

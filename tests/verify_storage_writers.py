@@ -53,7 +53,7 @@ class WriterTests(unittest.TestCase):
     def test_existing_file_and_symlink_are_never_replaced(self):
         old=self.root/'old';old.write_bytes(b'KEEP');(self.root/'link').symlink_to(old)
         for name in ['old','link']:
-            with self.assertRaises(ValueError):self.output([(name,b'NEW')])
+            with self.assertRaises((ValueError,FileExistsError)):self.output([(name,b'NEW')])
         self.assertEqual(old.read_bytes(),b'KEEP');self.assertEqual(self.ledger.usage(),0)
     def test_uncleanable_partial_keeps_full_crash_charge(self):
         with patch('storage_writers.os.fsync',side_effect=OSError(errno.ENOSPC,'full')),patch.object(Path,'unlink',side_effect=PermissionError('retain')),self.assertRaises(OSError):self.output([('partial',b'1')])

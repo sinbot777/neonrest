@@ -322,7 +322,6 @@ def register(app, core):
                 return filename
         except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError) as error:
             from .resource_errors import discard_files, raise_if_storage_full
-            discard_files(folder / filename if folder is not None and filename else None)
             raise_if_storage_full(error)
             abort(400, description='Choose a JPEG, PNG or WebP image up to 5 MB and 16 million pixels.')
 
