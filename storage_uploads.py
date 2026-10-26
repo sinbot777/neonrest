@@ -181,8 +181,8 @@ def register(app, core):
     path = Path(os.environ.get('NEONREST_STORAGE_POLICY', '/home/sinbot/private/storage-policy.json'))
     expected_db=Path('/home/sinbot/db')/('neonrest_sandbox.db' if environment=='sandbox' else 'neonrest.db')
     expected_source=Path('/home/sinbot')/('neonrest_sandbox' if environment=='sandbox' else 'neonrest')
-    # WSGI assigns Sandbox's private instance directory after registration.
-    # Match immutable deployed source and database identities at this point.
+    # Sandbox retains Flask's legacy default instance directory. Match the
+    # deployed source and database rather than assuming an instance location.
     deployed=(Path(app.config.get('DATABASE','')).absolute()==expected_db and Path(app.root_path).absolute()==expected_source)
     # A disposable database/instance must never inherit the live accounting
     # ledger, including when regression suites run after activation.
