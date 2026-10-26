@@ -164,7 +164,7 @@ scan. These are dated provisional observations, not an activated seed.
   and preservation review, including hard-linked backups and protected copies;
   deleting a post or losing a delegate role is insufficient evidence.
 
-Hosted candidate checks currently pass 35 real-app assertions per environment,
+Hosted candidate checks pass 42 real-app assertions per environment,
 covering auth/privacy, incoming spool behavior, accountable ownership, grouped
 GIFs, invalid second attachments, avatar preservation, quota/headroom denial,
 lock contention, uncertain scans, ledger BUSY and ENOSPC handling. The independent
@@ -172,3 +172,14 @@ foundation/writer/ownership suites total 39 checks. All eleven related regressio
 Rendered UI review and exact-source activation follow these checks.
 Hosted audio/video, downloadable-media policy and object-storage migration remain
 separate unfinished T29 scope. Afterglow remains shelved.
+
+
+## October 26 rollout complete — ordinary attachments
+
+Deployed to Production and Sandbox with 16 MiB per personal account, 24 MiB shared ordinary-media allowance and a separate 32 MiB provider-headroom reserve. The final inventory covers 32 physical files and 17,031,168 charged bytes, including Sandbox's legacy Flask instance directory. Unknown ownership remains charged; no existing attachment or backup was pruned.
+
+The live registration gate matches the deployed source directory and database identity, so the legacy Sandbox instance location loads its private policy while staged source and disposable databases remain isolated. Both live applications load the ready policy. Existing files retain their original bytes; every non-operational application table matches its pre-install fingerprint. SQLite integrity and foreign-key checks pass, with no pending upload reservations. Anonymous account views redirect to sign-in and staff aggregate views deny access.
+
+Validation: 42 full-app assertions per environment, 39 independent storage checks, the eleven related regression runs and a final 47-check recovery rerun per environment pass. Online database backups were restored and verified; source and base-plus-delta media backups were hash-verified. The final ledger checkpoint restores exactly and retains the complete conservative inventory. GitHub checks pass. No live fixture upload, account or content was created. Wider physical-device acceptance remains separate; the authenticated Sandbox browser session currently needs sign-in.
+
+This completes the ordinary-attachment quota rollout only. Hosted audio/video, downloadable-media policy and object storage remain unfinished T29 scope. Afterglow remains shelved and permanent account erasure remains disabled.
