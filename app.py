@@ -741,8 +741,8 @@ def user_page_test(user_id):
         f'''
         WITH profile_page AS (
         SELECT posts.id FROM posts
-        WHERE (posts.user_id = ? OR posts.target_user_id = ?)
-          AND NOT EXISTS (SELECT 1 FROM moderated_posts mp WHERE mp.post_id = posts.id) AND community_post_visible(posts.id)=1
+        WHERE CASE WHEN (posts.user_id = ? OR posts.target_user_id = ?) THEN community_post_visible(posts.id) ELSE 0 END=1
+          AND NOT EXISTS (SELECT 1 FROM moderated_posts mp WHERE mp.post_id = posts.id)
         {page_where}
         ORDER BY posts.created_at {'ASC' if page_reverse else 'DESC'}, posts.id {'ASC' if page_reverse else 'DESC'}
         LIMIT ?
