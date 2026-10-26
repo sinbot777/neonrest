@@ -5,6 +5,7 @@ from contextvars import ContextVar
 import json
 import fcntl
 import os
+import sqlite3
 from pathlib import Path
 from flask import Request, abort, current_app, redirect, render_template, request, session, url_for
 from .storage_reservations import connect, Limits, QuotaExceeded, ReservationConflict
@@ -82,6 +83,11 @@ def batch():
         write([item for outputs,_ in pending for item in outputs],pending[0][1])
 
 
+def upload_busy():
+    from .resource_errors import response_for
+    abort(response_for('upload_busy'))
+
+
 def write(outputs, category):
     if category not in ('media','avatars','legacy_posts','circle_icons','circle_covers'):
         raise ValueError('Unknown upload category.')
@@ -94,7 +100,7 @@ def write(outputs, category):
     if cfg is None:
         return write_outputs(outputs)
     if cfg.get('ready') is False:
-        abort(503, description='Attachment storage is being reconciled. Keep your text and try again shortly.')
+        upload_busy()
     who = owner_key(); ledger = None
     # Both environments share this lock and ledger. Permission/CSRF checks in
     # the owning route still precede every call to this adapter.
@@ -104,14 +110,14 @@ def write(outputs, category):
         try:
             fcntl.flock(lock, fcntl.LOCK_EX|fcntl.LOCK_NB)
         except BlockingIOError:
-            abort(503, description='Another upload is finishing. Keep your text and try again shortly.')
+            upload_busy()
         try:
             ledger = connect(cfg['ledger'], Limits(cfg['per_owner'],cfg['aggregate']))
             def headroom(maximum):
                 try:
                     measured = allocated_tree(cfg['account_root'])
                 except OSError:
-                    abort(503, description='Storage capacity could not be confirmed. Keep your text and try again shortly.')
+                    upload_busy()
                 # Include in-flight reservations conservatively even if some
                 # outputs are already counted by the physical scan.
                 pending = ledger.db.execute("SELECT COALESCE(SUM(reserved),0) FROM upload_reservations WHERE state IN ('reserved','writing')").fetchone()[0]
@@ -121,8 +127,12 @@ def write(outputs, category):
             return write_outputs(outputs, ledger, who, who.split(':user:')[0]+'-'+names[category], headroom)
         except QuotaExceeded:
             abort(413, description='This upload exceeds the available attachment allowance. Your existing files are unchanged; keep your text before returning.')
+        except sqlite3.Error as error:
+            from .resource_errors import failure_kind
+            if failure_kind(error) is not None:raise
+            upload_busy()
         except ReservationConflict:
-            abort(503, description='Upload accounting needs reconciliation. Keep your text and try again later.')
+            upload_busy()
         finally:
             if ledger:ledger.db.close()
 
@@ -159,6 +169,11 @@ class MemoryUploadRequest(Request):
 
 
 def register(app, core):
+    @app.errorhandler(413)
+    def upload_limit_response(error):
+        from .resource_errors import response_for
+        return response_for('attachment_limit')
+
     app.request_class = MemoryUploadRequest
     app.config.setdefault('MAX_FORM_PARTS', 100)
     environment = 'sandbox' if Path(app.root_path).name == 'neonrest_sandbox' else 'production'

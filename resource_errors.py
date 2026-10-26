@@ -3,6 +3,7 @@ import errno
 import sqlite3
 from flask import g, jsonify, make_response, request
 from markupsafe import escape
+from werkzeug.exceptions import HTTPException
 
 STORAGE_ERRNOS = {errno.ENOSPC, getattr(errno, 'EDQUOT', errno.ENOSPC)}
 JSON_ENDPOINTS = {'create_comment', 'edit_comment', 'react_to_post'}
@@ -45,19 +46,32 @@ def discard_files(*paths):
 
 
 def response_for(kind):
-    busy = kind == 'database_busy'
+    busy = kind in ('database_busy', 'upload_busy')
+    limited = kind == 'attachment_limit'
+    draft = ''
+    if request.method == 'POST' and request.endpoint in {'create_post','edit_post'} and 0 < (request.content_length or 0) <= 26*1024*1024:
+        try:
+            draft = request.form.get('content','')[:20000]
+        except (HTTPException,OSError,ValueError):
+            pass
     title = 'Neonrest is busy' if busy else 'Neonrest needs more storage'
     message = ('The database is temporarily busy. Wait a few seconds, check whether your change appeared, then try again if needed.'
                if busy else 'Neonrest cannot complete this request because server storage is full. Keep a copy of your text and try again later.')
-    status = 503 if busy else 507
+    if kind == 'upload_busy':
+        message = 'Another upload is finishing or storage accounting is temporarily unavailable. Keep your text and try again shortly.'
+    if limited:
+        title = 'Upload allowance reached'
+        message = 'This request exceeds a size or attachment allowance. Keep your text and choose a smaller attachment or try again later.'
+    status = 413 if limited else 503 if busy else 507
     wants_json = (request.endpoint in JSON_ENDPOINTS or request.is_json
                   or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
                   or request.accept_mimetypes.best == 'application/json')
     if wants_json:
-        response = jsonify(error=kind, message=message)
+        response = jsonify(error=kind, message=message, **({'draft_text':draft} if draft else {}))
         response.status_code = status
     else:
         home = escape((request.script_root or '') + '/')
+        recovered = ('<label for="unsaved-content">Your unsaved post text</label><textarea id="unsaved-content" readonly rows="8" style="box-sizing:border-box;width:100%;font:inherit;padding:.75rem">'+str(escape(draft))+'</textarea>') if draft else ''
         html = ('<!doctype html><html lang="en"><meta charset="utf-8">'
                 '<meta name="viewport" content="width=device-width,initial-scale=1">'
                 '<title>' + title + ' · Neonrest</title>'
@@ -67,7 +81,7 @@ def response_for(kind):
                 'border-radius:999px;padding:.5rem 1rem;min-height:44px;cursor:pointer;margin-right:1rem}'
                 'a:focus-visible,button:focus-visible{outline:3px solid #a3e9ff;outline-offset:4px}</style>'
                 '<main><h1>' + title + '</h1><p>' + message + '</p>'
-                '<p>Keep a copy of anything you entered before leaving this page.</p>'
+                '<p>Keep a copy of anything you entered before leaving this page.</p>' + recovered +
                 '<button type="button" onclick="history.back()">Go back</button>'
                 '<a href="' + str(home) + '">Return to Neonrest</a></main></html>')
         response = make_response(html, status)
