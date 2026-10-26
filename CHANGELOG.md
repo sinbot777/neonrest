@@ -1,3 +1,12 @@
+# Attachment storage allowances — October 26, 2026 (Pacific)
+
+- Deploy cumulative ordinary-media admission: 16 MiB/account, 24 MiB shared across environments, plus separate provider headroom.
+- Account and freshly authorized staff storage summaries are private; own exports include only the member's usage summary.
+- Reserve complete output batches, retain uncertain crash charges, preserve earlier avatars and return recoverable escaped post text on failed uploads.
+- Include all current media roots, including the legacy Sandbox instance location, in verified accounting and media backup coverage.
+- Pass 42 app assertions per environment, 39 independent checks, related regressions and final recovery reruns. Backups and restores verified; account/content/settings records and existing media preserved.
+- Hosted audio/video and object storage remain future scope. No media pruning or automatic erasure activation.
+
 # Pages, events and test billing — October 24, 2026 (Pacific)
 
 - Add page discovery and search, follows and a dedicated followed-page update feed with current visibility and account restrictions.
