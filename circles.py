@@ -317,7 +317,8 @@ def register(app, core):
                 folder = Path(app.instance_path) / 'circle_icons'
                 folder.mkdir(parents=True, exist_ok=True, mode=0o700)
                 filename = secrets.token_hex(24) + '.png'
-                image.save(folder / filename, format='PNG')
+                from .storage_uploads import image as store_image
+                store_image(folder / filename, image, 2*1024*1024, 'PNG', 'circle_icons')
                 return filename
         except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError) as error:
             from .resource_errors import discard_files, raise_if_storage_full

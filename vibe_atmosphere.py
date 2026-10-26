@@ -129,8 +129,8 @@ def register(app, core):
                 if request.form.get('remove_midi')=='yes' and raw is None: filename=None;title=''
                 if raw is not None:
                     filename=secrets.token_hex(20)+'.mid';candidate=media_folder()/filename
-                    target=candidate.open('xb');created=candidate
-                    with target: target.write(raw)
+                    from .storage_uploads import write as store_outputs
+                    store_outputs([(candidate,raw)], 'media');created=candidate
                 if not filename: title=''
                 elif not title: title='Vibe background MIDI'
                 db.execute('''INSERT INTO vibe_atmosphere(vibe_id,day_logo,night_logo,logo_motion,midi_filename,midi_title,revision,updated_by)
