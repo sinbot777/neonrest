@@ -99,7 +99,8 @@ def save_cover(app):
             folder = Path(app.instance_path) / 'circle_covers'
             folder.mkdir(parents=True, exist_ok=True, mode=0o700)
             allocated = folder / (secrets.token_hex(24) + '.jpg')
-            flattened.save(allocated, format='JPEG', quality=85, optimize=True)
+            from .storage_uploads import image as store_image
+            store_image(allocated, flattened, 4*1024*1024, 'JPEG', 'circle_covers', quality=85, optimize=True)
             return allocated
     except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError) as error:
         discard_files(allocated)

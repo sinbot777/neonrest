@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}Attachment storage - Neonrest{% endblock %}
+{% block content %}
+{% include 'partials/identity_page_styles.html' %}
+<main class="identity-page"><h1>{{ 'Site attachment storage' if staff else 'Your attachment storage' }}</h1>
+{% if storage.enabled %}
+<p><strong>{{ (storage.used / 1048576)|round(2) }} MiB of {{ (storage.limit / 1048576)|round(2) }} MiB</strong> accounted for.</p>
+<p>Uploads also depend on shared site capacity.</p>
+<p>Usage includes retained attachments and uploads still being reconciled. Replacing or removing a post or picture may not immediately free storage while its files are retained for recovery or review.</p>
+{% if staff %}<p>Uploads awaiting reconciliation: {{ storage.pending }}. Unattributed retained storage: {{ (storage.unattributed / 1048576)|round(2) }} MiB. These bytes count toward the shared allowance.</p>{% endif %}
+{% else %}<p>Cumulative attachment allowances are being prepared. Existing per-file limits still apply.</p>{% endif %}
+<p>Safety and consent documents use a separate submission process. Attachment allowances do not change who can view your content.</p>
+<p><a href="{{ url_for('account') }}">Account settings</a>{% if can_manage and not staff %} · <a href="{{ url_for('staff_storage_usage') }}">Site attachment storage</a>{% endif %}{% if staff %} · <a href="{{ url_for('community_operations') }}">Site operations</a>{% endif %}</p>
+</main>
+{% endblock %}

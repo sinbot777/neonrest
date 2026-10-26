@@ -953,6 +953,8 @@ def register(app, core):
         export['events']=export_events(db,uid)
         billing=db.execute('SELECT status,paid_until,cancel_at_period_end,review_required FROM page_subscriptions WHERE owner_id=?',(uid,)).fetchall()
         export['business_subscriptions']=[dict(row) for row in billing]
+        from .storage_uploads import usage as storage_usage
+        export['attachment_storage']=storage_usage()
         core.identifiers.export_ids(db,export)
         # Exclude internal case notes, password hashes, tokens and two-factor secrets.
         return Response(json.dumps(export,ensure_ascii=False,indent=2),mimetype='application/json',headers={'Content-Disposition':'attachment; filename="neonrest-data.json"'})

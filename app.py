@@ -553,15 +553,10 @@ def upload_avatar():
             image = image.convert('RGBA' if 'transparency' in image.info else 'RGB')
         avatar_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'avatars')
         os.makedirs(avatar_dir, exist_ok=True)
-        filename = f"user_{viewer['id']}_avatar.png"
+        filename = f"user_{viewer['id']}_avatar_{secrets.token_hex(12)}.png"
         target = os.path.join(avatar_dir, filename)
-        temporary = target + '.' + secrets.token_hex(8) + '.tmp'
-        try:
-            image.save(temporary, format='PNG')
-            os.replace(temporary, target)
-        finally:
-            if os.path.exists(temporary):
-                os.unlink(temporary)
+        from .storage_uploads import image as store_image
+        store_image(target, image, 2*1024*1024, 'PNG', 'avatars')
     except (OSError, ValueError, UnidentifiedImageError, Image.DecompressionBombError) as error:
         from .resource_errors import raise_if_storage_full
         raise_if_storage_full(error)
@@ -741,8 +736,8 @@ def user_page_test(user_id):
         f'''
         WITH profile_page AS (
         SELECT posts.id FROM posts
-        WHERE (posts.user_id = ? OR posts.target_user_id = ?)
-          AND NOT EXISTS (SELECT 1 FROM moderated_posts mp WHERE mp.post_id = posts.id) AND community_post_visible(posts.id)=1
+        WHERE CASE WHEN (posts.user_id = ? OR posts.target_user_id = ?) THEN community_post_visible(posts.id) ELSE 0 END=1
+          AND NOT EXISTS (SELECT 1 FROM moderated_posts mp WHERE mp.post_id = posts.id)
         {page_where}
         ORDER BY posts.created_at {'ASC' if page_reverse else 'DESC'}, posts.id {'ASC' if page_reverse else 'DESC'}
         LIMIT ?
@@ -996,7 +991,8 @@ def save_post_image():
     filename = uuid.uuid4().hex + '.jpg'
     path = os.path.join(folder, filename)
     try:
-        image.save(path, 'JPEG', quality=85, optimize=True)
+        from .storage_uploads import image as store_image
+        store_image(path, image, 8*1024*1024, 'JPEG', 'legacy_posts', quality=85, optimize=True)
     except OSError:
         from .resource_errors import discard_files
         from pathlib import Path
@@ -2726,3 +2722,6 @@ register_events(app,sys.modules[__name__])
 from .page_billing import register as register_page_billing
 register_page_billing(app,sys.modules[__name__])
 
+
+from .storage_uploads import register as register_storage_uploads
+register_storage_uploads(app,sys.modules[__name__])

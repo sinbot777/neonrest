@@ -49,6 +49,7 @@
 
 <div class="user-section">
   <h2>Upload Avatar</h2>
+  <p><a href="{{ url_for('account_storage_usage') }}">View your attachment storage</a></p>
   <form method="post" action="{{ url_for('upload_avatar') }}" enctype="multipart/form-data"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
     <input type="hidden" name="profile_edit_token" value="{{ profile_edit_token() }}">
     <label for="avatar">Upload Avatar:</label>
