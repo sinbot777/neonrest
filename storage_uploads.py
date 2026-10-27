@@ -5,6 +5,7 @@ from contextvars import ContextVar
 import json
 import fcntl
 import os
+import stat
 import sqlite3
 from pathlib import Path
 from flask import Request, abort, current_app, redirect, render_template, request, session, url_for
@@ -35,32 +36,57 @@ def policy():
     return value
 
 
-def allocated_tree(root, limit=100000):
+def allocated_tree(root, limit=100000, temporary_roots=()):
     """Count unique physical allocations including directories and symlinks.
 
     Symlinks are counted but never traversed. An unreadable or incomplete scan
     fails admission; no filenames or contents enter the account-facing result.
+    Optional shared temporary roots count only the current UID's entries.
+    One inode set and scan budget cover all roots, including aliases/hardlinks.
     """
     root = Path(root)
     if root.is_symlink() or not root.is_dir():
         raise OSError(errno.EIO, 'Storage inventory root unavailable.')
     seen = set(); total = 0; visited = 0
-    def count(path):
+    def count(path, owned=False, transient=False):
         nonlocal total, visited
         visited += 1
         if visited > limit:
             raise OSError(errno.EIO, 'Storage inventory is incomplete.')
-        info = path.lstat(); key = (info.st_dev, info.st_ino)
+        try:
+            info = path.lstat()
+        except FileNotFoundError:
+            if transient:return None
+            raise
+        if owned and info.st_uid != os.getuid():return None
+        key = (info.st_dev, info.st_ino)
         if key not in seen:
             seen.add(key); total += max(info.st_size, getattr(info,'st_blocks',0)*512)
-    count(root)
-    def failed(error):
-        raise error
-    for directory, folders, files in os.walk(root, followlinks=False, onerror=failed):
-        for name in folders[:]:
-            path = Path(directory)/name; count(path)
-            if path.is_symlink():folders.remove(name)
-        for name in files:count(Path(directory)/name)
+        return info
+    def walk(path, owned=False, transient=False):
+        info = count(path, owned, transient)
+        if info is None or not stat.S_ISDIR(info.st_mode):return
+        def failed(error):
+            if transient and isinstance(error, FileNotFoundError):return
+            raise error
+        for directory, folders, files in os.walk(path, followlinks=False, onerror=failed):
+            for name in folders[:]:
+                child = Path(directory)/name
+                info = count(child, owned, transient)
+                if info is None or not stat.S_ISDIR(info.st_mode):folders.remove(name)
+            for name in files:count(Path(directory)/name, owned, transient)
+    walk(root)
+    temporary_seen = set()
+    for shared in temporary_roots:
+        shared = Path(shared).resolve(strict=True)
+        info = shared.stat(); key = (info.st_dev, info.st_ino)
+        if not stat.S_ISDIR(info.st_mode):
+            raise OSError(errno.EIO, 'Temporary inventory root unavailable.')
+        if key in seen or key in temporary_seen:continue
+        temporary_seen.add(key)
+        # Shared parent allocation belongs to the provider, not this account.
+        with os.scandir(shared) as entries:
+            for entry in entries:walk(Path(entry.path), owned=True, transient=True)
     return total
 
 
@@ -115,7 +141,7 @@ def write(outputs, category):
             ledger = connect(cfg['ledger'], Limits(cfg['per_owner'],cfg['aggregate']))
             def headroom(maximum):
                 try:
-                    measured = allocated_tree(cfg['account_root'])
+                    measured = allocated_tree(cfg['account_root'], temporary_roots=('/tmp','/var/tmp'))
                 except OSError:
                     upload_busy()
                 # Include in-flight reservations conservatively even if some
