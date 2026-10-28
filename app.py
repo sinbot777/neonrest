@@ -2730,3 +2730,8 @@ register_storage_uploads(app,sys.modules[__name__])
 
 from .seller_studio import register as register_seller_studio
 register_seller_studio(app,sys.modules[__name__])
+
+from .marketplace_assets import register as register_marketplace_assets
+register_marketplace_assets(app,sys.modules[__name__])
+from .marketplace_orders import register as register_marketplace_orders
+register_marketplace_orders(app,sys.modules[__name__])
