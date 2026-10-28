@@ -5,7 +5,7 @@ from flask import current_app,g,request,url_for,redirect,abort
 ALPHABET='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
 TOKEN=re.compile(r'(?=[0-9A-Za-z]{0,15}[A-Za-z])[0-9A-Za-z]{16}\Z',re.ASCII)
 KINDS={'post':'posts','comment':'comments'}
-POST_ENDPOINTS={'post_detail','post_edit_history','edit_post','delete_post','react_to_post'}
+POST_ENDPOINTS={'post_detail','post_edit_history','edit_post','delete_post','react_to_post','post_reaction_people'}
 COMMENT_ENDPOINTS={'edit_comment','delete_comment'}
 MAX_KEY=2**63-1
 
@@ -186,3 +186,4 @@ def register(app,core):
         return 'comment-'+row[0].split(':',1)[1] if row else None
     app.jinja_env.globals.update(public_post_id=lambda key:public(core.get_db(),'post',key),public_comment_id=lambda key:public(core.get_db(),'comment',key),public_target_id=target,
         public_content_path=lambda path:canonical_path(core.get_db(),path),legacy_comment_anchor=old_anchor)
+

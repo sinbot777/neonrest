@@ -13,6 +13,7 @@
         <a href="{{ url_for('user_by_handle', handle=comment.author_handle.lstrip('@')) }}">
           <strong>@{{ comment.author_handle }}</strong>
         </a>
+        {% if comment.reply_to_handle %}<span class="reply-recipient">→ @{{ comment.reply_to_handle.lstrip('@') }}</span>{% elif comment.parent_comment_id %}<span class="reply-recipient">(reply)</span>{% endif %}
         {% if comment.last_edited %}
           <small class="edited-label">(edited {{ comment.last_edited }})</small>
         {% endif %}
@@ -111,10 +112,11 @@
   {% if viewer_id %}<form class="reading-bookmark-form" method="post" action="{{ url_for('reading_bookmark',post_id=public_post_id(post.id)) }}"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">{% set is_saved=reading_bookmarked(post.id) %}<button class="friend-btn reading-bookmark-button" name="action" value="{{ 'remove' if is_saved else 'save' }}">{{ 'Remove bookmark' if is_saved else 'Bookmark' }}</button></form>{% endif %}
   <div class="post-reactions-box react-form" data-post-id="{{ public_post_id(post.id) }}" data-csrf-token="{{ community_token() }}">
     {% for emoji in VALID_REACTS %}
-      <button type="button" data-reaction-url="{{ url_for('react_to_post',post_id=post.id) }}"{% if not can_participate %} disabled title="Sign in and join this Circle to react"{% endif %} class="react-btn{% if post.reaction_counts.get(emoji) %} active{% endif %}" data-emoji="{{ emoji }}" data-post-id="{{ public_post_id(post.id) }}">
+      <button type="button" data-reaction-url="{{ url_for('react_to_post',post_id=post.id) }}"{% if not can_participate %} disabled title="Sign in and join this Circle to react"{% endif %} aria-pressed="{{ 'true' if emoji in post.viewer_reactions else 'false' }}" class="react-btn{% if emoji in post.viewer_reactions %} active{% endif %}" data-emoji="{{ emoji }}" data-post-id="{{ public_post_id(post.id) }}">
         {{ emoji }}{% if post.reaction_counts.get(emoji) %}<sub>{{ post.reaction_counts.get(emoji) }}</sub>{% endif %}
       </button>
     {% endfor %}
+    <a class="reaction-people-link" href="{{ url_for('post_reaction_people',post_id=post.id,emoji=VALID_REACTS[0]) }}">Who reacted?</a>
     <span class="reaction-status" role="status" aria-live="polite"></span>
 </div>
 
@@ -242,3 +244,4 @@ window.addEventListener('DOMContentLoaded', () => {
   });
 });
 </script>
+
