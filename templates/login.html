@@ -11,9 +11,5 @@
     </form>
     <p><a href="{{ url_for('password_reset_request') }}">Forgot your password?</a></p><p><a href="{{ url_for('verification_request') }}">Resend verification email</a></p><p class="auth-link">Need an account? <a href="/signup">Sign up</a></p>
   </div>
-  <div class="under-construction">
-  <a href="{{ url_for('dev_summary') }}">
-    <img src="{{ url_for('static', filename='img/underconstruction.gif') }}" alt="Under Construction">
-  </a>
-</div>
+
 {% endblock %}
