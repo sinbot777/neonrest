@@ -246,7 +246,7 @@
 <nav aria-label="Profile post pages" style="display:flex;flex-wrap:wrap;gap:1rem;margin:1rem 0">
 {% if profile_newer %}<a class="button" rel="prev" href="{{ url_for('user_by_handle', handle=user.handle.lstrip('@'), mode=profile_mode, profile_view=profile_view, posts_cursor=profile_newer, _anchor='recent-posts') }}">Newer posts</a>{% endif %}
 {% if profile_older %}<a class="button" rel="next" href="{{ url_for('user_by_handle', handle=user.handle.lstrip('@'), mode=profile_mode, profile_view=profile_view, posts_cursor=profile_older, _anchor='recent-posts') }}">Older posts</a>{% endif %}
-{% if request.args.get('posts_cursor') %}<a href="{{ url_for('user_by_handle', handle=user.handle.lstrip('@'), mode=profile_mode, profile_view=profile_view, _anchor='recent-posts') }}">Latest posts</a>{% endif %}
+{% if request.args.get('posts_cursor') %}<a class="button" href="{{ url_for('user_by_handle', handle=user.handle.lstrip('@'), mode=profile_mode, profile_view=profile_view, _anchor='recent-posts') }}">Latest posts</a>{% endif %}
 </nav>
   {% if posts %}
     {% set _posts = posts %}
@@ -260,7 +260,7 @@
 <nav aria-label="Profile post pages" style="display:flex;flex-wrap:wrap;gap:1rem;margin:1rem 0">
 {% if profile_newer %}<a class="button" rel="prev" href="{{ url_for('user_by_handle', handle=user.handle.lstrip('@'), mode=profile_mode, profile_view=profile_view, posts_cursor=profile_newer, _anchor='recent-posts') }}">Newer posts</a>{% endif %}
 {% if profile_older %}<a class="button" rel="next" href="{{ url_for('user_by_handle', handle=user.handle.lstrip('@'), mode=profile_mode, profile_view=profile_view, posts_cursor=profile_older, _anchor='recent-posts') }}">Older posts</a>{% endif %}
-{% if request.args.get('posts_cursor') %}<a href="{{ url_for('user_by_handle', handle=user.handle.lstrip('@'), mode=profile_mode, profile_view=profile_view, _anchor='recent-posts') }}">Latest posts</a>{% endif %}
+{% if request.args.get('posts_cursor') %}<a class="button" href="{{ url_for('user_by_handle', handle=user.handle.lstrip('@'), mode=profile_mode, profile_view=profile_view, _anchor='recent-posts') }}">Latest posts</a>{% endif %}
 </nav>
 </div>
 
