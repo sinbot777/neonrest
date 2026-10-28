@@ -2708,3 +2708,6 @@ register_page_billing(app,sys.modules[__name__])
 
 from .storage_uploads import register as register_storage_uploads
 register_storage_uploads(app,sys.modules[__name__])
+
+from .seller_studio import register as register_seller_studio
+register_seller_studio(app,sys.modules[__name__])
