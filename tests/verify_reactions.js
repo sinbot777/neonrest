@@ -14,7 +14,7 @@ const document = {addEventListener(type, callback) {assert.equal(type, 'click');
   querySelectorAll: () => [a, duplicate], createElement: () => ({textContent: ''})};
 const fetch = async (url, options) => {
   calls.push({url, options});
-  if (fail) return {ok: false};
+  if (fail) return {ok: false, json: async () => null};
   return new Promise(resolve => {resolveFetch = resolve;});
 };
 vm.runInNewContext(fs.readFileSync('static/js/reactions.js', 'utf8'), {document, fetch, Set, JSON, String, Error});
@@ -44,3 +44,4 @@ const click = () => handler({target: {closest: () => a}, preventDefault() {}});
   assert.equal(a['aria-pressed'], 'false', 'A failed request must not fake a saved reaction');
   console.log('SHARED REACTION HANDLER PASS: scoped URL, CSRF, single request, add/remove, duplicate controls and failure/retry');
 })().catch(error => {console.error(error);process.exitCode = 1;});
+
