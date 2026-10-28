@@ -952,6 +952,8 @@ def register(app, core):
         export['business_subscriptions']=[dict(row) for row in billing]
         from .storage_uploads import usage as storage_usage
         export['attachment_storage']=storage_usage()
+        from .seller_studio import export_user as export_seller_studio
+        export['seller_studio']=export_seller_studio(db,uid)
         core.identifiers.export_ids(db,export)
         # Exclude internal case notes, password hashes, tokens and two-factor secrets.
         if request.form.get('include_uploads') == 'yes':
