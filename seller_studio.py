@@ -48,11 +48,19 @@ def quantity(value):
     return int(value)
 
 
+def adult_account(db,uid):
+    # Marketplace eligibility is independent of business Pages or subscriptions.
+    from . import age_policy
+    if not pages.eligible(db,uid,'creative'):return False
+    years=age_policy.age(db,uid)
+    return years is not None and years>=18
+
+
 def access(db,uid,page_id,owner_only=False):
-    if not pages.eligible(db,uid,'business'):raise StudioError('Seller Studio is available to eligible adult accounts.',403)
+    if not adult_account(db,uid):raise StudioError('Seller Studio is available to eligible adult accounts.',403)
     try:page=pages.get(db,page_id)
     except pages.PageError:raise StudioError('Shop unavailable.',404)
-    if not pages.eligible(db,page['owner_id'],'business') or pages.hidden(db,page_id) or pages.role(db,page,uid) not in (('owner',) if owner_only else ('owner','manager','editor')):raise StudioError('Shop unavailable.',404)
+    if not adult_account(db,page['owner_id']) or pages.hidden(db,page_id) or pages.role(db,page,uid) not in (('owner',) if owner_only else ('owner','manager','editor')):raise StudioError('Shop unavailable.',404)
     shop=db.execute('SELECT * FROM seller_shops WHERE page_id=?',(page_id,)).fetchone()
     if shop and shop['owner_id']!=page['owner_id']:raise StudioError('This Page changed owners. Shop transfer needs support review.',409)
     return page,shop
@@ -117,6 +125,7 @@ def save_listing(db,uid,page_id,form,listing_id=None):
         if old['state']!='draft':raise StudioError('Restore the listing before editing.',409)
     elif db.execute('SELECT COUNT(*) FROM seller_listings WHERE shop_id=?',(page_id,)).fetchone()[0]>=100:raise StudioError('The initial limit is 100 listing drafts per shop.',409)
     fields=listing_fields(form);now=int(time.time())
+    if listing_id and fields['kind']=='physical' and db.execute("SELECT 1 FROM seller_assets WHERE listing_id=? AND kind='file' AND state='active'",(listing_id,)).fetchone():raise StudioError('Remove the active product download before changing to a physical listing.',409)
     if listing_id:
         revision=form.get('revision',type=int)
         if revision is None or not 0<=revision<2**63:raise StudioError('Reload before saving.',409)
@@ -164,7 +173,7 @@ def register(app,core):
     def actor():
         uid=session.get('user_id')
         if type(uid) is not int:abort(401)
-        if not pages.eligible(core.get_db(),uid,'business'):raise StudioError('Seller Studio is available to eligible adult accounts.',403)
+        if not adult_account(core.get_db(),uid):raise StudioError('Seller Studio is available to eligible adult accounts.',403)
         return uid
     def writing():
         helpers=app.extensions['community_auth_helpers'];helpers['csrf']()
@@ -213,11 +222,14 @@ def register(app,core):
                 else:raise StudioError('Publishing and sales are not enabled.',403)
             flash('Listing draft saved. Nothing was published or charged.','success');return redirect(url_for('seller_studio.listing',page_id=page_id,listing_id=listing_id))
         variants=json.loads(item['variations']) if item else []
-        return render_template('seller_studio.html',view='listing',page=page,shop=shop,item=item,variants=variants)
+        from .marketplace_assets import visible_assets
+        assets=visible_assets(db,listing_id) if item else []
+        return render_template('seller_studio.html',view='listing',page=page,shop=shop,item=item,variants=variants,assets=assets)
     @bp.get('/marketplace/studio/<page_id>/listing/<listing_id>/preview')
     def preview(page_id,listing_id):
         uid=actor();page,shop,item=get_listing(core.get_db(),uid,page_id,listing_id)
-        return render_template('seller_studio.html',view='preview',page=page,shop=shop,item=item,variants=json.loads(item['variations']))
+        from .marketplace_assets import visible_assets
+        return render_template('seller_studio.html',view='preview',page=page,shop=shop,item=item,variants=json.loads(item['variations']),assets=visible_assets(core.get_db(),listing_id))
     @bp.after_request
     def private(response):
         response.headers.update({'Cache-Control':'private, no-store','X-Robots-Tag':'noindex, nofollow','Referrer-Policy':'no-referrer'})

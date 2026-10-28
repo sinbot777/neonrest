@@ -1,0 +1,27 @@
+# T31 product files and checkout rehearsal
+
+This stage adds private draft product images/files and a provider-free checkout rehearsal. Free creative _handle Pages can host shops; sellers do not need a paid $handle Page. Business $handle Pages are a separate presence/identity offering, not a marketplace access tier. Approved marketplace listing/transaction fees remain separate from the optional business Page subscription. It does not enable listing publication, buyer checkout, actual payments, provider onboarding, fulfillment or commissions/memberships.
+
+## Draft product uploads
+
+Current eligible adult shop-team access, fresh authentication, CSRF and per-account upload throttling are required. Listing state and revision are checked transactionally; archived Pages/listings cannot receive uploads. At most five active images and one active digital download belong to a listing. Uploads accept at most 5 MiB. JPEG/PNG/WebP images are bounded to 25 million input pixels, oriented, resized to 1600 pixels and re-encoded without metadata to WebP (maximum 2 MiB). Digital draft downloads accept PDF, unencrypted bounded ZIP, and UTF-8 TXT. ZIP paths, symlinks, encryption and excessive expanded-size/entry counts are rejected; ZIP contents are never extracted or executed. Format validation is not malware clearance; public delivery needs a separate launch review.
+
+Bytes live in a private instance/marketplace directory, outside static assets, with generated keys. The existing durable upload reservation, cross-environment lock, physical accounting and provider reserve apply through a new marketplace category. Per-person/shared allowances remain 16/24 MiB; no separate free storage pool or commercial hosting capacity is implied. Failed app association after a certain file settlement leaves retained bytes attributed/charged for review rather than pretending the upload did not consume storage.
+
+Product images/files are served only after current shop/listing/team and uploader eligibility checks. Reads use no-follow file access and size/hash verification. Images are processed WebP; other files download as octet-stream attachments with nosniff/sandbox and private no-store/noindex headers. Removing a draft reference archives it without deleting the bytes or releasing quota; the UI explains that retention. Uploader identity is recorded separately from Page ownership. Account JSON includes the uploader's product-file metadata; optional media ZIPs include the uploader's retained bytes via the new ledger namespace, including archived draft files. A Page owner does not acquire another uploader's account-export rights.
+
+## Test quotes and orders
+
+Only current eligible shop-team members can rehearse their private drafts. Server-generated quotes snapshot title, unit price, variation, quantity, item subtotal, planned 6% seller commission and delivery/license/refund/shop terms. Shipping and taxes are explicitly not calculated, so the UI labels an item subtotal rather than a final purchase total. No payment method or customer address is collected. Quotes expire after 15 minutes.
+
+Confirming creates an unpaid TEST order. Unique quote-to-order pairing makes repeated submissions idempotent. A transaction rechecks current draft revision/state and available test stock. Active test orders hold only a test reservation; they never decrement saved listing stock, and expire after 15 minutes or release on cancellation. Reservations apply to the quoted draft revision, so old test holds do not attach to changed variation configurations. Order snapshots are immutable. Only test_unpaid/canceled/expired states are permitted by the schema; pay/fulfill requests are rejected and no provider return can mark an order paid. Provider adapters are still pending. Quote actor and order actor are rechecked alongside current shop access; test orders appear in involved accounts' private exports.
+
+Bounds: 1–99 units per preview, item subtotal within existing integer-cent quote limits, at most 20 active previews per actor and 1,000 retained test orders per account. No record purge or automatic account erasure is introduced.
+
+## Verification and remaining work
+
+Use disposable databases, files and ledgers. The owner authorized private copies of OregonButtonStore public listings as test products; titles/descriptions/prices and available public photos are held separately from public source. Test stock and delivery terms are fictional. No customers, reviews, orders, account credentials or shipping addresses are copied. Source tests fall back to synthetic products if private fixtures are absent.
+
+Cover file formats/limits, private reads, uploader-versus-Page-owner export rights, stale/delegate/revoked permissions, quota accounting and retained-file behavior; quotes, exact money, expiry, revision/variation changes, idempotency, competing test reservations, immutable snapshots and no payment transitions. Run existing studio/export/recovery regressions and rehearse additive schema restoration without changing old rows. Private fixture copies must not be inserted into the live catalog or published.
+
+Remaining: actual provider sandbox adapters (Stripe Connect, PayPal and supported Google Pay wallet), seller onboarding, tax/shipping total calculation, customer checkout eligibility, public listing/product-file delivery and malware/storage launch review, Shippo/Pirate Ship fulfillment UI/acceptance, and the earlier commission/membership stages. Public commerce stays disabled.
