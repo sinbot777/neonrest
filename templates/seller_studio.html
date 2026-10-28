@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block title %}Seller Studio - Neonrest{% endblock %}
+{% block content %}
+{% include 'partials/identity_page_styles.html' %}
+<main class="identity-page seller-studio">
+<h1>Seller Studio</h1>
+<p class="studio-notice"><strong>Private preparation only.</strong> Shops and listings cannot be published or purchased yet. Saving a draft creates no listing fee, subscription or charge.</p>
+<nav aria-label="Seller tools"><a href="{{ url_for('seller_studio.index') }}">Your shop drafts</a><a href="{{ url_for('identity_pages.mine') }}">Your pages</a></nav>
+{% if error %}<p role="alert">{{ error }}</p>{% if unsaved %}<h2>Your unsaved entries</h2><p>Copy anything you want to keep before reopening the draft. Nothing from this attempt was saved.</p>{% for label,value in unsaved %}<label>{{ label }}<textarea readonly rows="4">{{ value }}</textarea></label>{% endfor %}{% endif %}
+{% elif view == 'index' %}
+<p>Prepare a shop attached to an existing Page. Seller preparation is available to eligible adult owners and adult Page delegates.</p>
+{% for entry in available %}<article><h2>{{ entry.page.name }}</h2><p>{{ entry.page.handle }} · {{ entry.page.state|capitalize }}</p>
+{% if entry.shop %}<a href="{{ url_for('seller_studio.shop',page_id=entry.page.id) }}">Open {{ entry.shop.name }} shop draft</a>
+{% elif entry.owner and entry.page.state != 'archived' %}<a href="{{ url_for('seller_studio.shop',page_id=entry.page.id) }}">Prepare a shop for {{ entry.page.handle }}</a>
+{% else %}<p>The Page owner must create the shop draft; archived Pages must first be restored.</p>{% endif %}</article>
+{% else %}<p>No eligible Pages are available. <a href="{{ url_for('identity_pages.new') }}">Create a creative Page</a> to prepare a shop. No paid business Page is required.</p>{% endfor %}
+{% elif view == 'shop' %}
+<h2>{{ page.name }} · {{ page.handle }}</h2>
+{% if page.state == 'archived' %}<p>Restore the Page before editing this shop. Existing drafts are retained.</p>{% endif %}
+{% if not shop %}
+<p>Only the Page owner can create its private shop draft.</p>
+{% if owner and page.state != 'archived' %}<form method="post"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}"><button name="action" value="create">Create private shop draft</button></form>{% endif %}
+{% else %}
+{% if owner and page.state != 'archived' %}<form method="post"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}"><input type="hidden" name="revision" value="{{ shop.revision }}"><input type="hidden" name="action" value="save">
+<label>Shop name<input name="name" maxlength="80" value="{{ shop.name }}" required></label>
+<label>Shop description<textarea name="description" rows="4" maxlength="4000">{{ shop.description }}</textarea></label>
+<label>Shop policies<textarea name="policies" rows="5" maxlength="4000">{{ shop.policies }}</textarea></label><button>Save shop draft</button></form>
+{% else %}<h3>{{ shop.name }}</h3><p class="studio-text">{{ shop.description }}</p><h3>Shop policies</h3><p class="studio-text">{{ shop.policies or 'No shop policies drafted yet.' }}</p>{% endif %}
+<h3>Listing drafts</h3>{% if page.state != 'archived' %}<p><a class="button" href="{{ url_for('seller_studio.listing',page_id=page.id) }}">New listing draft</a></p>{% endif %}
+{% for listing in listings %}<article><h4>{{ listing.title }}</h4><p>{{ listing.kind|capitalize }} · {{ listing.state|capitalize }} · USD {{ '%.2f'|format(listing.price_cents/100) }} · Quantity {{ listing.quantity }}</p><a href="{{ url_for('seller_studio.listing',page_id=page.id,listing_id=listing.id) }}">Edit {{ listing.title }}</a> · <a href="{{ url_for('seller_studio.preview',page_id=page.id,listing_id=listing.id) }}">Preview {{ listing.title }}</a></article>{% else %}<p>No listing drafts yet.</p>{% endfor %}
+{% endif %}
+{% elif view == 'listing' %}
+<p><a href="{{ url_for('seller_studio.shop',page_id=page.id) }}">Back to {{ shop.name }}</a></p><h2>{{ 'Edit listing draft' if item else 'New listing draft' }}</h2>
+{% if item %}<p>State: {{ item.state|capitalize }} · <a href="{{ url_for('seller_studio.preview',page_id=page.id,listing_id=item.id) }}">Preview saved draft</a></p>{% endif %}
+{% if page.state != 'archived' and (not item or item.state == 'draft') %}
+<form method="post"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}"><input type="hidden" name="action" value="save">{% if item %}<input type="hidden" name="revision" value="{{ item.revision }}">{% endif %}
+<label>Listing title<input name="title" maxlength="120" value="{{ item.title if item else '' }}" required></label>
+<label>Product type<select name="kind"><option value="physical" {{ 'selected' if not item or item.kind == 'physical' else '' }}>Physical item</option><option value="digital" {{ 'selected' if item and item.kind == 'digital' else '' }}>Digital download</option></select></label>
+<label>Description<textarea name="description" rows="6" maxlength="8000">{{ item.description if item else '' }}</textarea></label>
+<label>Base price (USD)<input name="price" inputmode="decimal" pattern="[0-9]+([.][0-9]{1,2})?" value="{{ '%.2f'|format(item.price_cents/100) if item else '0.00' }}" required></label>
+<label>Quantity<input name="quantity" type="number" min="0" max="1000000" value="{{ item.quantity if item else 0 }}" required></label>
+<fieldset><legend>Variations (optional, up to ten)</legend><p>Use a label such as “Blue / Large.” Each variation has its own quantity. A blank price uses the base price. When variations exist, their quantities determine the listing total.</p>
+{% for n in range(10) %}{% set v = variants[n] if n < variants|length else none %}<div class="studio-variation"><label>Variation {{ n+1 }} label<input name="variation_label" maxlength="80" value="{{ v.label if v else '' }}"></label><label>Variation {{ n+1 }} price (USD)<input name="variation_price" inputmode="decimal" value="{{ '%.2f'|format(v.price_cents/100) if v else '' }}"></label><label>Variation {{ n+1 }} quantity<input name="variation_quantity" type="number" min="0" max="1000000" value="{{ v.quantity if v else '' }}"></label></div>{% endfor %}</fieldset>
+<label>Delivery and processing terms<textarea name="delivery" rows="4" maxlength="2000" placeholder="For physical items: processing time, shipping scope and packing details. For digital items: what files are included and when delivery is expected.">{{ item.delivery if item else '' }}</textarea></label>
+<label>Usage rights or license<textarea name="license" rows="4" maxlength="2000">{{ item.license if item else '' }}</textarea></label>
+<label>Return and refund terms<textarea name="returns" rows="4" maxlength="2000">{{ item.returns if item else '' }}</textarea></label>
+<p>Images and downloadable product files aren’t available in drafts yet. This preview is text-only. Commissions and membership tiers follow in later stages.</p><button>Save listing draft</button></form>
+{% endif %}
+{% if item and page.state != 'archived' %}<form method="post"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}"><input type="hidden" name="revision" value="{{ item.revision }}"><input type="hidden" name="action" value="state"><input type="hidden" name="state" value="{{ 'draft' if item.state == 'archived' else 'archived' }}"><button>{{ 'Restore draft' if item.state == 'archived' else 'Archive listing draft' }}</button></form>{% endif %}
+{% elif view == 'preview' %}
+<p><a href="{{ url_for('seller_studio.listing',page_id=page.id,listing_id=item.id) }}">Back to listing draft</a></p><article class="studio-preview"><p><strong>Private draft preview · {{ item.state }}</strong></p><h2>{{ item.title }}</h2><p>{{ shop.name }} · {{ page.handle }}</p><p>USD {{ '%.2f'|format(item.price_cents/100) }} · {{ item.kind|capitalize }} · Quantity {{ item.quantity }}</p><p class="studio-text">{{ item.description or 'Description not drafted yet.' }}</p>
+{% if variants %}<h3>Variations</h3><ul>{% for v in variants %}<li>{{ v.label }} · USD {{ '%.2f'|format(v.price_cents/100) }} · Quantity {{ v.quantity }}</li>{% endfor %}</ul>{% endif %}
+<h3>Delivery</h3><p class="studio-text">{{ item.delivery or 'Delivery terms not drafted yet.' }}</p><h3>Usage rights</h3><p class="studio-text">{{ item.license or 'Usage rights not drafted yet.' }}</p><h3>Returns and refunds</h3><p class="studio-text">{{ item.returns or 'Return/refund terms not drafted yet.' }}</p><h3>Shop policies</h3><p class="studio-text">{{ shop.policies or 'Shop policies not drafted yet.' }}</p><p>No purchase or public sharing link is available.</p></article>
+{% endif %}
+<p>Planned marketplace fees: USD $0.10 per four-month published listing and 6% of item sales, plus disclosed processing costs. Drafts are free. These fees are not being charged.</p>
+</main>
+<style>.seller-studio{min-width:0;overflow-wrap:anywhere}.seller-studio .studio-notice{padding:1rem;border:2px solid currentColor;border-radius:.5rem}.seller-studio .studio-text{white-space:pre-wrap}.seller-studio label{display:block;margin:.75rem 0}.seller-studio :is(input,select,textarea){display:block;box-sizing:border-box;max-width:100%;width:100%;font:inherit}.seller-studio :is(button,.button){min-height:44px}.seller-studio fieldset{min-width:0;max-width:100%;box-sizing:border-box}.seller-studio .studio-variation{display:grid;grid-template-columns:2fr 1fr 1fr;gap:.75rem;border-bottom:1px solid currentColor}.seller-studio nav{display:flex;flex-wrap:wrap;gap:1rem}.seller-studio nav a{display:inline-flex;align-items:center;min-height:44px}@media(max-width:600px){.seller-studio .studio-variation{grid-template-columns:1fr}.seller-studio input{font-size:16px}}</style>
+{% endblock %}
