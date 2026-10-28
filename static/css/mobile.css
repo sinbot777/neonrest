@@ -40,3 +40,9 @@
   #main-content pre {max-width:100%;overflow-x:auto;}
   body #footer-tagline {box-sizing:border-box!important;width:100%!important;max-width:100%!important;padding:1rem;overflow-wrap:anywhere;}
 }
+
+/* Match profile actions to the touch targets used by account and Circle tools. */
+@media (max-width: 768px) {
+  #theme-root.profile-page #main-content button:not(.react-btn):not(.icon-button):not(.link-button) {min-height:44px;}
+  #theme-root.profile-page #main-content input[type=file]::file-selector-button {min-height:44px;}
+}
