@@ -954,6 +954,12 @@ def register(app, core):
         export['attachment_storage']=storage_usage()
         core.identifiers.export_ids(db,export)
         # Exclude internal case notes, password hashes, tokens and two-factor secrets.
+        if request.form.get('include_uploads') == 'yes':
+            throttled = limited('media-export', 4)
+            if throttled is not None:
+                return throttled
+            from .media_export import download
+            return download(app, db, uid, export)
         return Response(json.dumps(export,ensure_ascii=False,indent=2),mimetype='application/json',headers={'Content-Disposition':'attachment; filename="neonrest-data.json"'})
 
     @app.template_filter('community_time')
