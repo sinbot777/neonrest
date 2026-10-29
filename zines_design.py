@@ -17,12 +17,12 @@ def register_fonts(reportlab):
   if not p.exists():p=Path(reportlab.__file__).parent/'fonts'/bundled
   if name not in pdfmetrics.getRegisteredFontNames():pdfmetrics.registerFont(TTFont(name,str(p)))
 
-def para(c,text,x,y,width,size=9.3,leading=12.65,color=INK,font='ZineText',bottom=34):
+def _para(c,text,x,y,width,size=9.3,leading=12.65,color=INK,font='ZineText',bottom=34,accent=RED):
  for block in text.split('\n\n'):
   if not block:continue
   first=block.split('\n',1)
   if font=='ZineText' and len(first)==2 and first[0].isupper() and len(first[0])<80:
-   y=para(c,first[0],x,y,width,9.3,12,RED,'ZineHeavy',bottom);block=first[1]
+   y=_para(c,first[0],x,y,width,9.3,12,accent,'ZineHeavy',bottom,accent);block=first[1]
   face=pdfmetrics.getFont(font).face
   if any(ord(ch) not in face.charToGlyph for ch in block if ch not in '\n\r\t'):raise ZineError('This print font cannot render a character. Adjust the text before exporting.')
   p=Paragraph(escape(block).replace('\n','<br/>'),ParagraphStyle('punk',fontName=font,fontSize=size,leading=leading,textColor=color,splitLongWords=True))
@@ -31,13 +31,19 @@ def para(c,text,x,y,width,size=9.3,leading=12.65,color=INK,font='ZineText',botto
   p.drawOn(c,x,y-height);y-=height+9
  return y
 
-def picture(c,image_id,assets,y,max_height=130):
+def _picture(c,image_id,assets,y,max_height=130,width_fraction=1,alignment='center'):
  if not image_id:return y
- pic=ImageReader(io.BytesIO(assets(image_id)));iw,ih=pic.getSize();scale=min(348/iw,max_height/ih);w,h=iw*scale,ih*scale
+ pic=ImageReader(io.BytesIO(assets(image_id)));iw,ih=pic.getSize();scale=min(348*width_fraction/iw,max_height/ih);w,h=iw*scale,ih*scale
  if y-h<40:raise ZineError('The image does not fit the punk print layout.')
- c.drawImage(pic,24+(348-w)/2,y-h,w,h,mask='auto');return y-h-9
+ offset=0 if alignment=='left' else 348-w if alignment=='right' else (348-w)/2
+ c.drawImage(pic,24+offset,y-h,w,h,mask='auto');return y-h-9
 
 def draw(c,page,data,x,width,height,assets,numbers,number):
+ accent=HexColor({'red':'#b52525','cobalt':'#174c99','purple':'#71348a','forest':'#1c6545'}.get(data.get('accent','red'),'#b52525'));RED=accent
+ def para(*args,**kwargs):
+  kwargs.setdefault('accent',accent);return _para(*args,**kwargs)
+ def picture(c,image_id,assets,y,max_height=130):
+  return _picture(c,image_id,assets,y,max_height,{'full':1,'medium':.67,'small':.34}.get(data.get('image_width','full'),1),data.get('image_align','center'))
  # The fixed 396x612 design is scaled as vector/text onto each physical leaf.
  scale=min(width/396,height/612);c.saveState();c.translate(x+(width-396*scale)/2,(height-612*scale)/2);c.scale(scale,scale)
  kind=page['kind'];dark=kind in ('cover','back');c.setFillColor(INK if dark else PAPER);c.rect(0,0,396,612,fill=1,stroke=0)
@@ -80,7 +86,8 @@ def draw(c,page,data,x,width,height,assets,numbers,number):
   if data.get('highlight'):
    y=para(c,data['highlight'],24,y,348,39,42,RED,'ZineHeavy');y=para(c,data.get('highlight_label',''),24,y+4,348,6.5,9,INK,'ZineMono')
   if data.get('image') and data['layout']=='image-top':y=picture(c,data['image'],assets,y)
-  y=para(c,data['text'],24,y,348)
+  body_size={'small':8.2,'regular':9.3,'large':10.8}.get(data.get('text_size','regular'),9.3)
+  y=para(c,data['text'],24,y,348,body_size,body_size*1.36)
   if data.get('image') and data['layout']!='image-top':y=picture(c,data['image'],assets,y)
   if data.get('caption'):y=para(c,data['caption'],24,y,348,8,11)
   if data.get('print_alternative'):y=para(c,data['print_alternative'],24,y,348,8,11)

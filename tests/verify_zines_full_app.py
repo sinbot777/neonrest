@@ -188,3 +188,52 @@ check(post('Writer',base+'/assets',set_cover='1',revision=current('zines',zid)['
 check(b'Upload and use as cover' in get('Regular',base+'/edit').data,'Direct cover upload visible')
 check(b'zine-directory-grid' in get('Regular','/zines').data,'Directory grid renders')
 print('PASS',checks,'T34 directory and cover acceptance checks')
+
+# Focused workspace controls, permissions, revision recovery and print parity.
+check(modify('Regular',iid,action='state',state='draft').status_code==302,'Workspace returns issue to draft')
+page_rows=query("SELECT * FROM zine_pages WHERE issue_id=? ORDER BY CASE kind WHEN 'cover' THEN 0 WHEN 'page' THEN 1 ELSE 2 END,position",(iid,))
+target=next(row for row in page_rows if row['kind']=='page')
+html=get('Regular',base+'/issues/'+iid+'/edit',page=2).data
+check(b'Issue outline' in html and b'Saved page preview' in html,'Outline and saved preview visible')
+check(html.count(b'name="action" value="page"')==1,'Only one page editor shown')
+check(all(label in html for label in (b'Body text size',b'Accent color',b'Image width',b'Image alignment')),'Granular page controls visible')
+check(b'Issue outline' not in get('Writer',base+'/issues/'+iid+'/edit').data,'Contributor workspace does not expose editorial pages')
+check(b'Issue settings' in get('Regular',base+'/issues/'+iid+'/edit',tab='settings').data,'Dedicated settings view')
+check(b'Publish &amp; print' in get('Regular',base+'/issues/'+iid+'/edit',tab='publish').data,'Dedicated publish view')
+new_values=payload(heading='Workspace custom page',text='A short fictional paragraph for layout testing.',design='punk',accent='cobalt',text_size='large',image_width='small',image_align='right',image=cover)
+check(modify('Regular',iid,action='page',page_id=target['id'],workspace_page='2',**new_values).status_code==302,'Granular controls saved')
+saved=json.loads(current('zine_pages',target['id'])['content'])
+check(all(saved[key]==new_values[key] for key in ('accent','text_size','image_width','image_align')),'Granular choices retained')
+reader=get('Regular',read,page=2).data
+check(all(value in reader for value in (b'zine-accent-cobalt',b'zine-body-large',b'zine-image-small',b'zine-align-right')),'Reader applies granular styles')
+for key,value in [('accent','url(javascript:bad)'),('text_size','enormous'),('image_width','99999'),('image_align','position:fixed')]:
+    bad={**new_values,key:value}
+    check(modify('Regular',iid,action='page',page_id=target['id'],**bad).status_code==400,'Unsafe or unsupported '+key+' rejected')
+ids={row['id'] for row in query('SELECT id FROM zine_pages WHERE issue_id=?',(iid,))}
+check(modify('Regular',iid,action='duplicate',page_id=target['id']).status_code==302,'Interior page duplicated')
+new_ids={row['id'] for row in query('SELECT id FROM zine_pages WHERE issue_id=?',(iid,))}-ids
+check(len(new_ids)==1,'Exactly one duplicate created')
+copy_id=new_ids.pop()
+check(current('zine_pages',copy_id)['author_id']==target['author_id'],'Duplicate preserves attribution')
+front=next(row for row in page_rows if row['kind']=='cover')
+check(modify('Regular',iid,action='delete',page_id=front['id']).status_code==400,'Cover removal rejected')
+check(modify('Writer',iid,action='duplicate',page_id=target['id']).status_code in (403,404),'Contributor cannot duplicate editorial page')
+check(modify('Regular',iid,action='delete',page_id=copy_id).status_code==302,'Interior page removed')
+check(not query('SELECT id FROM zine_pages WHERE id=?',(copy_id,)),'Only selected page removed')
+check(any(copy_id in row['snapshot'] for row in query('SELECT snapshot FROM zine_revisions WHERE issue_id=?',(iid,))),'Removed page recoverable from retained history')
+check(modify('Regular',iid,action='settings',title='Issue One',allow_print='1').status_code==302,'Enable fixture print edition')
+response=get('Regular',read+'/print',download='1',mode='standard',paper='letter')
+check(response.status_code==200,'Custom page renders in standard PDF')
+doc=PdfReader(io.BytesIO(response.data));ops=doc.pages[1].get_contents().operations
+check(any(op==b'rg' and len(args)==3 and all(abs(float(args[i])-v)<0.0001 for i,v in enumerate((23/255,76/255,153/255))) for args,op in ops),'PDF uses selected cobalt accent')
+check(b'Workspace custom page'.lower() in ' '.join((doc.pages[1].extract_text() or '').split()).lower().encode(),'Custom page PDF text remains selectable')
+print('PASS',checks,'T34 workspace acceptance checks')
+
+from types import SimpleNamespace
+records=[]
+design_module=importlib.import_module(package+'.zines_design')
+design_module._picture(SimpleNamespace(drawImage=lambda *args,**kwargs:records.append(args)),'fixture',lambda _:art,400,width_fraction=.34,alignment='right')
+check(records[0][3]<=348*.34+.01,'Print image width respects selected fraction')
+check(abs(records[0][1]-(24+348-records[0][3]))<.01,'Print image aligns to right edge')
+check(any(op==b'Tf' and abs(float(args[1])-10.8)<.001 for args,op in ops),'PDF uses selected large body size')
+print('PASS',checks,'T34 final workspace acceptance checks')

@@ -67,3 +67,12 @@ Hosted acceptance: all eight pages were saved through the normal owner editor, p
 The directory uses three desktop columns and twelve entries per page. Smaller screens use two or one column. Publication owners can choose a file under Add or replace publication cover and use Upload and use as cover; this uploads and selects the image together. Save other settings first. Existing artwork selection and general contributor uploads remain available. Cover replacement checks the publication revision and owner role. 294 actual-app acceptance checks and 26 design/PDF checks passed against disposable fixtures.
 
 Requested reauthentication changes are prepared separately and are not part of this deployment.
+
+
+## Focused workspace (October 28, 2026)
+
+Open a publication, then choose an issue under Issues & pages. The issue workspace separates Pages, Issue settings, Submissions and Publish & print. Use the outline to select a page; only that page is edited. Save page updates its saved preview. Text, Artwork & placement, Style & graphic elements and additional print text have separate control groups. Interior pages can be reordered, duplicated (appended before the back cover) or removed. Removal retains the previous snapshot within the existing 20-snapshot retention limit; copy earlier content from Revision history to restore it. Cover pages remain fixed. Contributors see their own submission workspace.
+
+Per-page controls add Red/Cobalt/Purple/Forest accents for Punk, three interior body sizes, three image widths and left/center/right image alignment. The reader and vector PDF use the same choices. Existing content retains defaults; no database migration or saved-content rewrite. Published issues remain read-only until returned to draft. Preview shows saved content, not unsaved keystrokes. Unsaved editor forms prompt before leaving when JavaScript is available; all editing and navigation also work without JavaScript.
+
+Validation: 323 actual-app checks (including protected page actions, contributor boundaries, unsafe enum rejection, revision retention, selectable PDF text, accent/body size and image placement) and 26 design/PDF checks. Production source remains unchanged. Authentication changes requested by the owner remain prepared separately, awaiting activation confirmation.

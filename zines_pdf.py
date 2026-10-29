@@ -48,13 +48,15 @@ def draw_page(c,page,x,width,height,assets,numbers=False,number=0):
     def image_block(y):
         if not data.get('image'):return y
         raw=assets(data['image']);pic=ImageReader(io.BytesIO(raw));iw,ih=pic.getSize()
-        scale=min(available/iw, min(180,height*0.30)/ih)
+        scale=min(available*{'full':1,'medium':.67,'small':.34}.get(data.get('image_width','full'),1)/iw, min(180,height*0.30)/ih)
         w,h=iw*scale,ih*scale
         if y-h<42:raise ZineError('The image does not fit this print page.')
-        c.drawImage(pic,left+(available-w)/2,y-h,w,h,mask='auto')
+        offset=0 if data.get('image_align')=='left' else available-w if data.get('image_align')=='right' else (available-w)/2
+        c.drawImage(pic,left+offset,y-h,w,h,mask='auto')
         return paragraph(c,data['caption'],left,y-h-8,available,9,12)
     if data['layout']=='image-top':y=image_block(y)
-    y=paragraph(c,data['text'],left,y,available)
+    body_size={'small':8.8,'regular':10,'large':11.6}.get(data.get('text_size','regular'),10)
+    y=paragraph(c,data['text'],left,y,available,body_size,body_size*1.4)
     if data['layout']!='image-top':y=image_block(y)
     if data.get('print_alternative'):y=paragraph(c,data['print_alternative'],left,y,available,9,12)
     if numbers:

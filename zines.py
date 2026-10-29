@@ -24,7 +24,7 @@ def register(app,core):
         helpers=app.extensions['community_auth_helpers'];helpers['csrf']()
         if not helpers['fresh']():return redirect(url_for('community_reauth',next=request.path))
         return helpers['limited']('zines-write',80)
-    def form_content():return {**{k:request.form.get(k,'') for k in ('heading','text','caption','image','layout','print_alternative','section','pullquote','highlight','highlight_label')},'design':request.form.get('design','classic')}
+    def form_content():return {**{k:request.form.get(k,'') for k in ('heading','text','caption','image','layout','print_alternative','section','pullquote','highlight','highlight_label','accent','text_size','image_width','image_align')},'design':request.form.get('design','classic'),**{key:request.form.get(key,default) for key,default in [('accent','red'),('text_size','regular'),('image_width','full'),('image_align','center')]}}
     def render(view,**values):return render_template('zines.html',view=view,token=token(),waveform=z.wave(),**values)
     def budget(db,owner):
         total=0
@@ -129,10 +129,14 @@ def register(app,core):
                     z.draft(issue);z.touch_issue(db,issue,user)
                     if action=='settings':db.execute('UPDATE zine_issues SET title=?,allow_print=? WHERE id=?',(z.text(request.form.get('title',''),160,True),int(request.form.get('allow_print')=='1'),iid))
                     elif action=='add':z.add_page(db,p,issue,user,form_content())
-                    elif action in ('page','move'):
+                    elif action in ('page','move','duplicate','delete'):
                         rows=z.pages(db,iid);target=next((r for r in rows if r['id']==request.form.get('page_id')),None)
                         if not target:abort(404)
                         if action=='page':db.execute('UPDATE zine_pages SET content=? WHERE id=?',(z.content(db,zid,user,form_content()),target['id']))
+                        elif action in ('duplicate','delete'):
+                            if target['kind']!='page':raise z.ZineError('Front and back covers cannot be duplicated or removed.')
+                            if action=='duplicate':z.add_page(db,p,issue,user,json.loads(target['content']),author=target['author_id'])
+                            else:db.execute('DELETE FROM zine_pages WHERE id=?',(target['id'],))
                         else:
                             middle=[r for r in rows if r['kind']=='page'];index=next((i for i,r in enumerate(middle) if r['id']==target['id']),None);delta=-1 if request.form.get('direction')=='up' else 1
                             if index is None or not 0<=index+delta<len(middle):raise z.ZineError('Covers stay at the ends; this page cannot move farther.')
@@ -146,12 +150,18 @@ def register(app,core):
                         db.execute('UPDATE zine_submissions SET state=?,revision=revision+1 WHERE id=?',(state,submission['id']))
                     else:raise z.ZineError('Unsupported action.')
                 budget(db,p['owner_id'])
-            return redirect(url_for('zines.issue_edit',zid=zid,iid=iid))
+            tab=request.form.get('workspace_tab','pages');tab=tab if tab in ('pages','settings','submissions','publish') else 'pages'
+            selected=max(1,min(request.form.get('workspace_page',1,type=int) or 1,64))
+            if action=='move':selected=max(1,min(64,selected+(-1 if request.form.get('direction')=='up' else 1)))
+            return redirect(url_for('zines.issue_edit',zid=zid,iid=iid,tab=tab,page=selected,saved=1))
         if member in ('owner','editor') and not z.visible(db,p,issue,user):raise z.ZineError('An issue contributor or image is unavailable.',404)
         rows=z.pages(db,iid) if member in ('owner','editor') else []
         submissions=db.execute('SELECT * FROM zine_submissions WHERE issue_id=?'+('' if member in ('owner','editor') else ' AND author_id=?')+' ORDER BY created_at,id',(iid,) if member in ('owner','editor') else (iid,user)).fetchall()
         assets=db.execute('SELECT id FROM zine_assets WHERE zine_id=?'+('' if member in ('owner','editor') else ' AND uploader_id=?'),(zid,) if member in ('owner','editor') else (zid,user)).fetchall()
-        return render('issue_edit',publication=p,issue=issue,role=member,pages=[(r,json.loads(r['content'])) for r in rows],submissions=[(r,json.loads(r['content'])) for r in submissions],assets=assets)
+        selected=max(1,min(request.args.get('page',1,type=int) or 1,len(rows) or 1))
+        tab=request.args.get('tab','pages');tab=tab if tab in ('pages','new','settings','submissions','publish') else 'pages'
+        if member=='contributor':tab='submissions'
+        return render('issue_edit',selected_page=selected,workspace_tab=tab,publication=p,issue=issue,role=member,pages=[(r,json.loads(r['content'])) for r in rows],submissions=[(r,json.loads(r['content'])) for r in submissions],assets=assets)
     @bp.post('/zines/<zid>/issues/<iid>/submit')
     def submit(zid,iid):
         user=actor();db=core.get_db();p=z.publication(db,zid);z.require(db,p,user,('owner','editor','contributor'));issue=z.get_issue(db,p,iid);z.draft(issue)

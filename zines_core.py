@@ -86,9 +86,12 @@ def text(value,maximum,required=False):
     return value
 
 def content(db,zid,uid,data):
-    if not isinstance(data,dict) or set(data)-{'version','heading','text','caption','image','layout','print_alternative','design','section','pullquote','highlight','highlight_label'}:raise ZineError('Unsupported page structure.')
+    if not isinstance(data,dict) or set(data)-{'version','heading','text','caption','image','layout','print_alternative','design','section','pullquote','highlight','highlight_label','accent','text_size','image_width','image_align'}:raise ZineError('Unsupported page structure.')
     out={'version':1,'heading':text(data.get('heading',''),160),'text':text(data.get('text',''),MAX_TEXT),'caption':text(data.get('caption',''),300),'layout':data.get('layout','text'),'image':data.get('image',''),'print_alternative':text(data.get('print_alternative',''),1000)}
     out.update(design=data.get('design','classic'),section=text(data.get('section',''),80),pullquote=text(data.get('pullquote',''),160),highlight=text(data.get('highlight',''),40),highlight_label=text(data.get('highlight_label',''),100))
+    for key,default,allowed in [('accent','red',('red','cobalt','purple','forest')),('text_size','regular',('small','regular','large')),('image_width','full',('full','medium','small')),('image_align','center',('left','center','right'))]:
+        out[key]=data.get(key,default)
+        if out[key] not in allowed:raise ZineError('Choose a supported '+key.replace('_',' ')+'.')
     if out['design'] not in ('classic','punk'):raise ZineError('Choose a supported visual style.')
     if out['layout'] not in ('text','image-top','image-bottom'):raise ZineError('Choose a supported layout.')
     if not isinstance(out['image'],str) or len(out['image'])>60:raise ZineError('Invalid image.')

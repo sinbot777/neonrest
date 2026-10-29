@@ -1,3 +1,11 @@
+# Zine workspace - October 28, 2026 (Sandbox)
+
+- Add focused page outline, selected-page editing and saved preview, plus separate settings, submissions and publishing views.
+- Add per-page accent, body size, image width and alignment with reader/PDF parity.
+- Add interior-page duplicate/remove actions with role checks and retained revision snapshots.
+- Add grouped controls, artwork thumbnails, publication navigation and unsaved-change warnings.
+- Pass 323 actual-app acceptance checks and 26 design/PDF checks.
+
 # Zine directory and cover uploads - October 28, 2026 (Sandbox)
 
 - Show three desktop columns and twelve publications per directory page, with responsive two/one-column layouts.
