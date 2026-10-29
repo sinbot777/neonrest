@@ -957,6 +957,8 @@ def register(app, core):
         export['attachment_storage']=storage_usage()
         from .seller_studio import export_user as export_seller_studio
         export['seller_studio']=export_seller_studio(db,uid)
+        from .zines_core import export_user as export_zines
+        export['zines']=export_zines(db,uid)
         from .marketplace_assets import export_user as export_product_uploads
         from .marketplace_orders import export_user as export_test_orders
         export['product_uploads']=export_product_uploads(db,uid)

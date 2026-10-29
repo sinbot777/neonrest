@@ -1,3 +1,11 @@
+# Collaborative Zines — October 28, 2026 (Pacific; Sandbox)
+
+- Add independent publications, issues, owner/editor/contributor collaboration, structured pages and responsive reading.
+- Add editor-controlled Letter/A4 reading-order PDFs and correctly padded saddle-stitch imposition with sheet previews.
+- Preserve current account/privacy controls, CSRF/fresh authentication, revision conflicts and uploader-attributed storage/exports.
+- Generate bounded PDFs on demand; keep Production rollout and advanced publishing/commerce separate.
+- Technical and test documentation: docs/T34-zines.md.
+
 # Attachment storage allowances — October 26, 2026 (Pacific)
 
 - Deploy cumulative ordinary-media admission: 16 MiB/account, 24 MiB shared across environments, plus separate provider headroom.
