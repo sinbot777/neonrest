@@ -1,3 +1,10 @@
+# Zine directory and cover uploads - October 28, 2026 (Sandbox)
+
+- Show three desktop columns and twelve publications per directory page, with responsive two/one-column layouts.
+- Show cover artwork or a title placeholder on each directory card.
+- Add owner-only upload-and-set cover control beside publication settings, including revision conflict protection.
+- Pass 294 actual-app checks and 26 visual/PDF checks.
+
 # Native Zine visual design - October 28, 2026 (Sandbox)
 
 - Add shared Punk reader/vector-PDF styles, editable graphic metadata and deterministic waveform art.

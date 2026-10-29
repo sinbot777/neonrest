@@ -51,12 +51,12 @@ def register(app,core):
     @bp.get('/zines')
     def directory():
         db=core.get_db();items=[]
-        page=max(1,min(request.args.get('page',1,type=int) or 1,1000));rows=db.execute("SELECT DISTINCT z.* FROM zines z LEFT JOIN zine_members m ON m.zine_id=z.id AND m.user_id=? WHERE z.visibility='public' OR z.owner_id=? OR m.user_id=? ORDER BY z.created_at DESC,z.id LIMIT 51 OFFSET ?",(uid(),uid(),uid(),(page-1)*50)).fetchall()
-        for p in rows[:50]:
+        page=max(1,min(request.args.get('page',1,type=int) or 1,1000));rows=db.execute("SELECT DISTINCT z.* FROM zines z LEFT JOIN zine_members m ON m.zine_id=z.id AND m.user_id=? WHERE z.visibility='public' OR z.owner_id=? OR m.user_id=? ORDER BY z.created_at DESC,z.id LIMIT 13 OFFSET ?",(uid(),uid(),uid(),(page-1)*12)).fetchall()
+        for p in rows[:12]:
             member=z.role(db,p,uid())
             issues=db.execute("SELECT * FROM zine_issues WHERE zine_id=? AND state='published'",(p['id'],)).fetchall()
             if member or (p['visibility']=='public' and any(z.visible(db,p,i,uid()) for i in issues)):items.append(p)
-        return render('directory',items=items,page=page,more=len(rows)>50)
+        return render('directory',items=items,page=page,more=len(rows)>12)
     @bp.route('/zines/create',methods=['GET','POST'])
     def create():
         user=actor()
@@ -200,6 +200,8 @@ def register(app,core):
         response=writing()
         if response is not None:return response
         if policy() is None:raise z.ZineError('Artwork uploads are temporarily unavailable.',503)
+        set_cover=request.form.get('set_cover')=='1'
+        if set_cover:z.require(db,p,user,('owner',))
         incoming=request.files.get('image')
         if not incoming:raise z.ZineError('Choose an image.')
         raw=incoming.stream.read(2*1024*1024+1)
@@ -209,10 +211,14 @@ def register(app,core):
         if len(data)>512*1024:raise z.ZineError('The processed image exceeds 512 KiB. Resize it first.')
         with db:
             db.execute('BEGIN IMMEDIATE');p=z.publication(db,zid);z.require(db,p,user,('owner','editor','contributor'))
+            if set_cover:
+                z.require(db,p,user,('owner',))
+                if revision()!=p['revision']:raise z.ZineError('Publication changed. Reload before replacing the cover.',409)
             if db.execute('SELECT COUNT(*) FROM zine_assets WHERE zine_id=?',(zid,)).fetchone()[0]>=64:raise z.ZineError('Publication image limit reached.',409)
             directory=Path(app.instance_path)/'zines';directory.mkdir(mode=0o700,parents=True,exist_ok=True);os.chmod(directory,0o700);key=secrets.token_hex(24)+'.webp';aid=secrets.token_urlsafe(18)
             write([(directory/key,data)],'zines')
             db.execute('INSERT INTO zine_assets VALUES (?,?,?,?,?,?,?)',(aid,zid,user,key,len(data),hashlib.sha256(data).hexdigest(),int(time.time())))
+            if set_cover:db.execute('UPDATE zines SET cover_asset=?,revision=revision+1 WHERE id=?',(aid,zid))
         return redirect(url_for('zines.edit',zid=zid))
     @bp.get('/zines/<zid>/assets/<aid>')
     def image(zid,aid):
