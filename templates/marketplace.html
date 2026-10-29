@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}Marketplace - Neonrest{% endblock %}
+{% block content %}
+{% include 'partials/identity_page_styles.html' %}
+<main class="identity-page marketplace-home">
+<h1>Marketplace</h1>
+<p>A home for things made by the Neonrest community.</p>
+<section><h2>Prepare your shop</h2><p>Start directly in Marketplace with your personal account. Your shop can link to your @handle, a creative _handle Page or a business $handle Page, or stand on its own. No Page or business subscription is required.</p>
+{% if session.get('user_id') %}<p><a class="button" href="{{ url_for('seller_studio.index') }}">Open Seller Studio</a> <a class="button" href="{{ url_for('seller_studio.new') }}">Create a shop</a></p>{% else %}<p><a class="button" href="{{ url_for('login',next=url_for('seller_studio.index')) }}">Log in to prepare a shop</a></p>{% endif %}
+<p>Seller preparation is currently available to eligible adults. Drafts are private and free to prepare.</p></section>
+<section><h2>Shopping is coming next</h2><p>Public listings and purchases are not open yet. Sellers can prepare physical and digital product drafts, add private images/files, and rehearse checkout without charges. No payment providers are connected and nothing is being sold here yet.</p></section>
+<section><h2>Planned fees</h2><p>USD $0.10 per four-month published listing and 6% of item sales, plus disclosed payment-processing costs. Shipping and tax are excluded from the platform percentage. These fees are not currently charged.</p></section>
+</main>
+<style>.marketplace-home{min-width:0;overflow-wrap:anywhere}.marketplace-home section{margin-block:1.5rem}.marketplace-home .button{display:inline-flex;align-items:center;min-height:44px;margin:.25rem;box-sizing:border-box;max-width:100%}</style>
+{% endblock %}
