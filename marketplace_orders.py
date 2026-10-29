@@ -4,7 +4,7 @@ import secrets
 import re
 import time
 from .seller_studio import StudioError,get_listing,event
-from .marketplace_core import quote
+from .marketplace_catalog import shop_quote
 
 TTL=900
 
@@ -47,7 +47,7 @@ def create_quote(db,uid,page_id,listing_id,revision,variant,quantity,now=None):
     if quantity>available(db,listing_id,variant,stock,now,listing['revision']):raise StudioError('Insufficient draft stock after active test reservations.',409)
     if db.execute('SELECT COUNT(*) FROM seller_test_quotes WHERE actor_id=? AND expires_at>?',(uid,now)).fetchone()[0]>=20:raise StudioError('Too many active checkout previews. Wait for one to expire.',409)
     if price*quantity>100_000_000:raise StudioError('This item subtotal exceeds the checkout preview limit.')
-    snapshot={'title':listing['title'],'kind':listing['kind'],'unit_price':price,'variant':label,'delivery':listing['delivery'],'license':listing['license'],'returns':listing['returns'],'shop_name':shop['name'],'shop_policies':shop['policies'],'quote':quote(price*quantity,kind=listing['kind']),'test_only':True,'shipping_and_tax_calculated':False}
+    snapshot={'title':listing['title'],'kind':listing['kind'],'unit_price':price,'variant':label,'delivery':listing['delivery'],'license':listing['license'],'returns':listing['returns'],'shop_name':shop['name'],'shop_policies':shop['policies'],'quote':shop_quote(db,shop,price*quantity,listing['kind']),'test_only':True,'shipping_and_tax_calculated':False}
     key=secrets.token_urlsafe(24);db.execute('INSERT INTO seller_test_quotes VALUES (?,?,?,?,?,?,?,?,?,?)',(key,uid,page_id,listing_id,revision,variant,quantity,json.dumps(snapshot,ensure_ascii=False),now,now+TTL));return key
 
 
@@ -138,3 +138,4 @@ def register(app,core):
         response.headers.update({'Cache-Control':'private, no-store','X-Robots-Tag':'noindex, nofollow','Referrer-Policy':'no-referrer'})
         return response
     app.register_blueprint(bp)
+
