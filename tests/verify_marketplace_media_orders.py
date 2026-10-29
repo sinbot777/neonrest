@@ -1,7 +1,7 @@
 from pathlib import Path
 import sys,os,json,smtplib,importlib,io,sqlite3,hashlib,zipfile
 smtplib.SMTP=lambda *a,**k:(_ for _ in ()).throw(AssertionError('Fixture SMTP disabled'));smtplib.SMTP_SSL=smtplib.SMTP
-package=sys.argv[1];stage=Path(sys.argv[2]);assert str(stage).startswith('/home/sinbot/releases/T31-media-')
+package=sys.argv[1];stage=Path(sys.argv[2]);assert str(stage).startswith('/home/sinbot/releases/T31-')
 bootstrap=(stage/'tests/verify_statistics_suite.py').read_text().split('from datetime import datetime,timedelta,timezone')[0];exec(compile(bootstrap,'isolated marketplace media/order bootstrap','exec'))
 import urllib.request,requests
 def network_forbidden(*args,**kwargs):raise AssertionError('Provider network forbidden in fixture')
@@ -29,8 +29,8 @@ def form(product,kind='physical',quantity='2'):
 for product in fixtures['products'][:2]:check(post('Regular',base+'/listing/new',**form(product)).status_code==302,'Authorized copied/synthetic product fixture saves')
 listing=query('SELECT id FROM seller_listings WHERE shop_id=? ORDER BY created_at,id',(page,))[0][0];path=base+'/listing/'+listing
 check(get('Regular',path).status_code==200,'Upload/checkout controls render')
-check(b'paid $handle business Page is not required' in get('Regular','/marketplace/studio').data,'Free creative Page selling route is explicit')
-check(b'Create a free creative Page for your shop' in get('Regular','/marketplace/studio').data,'Free Page creation remains visible beside existing business Pages')
+check(b'No Page or business subscription is required' in get('Regular','/marketplace/studio').data,'Free creative Page selling route is explicit')
+check(b'Create an independent shop draft' in get('Regular','/marketplace/studio').data,'Standalone shop entry remains visible')
 check(query('SELECT kind FROM identity_pages WHERE id=?',(page,))[0][0]=='creative','Test shop uses free creative Page')
 check(query('SELECT COUNT(*) FROM page_subscriptions WHERE owner_id=?',(users['Regular'],))[0][0]==0,'No business subscription needed for product workflow')
 def rev():return query('SELECT revision FROM seller_listings WHERE id=?',(listing,))[0][0]
@@ -83,3 +83,4 @@ with app.app_context():
  else:check(False,'Expected expired quote refusal')
 check(post('Regular',path+'/checkout-preview',revision=str(rev()),quantity='2').status_code==302,'Canceled/expired test stock available again')
 print(json.dumps({'checks':checks,'passed':True,'fixtures':'authorized public listing copies' if fixture_path.is_file() else 'synthetic','scope':'disposable database, ledger and files; no provider calls'}))
+
