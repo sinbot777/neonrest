@@ -1,5 +1,7 @@
 """T34 structured collaborative publications; no arbitrary HTML or remote rendering."""
 import json
+import math
+import random
 import secrets
 import time
 from . import identity_pages, age_policy
@@ -77,14 +79,17 @@ def visible(db,zine,issue,uid):
     return True
 
 def text(value,maximum,required=False):
+    if isinstance(value,str):value=value.replace("\r\n","\n").replace("\r","\n")
     if not isinstance(value,str) or len(value)>maximum or any(ord(c)<32 and c not in '\n\r\t' for c in value):raise ZineError('Text is too long or contains unsupported control characters.')
     value=value.strip()
     if required and not value:raise ZineError('A title is required.')
     return value
 
 def content(db,zid,uid,data):
-    if not isinstance(data,dict) or set(data)-{'version','heading','text','caption','image','layout','print_alternative'}:raise ZineError('Unsupported page structure.')
+    if not isinstance(data,dict) or set(data)-{'version','heading','text','caption','image','layout','print_alternative','design','section','pullquote','highlight','highlight_label'}:raise ZineError('Unsupported page structure.')
     out={'version':1,'heading':text(data.get('heading',''),160),'text':text(data.get('text',''),MAX_TEXT),'caption':text(data.get('caption',''),300),'layout':data.get('layout','text'),'image':data.get('image',''),'print_alternative':text(data.get('print_alternative',''),1000)}
+    out.update(design=data.get('design','classic'),section=text(data.get('section',''),80),pullquote=text(data.get('pullquote',''),160),highlight=text(data.get('highlight',''),40),highlight_label=text(data.get('highlight_label',''),100))
+    if out['design'] not in ('classic','punk'):raise ZineError('Choose a supported visual style.')
     if out['layout'] not in ('text','image-top','image-bottom'):raise ZineError('Choose a supported layout.')
     if not isinstance(out['image'],str) or len(out['image'])>60:raise ZineError('Invalid image.')
     if out['image']:
@@ -149,3 +154,7 @@ def export_user(db,uid):
       'authored_pages':[dict(r) for r in db.execute('SELECT * FROM zine_pages WHERE author_id=?',(uid,))],
       'submissions':[dict(r) for r in db.execute('SELECT * FROM zine_submissions WHERE author_id=?',(uid,))],
       'uploaded_artwork':[dict(r) for r in db.execute('SELECT id,zine_id,bytes,sha256,created_at FROM zine_assets WHERE uploader_id=?',(uid,))]}
+
+def wave():
+    rng=random.Random(12)
+    return [round((14+55*abs(math.sin(x*.032)))*rng.uniform(.55,1),2) for x in range(22,375,5)]

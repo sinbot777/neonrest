@@ -1,3 +1,9 @@
+# Native Zine visual design - October 28, 2026 (Sandbox)
+
+- Add shared Punk reader/vector-PDF styles, editable graphic metadata and deterministic waveform art.
+- Preserve Classic defaults and all existing saved content; normalize browser line endings on future saves.
+- Pass 26 design checks plus the existing 287 focused Zine checks.
+
 # Collaborative Zines — October 28, 2026 (Pacific; Sandbox)
 
 - Add independent publications, issues, owner/editor/contributor collaboration, structured pages and responsive reading.

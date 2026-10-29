@@ -23,6 +23,8 @@ font_path=Path('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf')
 if not font_path.exists():font_path=Path(reportlab.__file__).parent/'fonts'/'Vera.ttf'
 pdfmetrics.registerFont(TTFont('ZineText',str(font_path)))
 FONT=pdfmetrics.getFont('ZineText')
+from . import zines_design
+zines_design.register_fonts(reportlab)
 
 def paragraph(c,text,x,y,width,size=10,leading=14):
     if not text:return y
@@ -38,6 +40,7 @@ def paragraph(c,text,x,y,width,size=10,leading=14):
 def draw_page(c,page,x,width,height,assets,numbers=False,number=0):
     if page is None:return
     data=json.loads(page['content'])
+    if data.get('design')=='punk':return zines_design.draw(c,page,data,x,width,height,assets,numbers,number)
     margin=30; left=x+margin; available=width-2*margin; y=height-margin
     c.saveState()
     c.setFillColorRGB(1,1,1);c.rect(x,0,width,height,fill=1,stroke=0)

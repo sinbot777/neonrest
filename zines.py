@@ -24,8 +24,8 @@ def register(app,core):
         helpers=app.extensions['community_auth_helpers'];helpers['csrf']()
         if not helpers['fresh']():return redirect(url_for('community_reauth',next=request.path))
         return helpers['limited']('zines-write',80)
-    def form_content():return {k:request.form.get(k,'') for k in ('heading','text','caption','image','layout','print_alternative')}
-    def render(view,**values):return render_template('zines.html',view=view,token=token(),**values)
+    def form_content():return {**{k:request.form.get(k,'') for k in ('heading','text','caption','image','layout','print_alternative','section','pullquote','highlight','highlight_label')},'design':request.form.get('design','classic')}
+    def render(view,**values):return render_template('zines.html',view=view,token=token(),waveform=z.wave(),**values)
     def budget(db,owner):
         total=0
         for sql in ["SELECT SUM(length(CAST(p.content AS BLOB))) FROM zine_pages p JOIN zine_issues i ON i.id=p.issue_id JOIN zines z ON z.id=i.zine_id WHERE z.owner_id=?", "SELECT SUM(length(CAST(p.snapshot AS BLOB))) FROM zine_revisions p JOIN zine_issues i ON i.id=p.issue_id JOIN zines z ON z.id=i.zine_id WHERE z.owner_id=?", "SELECT SUM(length(CAST(p.content AS BLOB))) FROM zine_submissions p JOIN zine_issues i ON i.id=p.issue_id JOIN zines z ON z.id=i.zine_id WHERE z.owner_id=?"]:
@@ -178,7 +178,7 @@ def register(app,core):
         rows=z.pages(db,iid);page=request.args.get('page',1,type=int) or 1
         if not 1<=page<=len(rows):abort(404)
         row=rows[page-1]
-        return render('reader',publication=p,issue=issue,page=page,total=len(rows),data=json.loads(row['content']),role=z.role(db,p,uid()))
+        return render('reader',publication=p,issue=issue,page=page,total=len(rows),data=json.loads(row['content']),page_kind=row['kind'],role=z.role(db,p,uid()))
     @bp.get('/zines/<zid>/issues/<iid>/print')
     def printing(zid,iid):
         db=core.get_db();p=z.publication(db,zid);issue=z.get_issue(db,p,iid)
