@@ -15,7 +15,7 @@ def shoprow(key):return query('SELECT * FROM seller_shops WHERE page_id=?',(key,
 def identity(who,key,kind='personal',linked='',revision=None):
  return post(who,'/marketplace/studio/'+key+'/identity',identity_kind=kind,linked_page_id=linked,revision=str(shoprow(key)['revision'] if revision is None else revision))
 guest=app.test_client();r=guest.get('/marketplace',environ_overrides=env)
-check(r.status_code==200 and b'Shopping is coming next' in r.data,'Public standalone Marketplace')
+check(r.status_code==200 and b'Search listings' in r.data,'Public standalone Marketplace')
 check(b'Marketplace</a>' in guest.get('/',environ_overrides=env).data,'Logged-out homepage navigation')
 check(b'Marketplace</a>' in get('Regular','/feed').data,'Signed-in Marketplace navigation')
 check(get('Regular','/marketplace/studio/new').status_code==200,'Seller setup without Pages')

@@ -1,0 +1,8 @@
+{% extends 'base.html' %}{% block title %}{{ item.title }} - Marketplace - Neonrest{% endblock %}
+{% block content %}{% include 'partials/identity_page_styles.html' %}
+<main class="identity-page marketplace-product"><p><a href="{{ url_for('seller_studio.marketplace') }}">Back to Marketplace</a></p><p><strong>Preview listing · Checkout unavailable</strong></p><h1>{{ item.title }}</h1><p>{{ item.shop_name }} · <a href="{{ url_for('user_by_handle',handle=item.seller_handle.lstrip('@')) }}">{{ item.seller_handle }}</a></p>
+{% for asset_id in image_ids %}<img src="{{ url_for('seller_studio.public_image',listing_id=item.id,asset_id=asset_id) }}" alt="{{ item.title }}{% if loop.index>1 %} · image {{ loop.index }}{% endif %}" loading="lazy">{% endfor %}
+<p><strong>USD {{ '%.2f'|format(item.price_cents/100) }}</strong> · {{ item.kind|capitalize }}</p><p>Preview price only. Shipping and tax are not calculated. Purchases are not available on Neonrest yet.</p><div class="product-copy">{{ item.description }}</div>
+{% if variants %}<h2>Variations</h2><ul>{% for v in variants %}<li>{{ v.label }} · USD {{ '%.2f'|format(v.price_cents/100) }}</li>{% endfor %}</ul>{% endif %}
+{% if item.source_url.startswith('https://www.etsy.com/listing/') %}<p><a href="{{ item.source_url }}" rel="noopener noreferrer" referrerpolicy="no-referrer">View the original Etsy listing</a></p>{% endif %}
+</main><style>.marketplace-product{min-width:0;overflow-wrap:anywhere}.marketplace-product img{display:block;max-width:100%;max-height:500px;object-fit:contain;margin:1rem auto}.marketplace-product .product-copy{white-space:pre-wrap}.marketplace-product a{display:inline-flex;align-items:center;min-height:44px}</style>{% endblock %}

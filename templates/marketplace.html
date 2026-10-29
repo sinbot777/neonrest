@@ -2,14 +2,21 @@
 {% block title %}Marketplace - Neonrest{% endblock %}
 {% block content %}
 {% include 'partials/identity_page_styles.html' %}
-<main class="identity-page marketplace-home">
-<h1>Marketplace</h1>
-<p>A home for things made by the Neonrest community.</p>
-<section><h2>Prepare your shop</h2><p>Start directly in Marketplace with your personal account. Your shop can link to your @handle, a creative _handle Page or a business $handle Page, or stand on its own. No Page or business subscription is required.</p>
-{% if session.get('user_id') %}<p><a class="button" href="{{ url_for('seller_studio.index') }}">Open Seller Studio</a> <a class="button" href="{{ url_for('seller_studio.new') }}">Create a shop</a></p>{% else %}<p><a class="button" href="{{ url_for('login',next=url_for('seller_studio.index')) }}">Log in to prepare a shop</a></p>{% endif %}
-<p>Seller preparation is currently available to eligible adults. Drafts are private and free to prepare.</p></section>
-<section><h2>Shopping is coming next</h2><p>Public listings and purchases are not open yet. Sellers can prepare physical and digital product drafts, add private images/files, and rehearse checkout without charges. No payment providers are connected and nothing is being sold here yet.</p></section>
-<section><h2>Planned fees</h2><p>USD $0.10 per four-month published listing and 6% of item sales, plus disclosed payment-processing costs. Shipping and tax are excluded from the platform percentage. These fees are not currently charged.</p></section>
+<main class="identity-page marketplace-browser">
+<header><h1>Marketplace</h1><nav aria-label="Marketplace tools">
+{% if session.get('user_id') %}<a class="button" href="{{ url_for('seller_studio.new_listing') }}">Create a listing</a><a href="{{ url_for('seller_studio.index') }}">Your listings and shops</a>
+{% else %}<a class="button" href="{{ url_for('login',next=url_for('seller_studio.new_listing')) }}">Log in to create a listing</a>{% endif %}</nav></header>
+<form method="get" class="marketplace-search" role="search" aria-label="Marketplace listings">
+<label>Search listings<input type="search" name="q" value="{{ query }}" maxlength="120" placeholder="Find an item or shop"></label>
+<label>Sort listings<select name="sort">{% for key,label in sorts.items() %}<option value="{{ key }}" {{ 'selected' if sort==key else '' }}>{{ label }}</option>{% endfor %}</select></label>
+<button>Search and sort</button></form>
+<p class="marketplace-notice">Preview catalog · Purchases are not open yet. Prices are previews; no shipping, tax or checkout is available. New listings save privately.</p>
+{% if sort=='best_selling' and not sales_ranking_available %}<p>No verified Neonrest sales have been recorded yet. Best selling uses newest first until real sales rankings are available; test orders never count.</p>{% endif %}
+<section aria-label="Listing results" class="marketplace-grid">
+{% for item in items %}<article class="marketplace-card">{% set images=catalog_images(item) %}<a href="{{ url_for('seller_studio.public_listing',listing_id=item.id) }}">{% if images %}<img src="{{ url_for('seller_studio.public_image',listing_id=item.id,asset_id=images[0]) }}" alt="{{ item.title }}" loading="lazy">{% endif %}<h2>{{ item.title }}</h2></a><p>{{ item.shop_name }}</p><p><strong>USD {{ '%.2f'|format(item.price_cents/100) }}</strong></p><p>{{ item.kind|capitalize }} · Preview</p></article>
+{% else %}<p>{% if query %}No available listings match “{{ query }}”. Try another search.{% else %}No public preview listings yet.{% endif %}</p>{% endfor %}</section>
+<nav aria-label="Marketplace results pages">{% if page>1 %}<a href="{{ url_for('seller_studio.marketplace',q=query,sort=sort,page=page-1) }}">Previous listings</a>{% endif %}{% if has_next %}<a href="{{ url_for('seller_studio.marketplace',q=query,sort=sort,page=page+1) }}">More listings</a>{% endif %}</nav>
+<details><summary>Selling on Neonrest</summary><p>Every seller needs a basic personal Neonrest profile. Create listings here using your @handle, with the option to associate them with an owned creative _handle or business $handle Page. No Page or business subscription is required.</p><p>Planned marketplace fees: USD $0.10 per four-month published listing and 6% of item sales, plus disclosed processing costs. Shipping/tax are excluded from the percentage. No fees are currently charged.</p></details>
 </main>
-<style>.marketplace-home{min-width:0;overflow-wrap:anywhere}.marketplace-home section{margin-block:1.5rem}.marketplace-home .button{display:inline-flex;align-items:center;min-height:44px;margin:.25rem;box-sizing:border-box;max-width:100%}</style>
+<style>.marketplace-browser{min-width:0;overflow-wrap:anywhere}.marketplace-browser nav{display:flex;align-items:center;flex-wrap:wrap;gap:1rem}.marketplace-browser :is(button,.button,nav a,summary){min-height:44px;display:inline-flex;align-items:center}.marketplace-search{display:grid;grid-template-columns:2fr 1fr auto;align-items:end;gap:.75rem;margin-block:1.5rem}.marketplace-search label{display:block;min-width:0}.marketplace-search :is(input,select){display:block;box-sizing:border-box;width:100%;max-width:100%;min-height:44px;font:inherit}.marketplace-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}.marketplace-card{min-width:0;padding:1rem;border:1px solid currentColor;border-radius:.5rem}.marketplace-card img{display:block;width:100%;height:220px;object-fit:contain;background:#fff;border-radius:.25rem}.marketplace-card h2{font-size:1.15rem}.marketplace-notice{padding:.75rem;border:1px solid currentColor}.marketplace-browser details{margin-top:1.5rem}@media(max-width:600px){.marketplace-search,.marketplace-grid{grid-template-columns:1fr}.marketplace-search input{font-size:16px}}</style>
 {% endblock %}
