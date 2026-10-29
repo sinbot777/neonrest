@@ -242,19 +242,21 @@ def export_user(db,uid):
     shops=[dict(r) for r in db.execute('SELECT * FROM seller_shops WHERE owner_id=? ORDER BY page_id',(uid,))]
     ids=[s['page_id'] for s in shops];listings=[]
     for page_id in ids:listings.extend(dict(r) for r in db.execute('SELECT * FROM seller_listings WHERE shop_id=? ORDER BY id',(page_id,)))
-    return {'shops':shops,'listings':listings}
+    benefits=[dict(r) for r in db.execute('SELECT * FROM marketplace_shop_benefits WHERE owner_id=? ORDER BY shop_id',(uid,))]
+    return {'shops':shops,'listings':listings,'fee_benefits':benefits}
 
 
 def register(app,core):
     from flask import Blueprint,abort,flash,redirect,render_template,request,session,url_for
     bp=Blueprint('seller_studio',__name__)
+    from . import marketplace_catalog as catalog
     with app.app_context():
-        db=core.get_db();db.commit();initialize(db);db.commit()
+        db=core.get_db();db.commit();initialize(db);catalog.initialize(db);db.commit()
     @bp.errorhandler(StudioError)
     def failure(error):
         unsaved=[]
         if request.method=='POST' and error.status in (400,409):
-            for key,label in [('name','Shop name'),('title','Listing title'),('kind','Product type'),('description','Description'),('policies','Shop policies'),('price','Base price'),('quantity','Quantity'),('variation_label','Variation labels'),('variation_price','Variation prices'),('variation_quantity','Variation quantities'),('delivery','Delivery terms'),('license','Usage rights'),('returns','Return/refund terms')]:
+            for key,label in [('name','Shop name'),('listing_identity','Listing identity'),('title','Listing title'),('kind','Product type'),('description','Description'),('policies','Shop policies'),('price','Base price'),('quantity','Quantity'),('variation_label','Variation labels'),('variation_price','Variation prices'),('variation_quantity','Variation quantities'),('delivery','Delivery terms'),('license','Usage rights'),('returns','Return/refund terms')]:
                 values=request.form.getlist(key)
                 if values:unsaved.append((label,'\n'.join(values)[:10000]))
         return render_template('seller_studio.html',error=str(error),view='error',unsaved=unsaved),error.status
@@ -273,7 +275,52 @@ def register(app,core):
         return n
     @bp.get('/marketplace')
     def marketplace():
-        return render_template('marketplace.html')
+        results=catalog.browse(core.get_db(),session.get('user_id'),request.args.get('q',''),request.args.get('sort','newest'),request.args.get('page','1'))
+        return render_template('marketplace.html',catalog_images=catalog.images,**results)
+    @bp.get('/marketplace/listings/<listing_id>')
+    def public_listing(listing_id):
+        item=catalog.detail(core.get_db(),session.get('user_id'),listing_id)
+        return render_template('marketplace_listing.html',item=item,variants=json.loads(item['variations']),image_ids=catalog.images(item))
+    @bp.get('/marketplace/listings/<listing_id>/images/<asset_id>')
+    def public_image(listing_id,asset_id):
+        import hashlib,io
+        from flask import send_file
+        from .marketplace_assets import folder,MAX_UPLOAD
+        from .media_export import open_regular
+        db=core.get_db();item=catalog.detail(db,session.get('user_id'),listing_id)
+        if asset_id not in catalog.images(item):abort(404)
+        asset=db.execute("SELECT * FROM seller_assets WHERE id=? AND listing_id=? AND kind='image' AND state='active'",(asset_id,listing_id)).fetchone()
+        if not asset or not adult_account(db,asset['uploader_id']):abort(404)
+        try:
+            with open_regular(folder(app),asset['storage_key']) as file:data=file.read(MAX_UPLOAD+1)
+        except OSError:abort(404)
+        if len(data)!=asset['bytes'] or hashlib.sha256(data).hexdigest()!=asset['sha256']:abort(404)
+        response=send_file(io.BytesIO(data),mimetype='image/webp',conditional=False,etag=False,max_age=0)
+        response.headers['X-Content-Type-Options']='nosniff';return response
+    @bp.route('/marketplace/listings/new',methods=['GET','POST'])
+    def new_listing():
+        uid=actor();db=core.get_db()
+        if request.method=='POST':
+            response=writing()
+            if response is not None:return response
+            with db:
+                db.execute('BEGIN IMMEDIATE')
+                identity=request.form.get('listing_identity','personal')
+                if identity=='personal':kind='personal';linked=None
+                elif isinstance(identity,str) and identity.startswith('page:') and len(identity)<=100:kind='page';linked=identity[5:]
+                else:raise StudioError('Choose your personal profile or an owned Page.')
+                linked=validate_identity(db,uid,kind,linked)
+                existing=db.execute('''SELECT page_id FROM seller_shops WHERE owner_id=? AND identity_kind=?
+                AND (linked_page_id=? OR (linked_page_id IS NULL AND ? IS NULL)) ORDER BY created_at,page_id LIMIT 1''',(uid,kind,linked,linked)).fetchone()
+                if existing:key=existing['page_id']
+                else:
+                    label=pages.get(db,linked)['name'] if linked else db.execute('SELECT handle FROM users WHERE id=?',(uid,)).fetchone()['handle']
+                    key=create_independent(db,uid,(label+' shop')[:80],kind,linked)
+                listing_id=save_listing(db,uid,key,request.form)
+            flash('Listing draft saved privately. Nothing was published or charged.','success')
+            return redirect(url_for('seller_studio.listing',page_id=key,listing_id=listing_id))
+        return render_template('seller_studio.html',view='listing',quick_listing=True,choices=identity_choices(db,uid),
+                               page={'state':'draft'},shop=None,item=None,variants=[],assets=[])
     @bp.route('/marketplace/studio/new',methods=['GET','POST'])
     def new():
         uid=actor();db=core.get_db()
@@ -325,7 +372,7 @@ def register(app,core):
                 else:raise StudioError('Publishing and sales are not enabled.',403)
             flash('Shop draft saved. Nothing was published or charged.','success');return redirect(url_for('seller_studio.shop',page_id=page_id))
         listings=db.execute('SELECT * FROM seller_listings WHERE shop_id=? ORDER BY created_at DESC,id LIMIT 100',(page_id,)).fetchall() if shop else []
-        return render_template('seller_studio.html',view='shop',page=page,shop=shop,listings=listings,owner=page['owner_id']==uid)
+        return render_template('seller_studio.html',view='shop',page=page,shop=shop,listings=listings,owner=page['owner_id']==uid,fees_waived=catalog.fee_policy(db,shop) if shop else False)
     @bp.route('/marketplace/studio/<page_id>/listing/new',methods=['GET','POST'])
     @bp.route('/marketplace/studio/<page_id>/listing/<listing_id>',methods=['GET','POST'])
     def listing(page_id,listing_id=None):
@@ -355,4 +402,5 @@ def register(app,core):
         response.headers.update({'Cache-Control':'private, no-store','X-Robots-Tag':'noindex, nofollow','Referrer-Policy':'no-referrer'})
         return response
     app.register_blueprint(bp)
+
 
