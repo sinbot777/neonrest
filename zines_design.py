@@ -54,7 +54,12 @@ def draw(c,page,data,x,width,height,assets,numbers,number):
   blocks=data['text'].split('\n\n');para(c,blocks[0] if blocks else '',24,190,348,14,20,PAPER,'ZineHeavy',bottom=135)
   quote=' '.join((data.get('pullquote') or 'NOISE FOR THE MANY.').split())
   rest=[b for b in blocks[1:] if ' '.join(b.split())!=quote]
-  para(c,'\n'.join(rest),24,125,348,7.7,11,PAPER,'ZineMono',bottom=30)
+  if rest:
+   para(c,'\n'.join(rest[:-1]),24,125,348,7.7,11,PAPER,'ZineMono',bottom=66)
+   footer=rest[-1].split('\n',1)
+   c.setFillColor(RED);c.rect(24,30,348,30,fill=1,stroke=0)
+   para(c,footer[0].upper(),34,51,328,10,12,PAPER,'ZineHeavy',bottom=32)
+   if len(footer)>1:para(c,footer[1],24,23,348,6,8,PAPER,'ZineMono',bottom=8)
  elif kind=='back':
   c.setFillColor(RED);c.rect(0,579,396,33,fill=1,stroke=0);c.setFillColor(PAPER);c.setFont('ZineMono',7);c.drawString(24,591,section[:80])
   words=data['heading'].split()

@@ -23,7 +23,7 @@
 {% if kind=='cover' %}
 <div class="punk-cover-banner">{{ data.pullquote|default('NOISE FOR\nTHE MANY.',true) }}</div>
 {% if data.image %}<figure><img src="{{ url_for('zines.image',zid=zid,aid=data.image) }}" alt="{{ data.caption }}"></figure>{% else %}<div class="punk-wave" role="img" aria-label="Sound waveform">{% for height in waveform %}<span style="height:{{ height }}%"></span>{% endfor %}</div>{% endif %}
-{% set blocks=data.text.split('\n\n') %}<div class="punk-tagline">{{ blocks[0] }}</div><div class="punk-cover-copy">{% for block in blocks[1:] if block.split()|join(' ') != (data.pullquote|default('NOISE FOR THE MANY.',true)).split()|join(' ') %}<p>{{ block }}</p>{% endfor %}</div>
+{% set blocks=data.text.split('\n\n') %}<div class="punk-tagline">{{ blocks[0] }}</div><div class="punk-cover-copy">{% for block in blocks[1:] if block.split()|join(' ') != (data.pullquote|default('NOISE FOR THE MANY.',true)).split()|join(' ') %}{% if loop.last %}{% set footer=block.split('\n',1) %}<p class="punk-cover-footer">{{ footer[0] }}</p>{% if footer|length>1 %}<small>{{ footer[1] }}</small>{% endif %}{% else %}<p>{{ block }}</p>{% endif %}{% endfor %}</div>
 {% elif kind=='back' %}<div class="punk-back-rule"></div><div class="punk-prose">{{ punk_prose(data.text) }}</div>
 {% else %}
 {% if data.highlight %}<div class="punk-highlight">{{ data.highlight }}</div><div class="punk-highlight-label">{{ data.highlight_label }}</div>{% endif %}
