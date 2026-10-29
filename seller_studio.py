@@ -1,4 +1,4 @@
-"""Private Page-linked seller preparation. No publish, checkout or payment route."""
+"""Independent private shops with optional personal or Page identity links."""
 import json
 import re
 import secrets
@@ -10,11 +10,50 @@ class StudioError(ValueError):
     def __init__(self,message,status=400):super().__init__(message);self.status=status
 
 
-def initialize(db):
-    for sql in [
-        '''CREATE TABLE IF NOT EXISTS seller_shops(page_id TEXT PRIMARY KEY REFERENCES identity_pages(id),
+def migrate_legacy(db):
+    """Keep stable shop/listing keys while removing the legacy mandatory Page FK.
+
+    Run only on a dedicated startup/migration connection outside a transaction.
+    Rebuild follows SQLite's create/copy/drop/rename sequence. Child references
+    keep the original table name; all existing columns and row values survive.
+    """
+    columns=[r[1] for r in db.execute('PRAGMA table_info(seller_shops)')]
+    if not columns or 'identity_kind' in columns:return
+    if db.in_transaction:raise RuntimeError('Shop migration requires a dedicated idle connection.')
+    enabled=db.execute('PRAGMA foreign_keys').fetchone()[0]
+    before=list(db.execute('PRAGMA foreign_key_check'))
+    if before:raise RuntimeError('Resolve existing foreign-key errors before shop migration.')
+    try:
+        db.execute('PRAGMA foreign_keys=OFF');db.execute('BEGIN IMMEDIATE')
+        if 'identity_kind' in [r[1] for r in db.execute('PRAGMA table_info(seller_shops)')]:
+            db.commit();return
+        db.execute('''CREATE TABLE seller_shops_standalone(page_id TEXT PRIMARY KEY,
         owner_id INTEGER NOT NULL REFERENCES users(id),name TEXT NOT NULL,description TEXT NOT NULL DEFAULT '',
-        policies TEXT NOT NULL DEFAULT '',revision INTEGER NOT NULL DEFAULT 0,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL)''',
+        policies TEXT NOT NULL DEFAULT '',revision INTEGER NOT NULL DEFAULT 0,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,
+        identity_kind TEXT NOT NULL DEFAULT 'personal' CHECK(identity_kind IN ('personal','page','none')),
+        linked_page_id TEXT REFERENCES identity_pages(id),
+        CHECK((identity_kind='page' AND linked_page_id IS NOT NULL) OR (identity_kind!='page' AND linked_page_id IS NULL)))''')
+        db.execute('''INSERT INTO seller_shops_standalone SELECT page_id,owner_id,name,description,policies,revision,
+        created_at,updated_at,'page',page_id FROM seller_shops''')
+        db.execute('DROP TABLE seller_shops');db.execute('ALTER TABLE seller_shops_standalone RENAME TO seller_shops')
+        if list(db.execute('PRAGMA foreign_key_check')):raise RuntimeError('Shop migration foreign-key check failed.')
+        db.commit()
+    except BaseException:
+        db.rollback();raise
+    finally:db.execute('PRAGMA foreign_keys='+str(int(enabled)))
+
+
+def initialize(db):
+    migrate_legacy(db)
+    for sql in [
+        '''CREATE TABLE IF NOT EXISTS seller_shops(page_id TEXT PRIMARY KEY,
+        owner_id INTEGER NOT NULL REFERENCES users(id),name TEXT NOT NULL,description TEXT NOT NULL DEFAULT '',
+        policies TEXT NOT NULL DEFAULT '',revision INTEGER NOT NULL DEFAULT 0,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,
+        identity_kind TEXT NOT NULL DEFAULT 'personal' CHECK(identity_kind IN ('personal','page','none')),
+        linked_page_id TEXT REFERENCES identity_pages(id),
+        CHECK((identity_kind='page' AND linked_page_id IS NOT NULL) OR (identity_kind!='page' AND linked_page_id IS NULL)))''',
+        'CREATE INDEX IF NOT EXISTS seller_shop_owner ON seller_shops(owner_id,page_id)',
+        'CREATE INDEX IF NOT EXISTS seller_shop_page ON seller_shops(linked_page_id)',
         '''CREATE TABLE IF NOT EXISTS seller_listings(id TEXT PRIMARY KEY,shop_id TEXT NOT NULL REFERENCES seller_shops(page_id),
         kind TEXT NOT NULL CHECK(kind IN ('physical','digital')),title TEXT NOT NULL,description TEXT NOT NULL DEFAULT '',
         price_cents INTEGER NOT NULL CHECK(price_cents>=0),quantity INTEGER NOT NULL CHECK(quantity>=0),
@@ -58,12 +97,23 @@ def adult_account(db,uid):
 
 def access(db,uid,page_id,owner_only=False):
     if not adult_account(db,uid):raise StudioError('Seller Studio is available to eligible adult accounts.',403)
-    try:page=pages.get(db,page_id)
-    except pages.PageError:raise StudioError('Shop unavailable.',404)
-    if not adult_account(db,page['owner_id']) or pages.hidden(db,page_id) or pages.role(db,page,uid) not in (('owner',) if owner_only else ('owner','manager','editor')):raise StudioError('Shop unavailable.',404)
     shop=db.execute('SELECT * FROM seller_shops WHERE page_id=?',(page_id,)).fetchone()
+    if shop:
+        if not adult_account(db,shop['owner_id']):raise StudioError('Shop unavailable.',404)
+        if shop['identity_kind']!='page':
+            if uid!=shop['owner_id']:raise StudioError('Shop unavailable.',404)
+            user=db.execute('SELECT handle FROM users WHERE id=?',(shop['owner_id'],)).fetchone()
+            return {'id':page_id,'owner_id':shop['owner_id'],'name':shop['name'],
+                    'handle':user['handle'] if shop['identity_kind']=='personal' else 'Independent shop',
+                    'state':'draft','kind':shop['identity_kind']},shop
+        linked_id=shop['linked_page_id']
+    else:linked_id=page_id
+    try:page=pages.get(db,linked_id)
+    except pages.PageError:raise StudioError('Shop unavailable.',404)
+    if not adult_account(db,page['owner_id']) or pages.hidden(db,linked_id) or pages.role(db,page,uid) not in (('owner',) if owner_only else ('owner','manager','editor')):raise StudioError('Shop unavailable.',404)
     if shop and shop['owner_id']!=page['owner_id']:raise StudioError('This Page changed owners. Shop transfer needs support review.',409)
-    return page,shop
+    context=dict(page);context['id']=page_id
+    return context,shop
 
 
 def event(db,page_id,uid,action,listing_id=None):
@@ -74,7 +124,44 @@ def create_shop(db,uid,page_id):
     page,shop=access(db,uid,page_id,True)
     if page['state']=='archived':raise StudioError('Restore the Page before preparing its shop.',409)
     if shop:raise StudioError('This Page already has a shop draft.',409)
-    now=int(time.time());db.execute('INSERT INTO seller_shops(page_id,owner_id,name,created_at,updated_at) VALUES (?,?,?,?,?)',(page_id,page['owner_id'],page['name'],now,now));event(db,page_id,uid,'create-shop')
+    if db.execute('SELECT COUNT(*) FROM seller_shops WHERE owner_id=?',(uid,)).fetchone()[0]>=20:raise StudioError('The initial limit is 20 shops per account.',409)
+    now=int(time.time());db.execute("INSERT INTO seller_shops(page_id,owner_id,name,created_at,updated_at,identity_kind,linked_page_id) VALUES (?,?,?,?,?,'page',?)",(page_id,page['owner_id'],page['name'],now,now,page_id));event(db,page_id,uid,'create-shop')
+
+
+def identity_choices(db,uid):
+    return [dict(p) for p in db.execute("SELECT * FROM identity_pages WHERE owner_id=? AND state!='archived' ORDER BY handle LIMIT 20",(uid,)) if not pages.hidden(db,p['id'])]
+
+
+def validate_identity(db,uid,kind,linked):
+    if kind not in ('personal','page','none'):raise StudioError('Choose a shop identity.')
+    if kind!='page':
+        return None
+    try:page=pages.get(db,linked)
+    except pages.PageError:raise StudioError('Linked identity unavailable.',404)
+    if page['owner_id']!=uid or page['state']=='archived' or pages.hidden(db,page['id']):raise StudioError('Link an available Page you own.',404)
+    return page['id']
+
+
+def create_independent(db,uid,name,kind='personal',linked=None):
+    if not adult_account(db,uid):raise StudioError('Seller setup requires an eligible adult account.',403)
+    name=clean(name,'shop name',80,True);linked=validate_identity(db,uid,kind,linked)
+    if db.execute('SELECT COUNT(*) FROM seller_shops WHERE owner_id=?',(uid,)).fetchone()[0]>=20:raise StudioError('The initial limit is 20 shops per account.',409)
+    key='shop_'+secrets.token_urlsafe(18);now=int(time.time())
+    db.execute('''INSERT INTO seller_shops(page_id,owner_id,name,created_at,updated_at,identity_kind,linked_page_id)
+    VALUES (?,?,?,?,?,?,?)''',(key,uid,name,now,now,kind,linked));event(db,key,uid,'create-independent-shop');return key
+
+
+def set_identity(db,uid,shop_id,revision,kind,linked=None):
+    # A transferred/archived Page must not trap the shop's actual owner. Only
+    # that owner can unlink/relink; Page delegates never acquire shop ownership.
+    if not adult_account(db,uid):raise StudioError('Seller setup requires an eligible adult account.',403)
+    row=db.execute('SELECT * FROM seller_shops WHERE page_id=? AND owner_id=?',(shop_id,uid)).fetchone()
+    if not row:raise StudioError('Shop unavailable.',404)
+    linked=validate_identity(db,uid,kind,linked)
+    r=db.execute('''UPDATE seller_shops SET identity_kind=?,linked_page_id=?,revision=revision+1,updated_at=?
+    WHERE page_id=? AND owner_id=? AND revision=?''',(kind,linked,int(time.time()),shop_id,uid,revision))
+    if r.rowcount!=1:raise StudioError('This shop changed. Reload before saving.',409)
+    event(db,shop_id,uid,'link-identity:'+kind)
 
 
 def save_shop(db,uid,page_id,revision,name,description,policies):
@@ -152,7 +239,7 @@ def set_state(db,uid,page_id,listing_id,revision,state):
 
 def export_user(db,uid):
     # Ownership changes freeze access; do not expose a prior owner's commercial drafts.
-    shops=[dict(r) for r in db.execute('SELECT s.* FROM seller_shops s JOIN identity_pages p ON p.id=s.page_id WHERE s.owner_id=? AND p.owner_id=? ORDER BY s.page_id',(uid,uid))]
+    shops=[dict(r) for r in db.execute('SELECT * FROM seller_shops WHERE owner_id=? ORDER BY page_id',(uid,))]
     ids=[s['page_id'] for s in shops];listings=[]
     for page_id in ids:listings.extend(dict(r) for r in db.execute('SELECT * FROM seller_listings WHERE shop_id=? ORDER BY id',(page_id,)))
     return {'shops':shops,'listings':listings}
@@ -161,7 +248,8 @@ def export_user(db,uid):
 def register(app,core):
     from flask import Blueprint,abort,flash,redirect,render_template,request,session,url_for
     bp=Blueprint('seller_studio',__name__)
-    with app.app_context():initialize(core.get_db());core.get_db().commit()
+    with app.app_context():
+        db=core.get_db();db.commit();initialize(db);db.commit()
     @bp.errorhandler(StudioError)
     def failure(error):
         unsaved=[]
@@ -183,13 +271,45 @@ def register(app,core):
         n=request.form.get('revision',type=int)
         if n is None or not 0<=n<2**63:raise StudioError('Reload before saving.',409)
         return n
+    @bp.get('/marketplace')
+    def marketplace():
+        return render_template('marketplace.html')
+    @bp.route('/marketplace/studio/new',methods=['GET','POST'])
+    def new():
+        uid=actor();db=core.get_db()
+        if request.method=='POST':
+            response=writing()
+            if response is not None:return response
+            with db:
+                db.execute('BEGIN IMMEDIATE')
+                key=create_independent(db,uid,request.form.get('name',''),request.form.get('identity_kind','personal'),request.form.get('linked_page_id') or None)
+            flash('Independent shop draft created. Nothing was published or charged.','success')
+            return redirect(url_for('seller_studio.shop',page_id=key))
+        return render_template('seller_studio.html',view='new',choices=identity_choices(db,uid))
+    @bp.route('/marketplace/studio/<page_id>/identity',methods=['GET','POST'])
+    def identity(page_id):
+        uid=actor();db=core.get_db()
+        owned=db.execute('SELECT * FROM seller_shops WHERE page_id=? AND owner_id=?',(page_id,uid)).fetchone()
+        if not owned:raise StudioError('Shop unavailable.',404)
+        if request.method=='POST':
+            response=writing()
+            if response is not None:return response
+            with db:
+                db.execute('BEGIN IMMEDIATE');set_identity(db,uid,page_id,revision(),request.form.get('identity_kind'),request.form.get('linked_page_id') or None)
+            flash('Shop identity updated. Shop ownership, drafts and files are unchanged.','success')
+            return redirect(url_for('seller_studio.shop',page_id=page_id))
+        return render_template('seller_studio.html',view='identity',shop=owned,choices=identity_choices(db,uid))
     @bp.get('/marketplace/studio')
     def index():
         uid=actor();db=core.get_db();available=[]
-        for row in db.execute('SELECT DISTINCT p.* FROM identity_pages p LEFT JOIN identity_page_members m ON m.page_id=p.id WHERE p.owner_id=? OR m.user_id=? ORDER BY p.updated_at DESC LIMIT 40',(uid,uid)):
-            try:page,shop=access(db,uid,row['id'])
-            except StudioError:continue
-            available.append({'page':page,'shop':shop,'owner':page['owner_id']==uid})
+        rows=db.execute('''SELECT DISTINCT s.* FROM seller_shops s LEFT JOIN identity_page_members m ON m.page_id=s.linked_page_id
+        WHERE s.owner_id=? OR m.user_id=? ORDER BY s.updated_at DESC,s.page_id LIMIT 60''',(uid,uid)).fetchall()
+        for row in rows:
+            try:page,shop=access(db,uid,row['page_id'])
+            except StudioError:
+                if row['owner_id']==uid:available.append({'shop':row,'owner':True,'frozen':True})
+                continue
+            available.append({'page':page,'shop':shop,'owner':shop['owner_id']==uid,'frozen':False})
         return render_template('seller_studio.html',view='index',available=available)
     @bp.route('/marketplace/studio/<page_id>',methods=['GET','POST'])
     def shop(page_id):
@@ -235,3 +355,4 @@ def register(app,core):
         response.headers.update({'Cache-Control':'private, no-store','X-Robots-Tag':'noindex, nofollow','Referrer-Policy':'no-referrer'})
         return response
     app.register_blueprint(bp)
+
