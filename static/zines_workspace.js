@@ -27,7 +27,7 @@ for(const root of document.querySelectorAll('[data-zc-editor]')){
  root.classList.add('zc-focused');
  // Move the actual nodes so existing editor listeners and form values stay intact.
  const starters=root.querySelector('[data-zc-layout-starters]');
- if(starters)inspector.append(starters);
+ if(starters){inspector.append(starters);starters.open=!root.querySelector('[data-zc-json]').value.trim();}
  for(const section of [...controls.children]){
   if(section.matches('details[data-tool]'))inspector.append(section);
   else if(section.matches('.zc-toolbar[data-tool="composition"]')){
@@ -37,6 +37,14 @@ for(const root of document.querySelectorAll('[data-zc-editor]')){
  }
  const precision=inspector.querySelector('.zc-control-grid[data-tool="precision"]');
  if(precision){const details=document.createElement('details'),summary=document.createElement('summary');details.dataset.tool='precision';summary.textContent='Position, size & borders';precision.before(details);details.append(summary,precision);}
+ const formatting=inspector.querySelector('[data-prop="size"]')?.closest('label')?.parentElement;
+ if(formatting){
+  formatting.classList.add('zc-format-controls');
+  const advancedType=[...formatting.querySelectorAll('label[data-tool="typography"]')];
+  if(advancedType.length){const details=document.createElement('details'),summary=document.createElement('summary');details.dataset.tool='typography';summary.textContent='Typeface & line spacing';advancedType[0].before(details);details.append(summary,...advancedType);}
+ }
+ const transforms=inspector.querySelector('.zc-control-grid[data-tool="composition"]');
+ if(transforms){const details=document.createElement('details'),summary=document.createElement('summary');details.dataset.tool='composition';summary.textContent='Rotation & opacity';transforms.before(details);details.append(summary,transforms);}
  const layer=inspector.querySelector('.zc-layer-panel');if(layer)inspector.append(layer);
  // The live canvas is the primary preview. Keep the saved version available on demand.
  const workspace=root.closest('.zine-edit-preview'),saved=workspace?.querySelector('.zine-saved-preview');
