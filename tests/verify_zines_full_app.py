@@ -296,7 +296,7 @@ for paper in ('letter','a4'):
  for mode in ('standard','booklet'):
   response=get('Regular',read+'/print',download='1',mode=mode,paper=paper)
   check(response.status_code==200,'Composed '+paper+' '+mode+' PDF exports')
-  parsed=PdfReader(io.BytesIO(response.data));text_dump=' '.join(p.extract_text() or '' for p in parsed.pages)
+  parsed=PdfReader(io.BytesIO(response.data));text_dump=' '.join(' '.join(p.extract_text() or '' for p in parsed.pages).split())
   check('Selectable composition body' in text_dump and 'COMPOSITION FIXTURE' in text_dump,'Composition PDF text selectable '+paper+' '+mode)
 # Print overflow returns an actionable error, never silent clipping.
 over=json.loads(json.dumps(layout));over['blocks'][0].update(text='overflow '*100,h=12)
@@ -304,3 +304,23 @@ check(modify('Regular',iid,action='page',page_id=target['id'],**{**values,'compo
 check(get('Regular',read+'/print',download='1').status_code==400,'Print rejects overflowing composition text')
 check(modify('Regular',iid,action='page',page_id=target['id'],**values).status_code==302,'Repair overflowing draft')
 print('PASS',checks,'T34 composition acceptance checks; disposable data only')
+
+# A separate composed issue isolates nested-artwork visibility from legacy image fields.
+row=current('zines',zid)
+check(post('Regular',base+'/edit',action='settings',revision=row['revision'],title=row['title'],description=row['description'],visibility='public',allow_print='1').status_code==302,'Composition visibility fixture public')
+row=current('zines',zid)
+check(post('Regular',base+'/edit',action='issue',revision=row['revision'],title='Nested artwork only').status_code==302,'Create nested-artwork fixture issue')
+nested_iid=query("SELECT id FROM zine_issues WHERE title='Nested artwork only' AND zine_id=?",(zid,))[0][0]
+nested_layout=json.loads(json.dumps(layout));nested_layout['blocks'][1]['image']=aid
+check(modify('Regular',nested_iid,action='add',**payload(heading='Nested reference',design='composition',composition=json.dumps(nested_layout))).status_code==302,'Save contributor artwork inside composition')
+check(modify('Regular',nested_iid,action='settings',title='Nested artwork only',allow_print='1').status_code==302,'Nested fixture printable')
+check(modify('Regular',nested_iid,action='state',state='published').status_code==302,'Publish nested fixture')
+nested_read=base+'/issues/'+nested_iid
+check(get('OtherManager',nested_read,page=2).status_code==200,'Outsider can read published nested-artwork issue')
+check(get('OtherManager',nested_read+'/print',download='1').status_code==200,'Outsider can print permitted nested artwork')
+change('INSERT INTO user_blocks(user_id,target_id) VALUES (?,?)',(users['Writer'],users['OtherManager']))
+check(get('OtherManager',nested_read).status_code==404,'Nested artwork uploader block revokes reader')
+check(get('OtherManager',nested_read+'/print',download='1').status_code==404,'Nested artwork uploader block revokes PDF')
+check(get('Regular',base+'/issues/'+nested_iid+'/history').status_code==200,'Authorized composition history available')
+change('DELETE FROM user_blocks WHERE user_id=? AND target_id=?',(users['Writer'],users['OtherManager']))
+print('PASS',checks,'T34 final composition and nested-artwork privacy checks')
