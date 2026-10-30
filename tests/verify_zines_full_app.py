@@ -326,6 +326,8 @@ change('DELETE FROM user_blocks WHERE user_id=? AND target_id=?',(users['Writer'
 print('PASS',checks,'T34 final composition and nested-artwork privacy checks')
 
 # Advanced composition persistence, PDF transforms, and whole-issue operations.
+# Each test batch uses its own disposable rate budget; live throttles are unchanged.
+change('DELETE FROM rate_buckets WHERE action IN (?,?)',('zines-pdf','zines-write'))
 advanced=json.loads(json.dumps(layout));advanced['blocks'][0].update(x=60,y=60,w=250,h=100,text='Rotated selectable headline',rotation=12,opacity=.6,group='headline-group',name='Main headline')
 advanced['blocks'][1].update(focal_x=15,focal_y=80,rotation=-8,opacity=.75,group='headline-group')
 advanced_values={**values,'composition':json.dumps(advanced)}
