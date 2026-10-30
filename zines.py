@@ -22,7 +22,6 @@ def register(app,core):
     def revision():return request.form.get('revision',type=int)
     def writing():
         helpers=app.extensions['community_auth_helpers'];helpers['csrf']()
-        if not helpers['fresh']():return redirect(url_for('community_reauth',next=request.path))
         return helpers['limited']('zines-write',80)
     def form_content():return {**{k:request.form.get(k,'') for k in ('heading','text','caption','image','layout','print_alternative','section','pullquote','highlight','highlight_label','accent','text_size','image_width','image_align')},'design':request.form.get('design','classic'),**{key:request.form.get(key,default) for key,default in [('accent','red'),('text_size','regular'),('image_width','full'),('image_align','center')]}}
     def render(view,**values):return render_template('zines.html',view=view,token=token(),waveform=z.wave(),**values)

@@ -76,3 +76,8 @@ Open a publication, then choose an issue under Issues & pages. The issue workspa
 Per-page controls add Red/Cobalt/Purple/Forest accents for Punk, three interior body sizes, three image widths and left/center/right image alignment. The reader and vector PDF use the same choices. Existing content retains defaults; no database migration or saved-content rewrite. Published issues remain read-only until returned to draft. Preview shows saved content, not unsaved keystrokes. Unsaved editor forms prompt before leaving when JavaScript is available; all editing and navigation also work without JavaScript.
 
 Validation: 323 actual-app checks (including protected page actions, contributor boundaries, unsafe enum rejection, revision retention, selectable PDF text, accent/body size and image placement) and 26 design/PDF checks. Production source remains unchanged. Authentication changes requested by the owner remain prepared separately, awaiting activation confirmation.
+
+
+## Authentication update
+
+Sandbox Zine authentication update - October 29, 2026: Owner confirmed activation. Zine writing uses normal login, authorization, CSRF and throttling without an extra fresh-auth challenge. Staff confirmation lasts 24 hours; account-security confirmation remains 30 minutes. Login 2FA is retained. The isolated actual-app and design/PDF suites pass. Production source and data are unchanged.

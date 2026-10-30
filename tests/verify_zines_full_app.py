@@ -86,7 +86,7 @@ check(modify('Regular',iid,action='add',**payload(image='../../private')).status
 check(modify('Regular',iid,action='add',**payload(heading='<script>alert(1)</script>')).status_code==302,'Text saved literally')
 check(b'<script>alert(1)</script>' not in get('Regular',read,page=5).data,'User HTML escaped')
 with clients['Regular'].session_transaction() as s:s['fresh_at']=0
-check(modify('Regular',iid,action='settings',title='Fresh gate').status_code==302,'Fresh auth gate redirects')
+check(modify('Regular',iid,action='settings',title='Fresh gate',allow_print='1').status_code==302,'Fresh auth gate redirects')
 with clients['Regular'].session_transaction() as s:s['fresh_at']=now
 
 # Independently verify actual rendered PDF objects, text coordinates and paper sizes.
@@ -237,3 +237,18 @@ check(records[0][3]<=348*.34+.01,'Print image width respects selected fraction')
 check(abs(records[0][1]-(24+348-records[0][3]))<.01,'Print image aligns to right edge')
 check(any(op==b'Tf' and abs(float(args[1])-10.8)<.001 for args,op in ops),'PDF uses selected large body size')
 print('PASS',checks,'T34 final workspace acceptance checks')
+
+from flask import session
+fresh=app.extensions['community_auth_helpers']['fresh']
+for path,age,expected in [('/manage',23*3600,True),('/manage',25*3600,False),('/staff',23*3600,True),('/account/security',3600,False),('/account/security',60,True)]:
+    with app.test_request_context(path):
+        session.update(user_id=users['Regular'],fresh_at=now-age,factor_at=now-age)
+        check(fresh()==expected,'Reauthentication window '+path+' '+str(age))
+with app.test_request_context('/manage'):
+    session.update(user_id=users['Regular'],fresh_at=now,factor_at=now-25*3600)
+    check(not fresh(),'Staff window still requires a recent second factor')
+with clients['Regular'].session_transaction() as s:s.update(fresh_at=0,factor_at=0)
+row=current('zines',zid)
+check(post('Regular',base+'/edit',action='settings',revision=row['revision'],title='No extra factor for writing',description=row['description'],visibility='private',allow_print='1').status_code==302,'Stale step-up session can save Zine')
+check(current('zines',zid)['title']=='No extra factor for writing','Zine save really occurred without reauthentication')
+print('PASS',checks,'T34 auth window acceptance checks')

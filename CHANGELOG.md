@@ -1,3 +1,7 @@
+# Zine authentication - October 29, 2026 (Sandbox)
+
+Sandbox Zine authentication update - October 29, 2026: Owner confirmed activation. Zine writing uses normal login, authorization, CSRF and throttling without an extra fresh-auth challenge. Staff confirmation lasts 24 hours; account-security confirmation remains 30 minutes. Login 2FA is retained. The isolated actual-app and design/PDF suites pass. Production source and data are unchanged.
+
 # Zine workspace - October 28, 2026 (Sandbox)
 
 - Add focused page outline, selected-page editing and saved preview, plus separate settings, submissions and publishing views.
