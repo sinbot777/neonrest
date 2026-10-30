@@ -252,3 +252,55 @@ row=current('zines',zid)
 check(post('Regular',base+'/edit',action='settings',revision=row['revision'],title='No extra factor for writing',description=row['description'],visibility='private',allow_print='1').status_code==302,'Stale step-up session can save Zine')
 check(current('zines',zid)['title']=='No extra factor for writing','Zine save really occurred without reauthentication')
 print('PASS',checks,'T34 auth window acceptance checks')
+
+# Composition storage, reader/PDF parity, bounded schema and asset permissions.
+composition=importlib.import_module(package+'.zines_composition')
+layout={'version':1,'background':'#f7f3e8','blocks':[
+ {'id':'title','type':'text','x':24,'y':24,'w':348,'h':90,'text':'COMPOSITION FIXTURE <script>alert(1)</script>','font':'bold','size':22,'leading':1.2,'align':'left','color':'#174c99'},
+ {'id':'photo','type':'image','x':24,'y':140,'w':168,'h':180,'image':cover,'alt':'Fictional artwork','fit':'cover'},
+ {'id':'body','type':'text','x':204,'y':140,'w':168,'h':300,'text':'Selectable composition body.\nSecond line.','size':12,'leading':1.4,'font':'mono','align':'right'},
+ {'id':'shape','type':'ellipse','x':24,'y':350,'w':140,'h':90,'fill':'#b52525'},
+ {'id':'rule','type':'rule','x':24,'y':470,'w':348,'h':12,'color':'#171717','stroke_width':2}]}
+values=payload(heading='Composition fixture',design='composition',composition=json.dumps(layout))
+check(modify('Regular',iid,action='page',page_id=target['id'],**values).status_code==302,'Composition saved without extra authentication')
+stored=json.loads(current('zine_pages',target['id'])['content'])
+check(stored['composition']['blocks'][0]['text']==layout['blocks'][0]['text'],'Composition text round trips literally')
+check(composition.asset_ids(stored)==[cover],'Nested artwork reference enumerated')
+html=get('Regular',read,page=2).data
+check(b'zc-type-ellipse' in html and b'object-fit:cover' in html,'Reader renders composition geometry and crop')
+check(b'<script>alert(1)</script>' not in html and b'&lt;script&gt;' in html,'Composition reader escapes text')
+html=get('Regular',edit,page=2).data
+check(all(label in html for label in (b'Standard',b'Custom',b'Advanced',b'Page composition studio',b'Portable layout JSON')),'Three real composition toolsets exposed')
+check(modify('Writer',iid,action='page',page_id=target['id'],**values).status_code in (403,404),'Composition does not bypass editorial permissions')
+stale=post('Regular',edit,action='page',page_id=target['id'],revision=0,**values)
+check(stale.status_code==409,'Composition stale save rejected')
+for name,mutate in [
+ ('unknown page field',lambda x:x.update(css='position:fixed')),
+ ('unknown block field',lambda x:x['blocks'][0].update(html='<script>')),
+ ('unsafe color',lambda x:x.update(background='url(javascript:bad)')),
+ ('external artwork',lambda x:x['blocks'][1].update(image='https://bad.invalid/x')),
+ ('wrong publication artwork',lambda x:x['blocks'][1].update(image='unavailable-asset')),
+ ('NaN coordinate',lambda x:x['blocks'][0].update(x=float('nan'))),
+ ('off-page geometry',lambda x:x['blocks'][0].update(x=390)),
+ ('duplicate IDs',lambda x:x['blocks'][1].update(id='title')),
+ ('too many blocks',lambda x:x.update(blocks=x['blocks']*8)),
+ ('unsupported font',lambda x:x['blocks'][0].update(font='remote-font')),
+ ('oversized type',lambda x:x['blocks'][0].update(size=900)),
+ ('boolean geometry',lambda x:x['blocks'][0].update(x=True))]:
+ bad=json.loads(json.dumps(layout));mutate(bad)
+ response=modify('Regular',iid,action='page',page_id=target['id'],**{**values,'composition':json.dumps(bad)})
+ check(response.status_code in (400,404),'Reject '+name)
+check(modify('Regular',iid,action='page',page_id=target['id'],**{**values,'composition':'{"broken"'}).status_code==400,'Malformed JSON rejected')
+check(json.loads(current('zine_pages',target['id'])['content'])==stored,'Rejected composition writes leave saved page unchanged')
+for paper in ('letter','a4'):
+ for mode in ('standard','booklet'):
+  response=get('Regular',read+'/print',download='1',mode=mode,paper=paper)
+  check(response.status_code==200,'Composed '+paper+' '+mode+' PDF exports')
+  parsed=PdfReader(io.BytesIO(response.data));text_dump=' '.join(p.extract_text() or '' for p in parsed.pages)
+  check('Selectable composition body' in text_dump and 'COMPOSITION FIXTURE' in text_dump,'Composition PDF text selectable '+paper+' '+mode)
+# Print overflow returns an actionable error, never silent clipping.
+over=json.loads(json.dumps(layout));over['blocks'][0].update(text='overflow '*100,h=12)
+check(modify('Regular',iid,action='page',page_id=target['id'],**{**values,'composition':json.dumps(over)}).status_code==302,'Overflowing draft can be retained for repair')
+check(get('Regular',read+'/print',download='1').status_code==400,'Print rejects overflowing composition text')
+check(modify('Regular',iid,action='page',page_id=target['id'],**values).status_code==302,'Repair overflowing draft')
+print('PASS',checks,'T34 composition acceptance checks; disposable data only')

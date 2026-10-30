@@ -73,8 +73,9 @@ def visible(db,zine,issue,uid):
     for row in pages(db,issue['id']):
         if not compatible(db,row['author_id'],uid):return False
         data=json.loads(row['content'])
-        if data.get('image'):
-            asset=db.execute('SELECT * FROM zine_assets WHERE id=? AND zine_id=?',(data['image'],zine['id'])).fetchone()
+        from .zines_composition import asset_ids
+        for image_id in asset_ids(data):
+            asset=db.execute('SELECT * FROM zine_assets WHERE id=? AND zine_id=?',(image_id,zine['id'])).fetchone()
             if not asset or not compatible(db,asset['uploader_id'],uid):return False
     return True
 
@@ -86,17 +87,20 @@ def text(value,maximum,required=False):
     return value
 
 def content(db,zid,uid,data):
-    if not isinstance(data,dict) or set(data)-{'version','heading','text','caption','image','layout','print_alternative','design','section','pullquote','highlight','highlight_label','accent','text_size','image_width','image_align'}:raise ZineError('Unsupported page structure.')
+    if not isinstance(data,dict) or set(data)-{'version','heading','text','caption','image','layout','print_alternative','design','section','pullquote','highlight','highlight_label','accent','text_size','image_width','image_align','composition'}:raise ZineError('Unsupported page structure.')
     out={'version':1,'heading':text(data.get('heading',''),160),'text':text(data.get('text',''),MAX_TEXT),'caption':text(data.get('caption',''),300),'layout':data.get('layout','text'),'image':data.get('image',''),'print_alternative':text(data.get('print_alternative',''),1000)}
     out.update(design=data.get('design','classic'),section=text(data.get('section',''),80),pullquote=text(data.get('pullquote',''),160),highlight=text(data.get('highlight',''),40),highlight_label=text(data.get('highlight_label',''),100))
     for key,default,allowed in [('accent','red',('red','cobalt','purple','forest')),('text_size','regular',('small','regular','large')),('image_width','full',('full','medium','small')),('image_align','center',('left','center','right'))]:
         out[key]=data.get(key,default)
         if out[key] not in allowed:raise ZineError('Choose a supported '+key.replace('_',' ')+'.')
-    if out['design'] not in ('classic','punk'):raise ZineError('Choose a supported visual style.')
+    if out['design'] not in ('classic','punk','composition'):raise ZineError('Choose a supported visual style.')
     if out['layout'] not in ('text','image-top','image-bottom'):raise ZineError('Choose a supported layout.')
     if not isinstance(out['image'],str) or len(out['image'])>60:raise ZineError('Invalid image.')
-    if out['image']:
-        asset=db.execute('SELECT * FROM zine_assets WHERE id=? AND zine_id=?',(out['image'],zid)).fetchone()
+    from .zines_composition import normalize,asset_ids
+    if out['design']=='composition' or data.get('composition'):
+        out['composition']=normalize(data.get('composition',{}))
+    for image_id in asset_ids(out):
+        asset=db.execute('SELECT * FROM zine_assets WHERE id=? AND zine_id=?',(image_id,zid)).fetchone()
         z=publication(db,zid)
         if not asset or (role(db,z,uid) not in ('owner','editor') and asset['uploader_id']!=uid) or not compatible(db,asset['uploader_id'],uid):raise ZineError('Image unavailable.',404)
     return json.dumps(out,ensure_ascii=False)

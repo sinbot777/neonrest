@@ -23,7 +23,8 @@ def register(app,core):
     def writing():
         helpers=app.extensions['community_auth_helpers'];helpers['csrf']()
         return helpers['limited']('zines-write',80)
-    def form_content():return {**{k:request.form.get(k,'') for k in ('heading','text','caption','image','layout','print_alternative','section','pullquote','highlight','highlight_label','accent','text_size','image_width','image_align')},'design':request.form.get('design','classic'),**{key:request.form.get(key,default) for key,default in [('accent','red'),('text_size','regular'),('image_width','full'),('image_align','center')]}}
+    from .zines_composition import asset_ids
+    def form_content():return {**{k:request.form.get(k,'') for k in ('heading','text','caption','image','layout','print_alternative','section','pullquote','highlight','highlight_label','accent','text_size','image_width','image_align')},'composition':request.form.get('composition',''),'design':request.form.get('design','classic'),**{key:request.form.get(key,default) for key,default in [('accent','red'),('text_size','regular'),('image_width','full'),('image_align','center')]}}
     def render(view,**values):return render_template('zines.html',view=view,token=token(),waveform=z.wave(),**values)
     def budget(db,owner):
         total=0
@@ -235,7 +236,7 @@ def register(app,core):
         allowed=bool(asset and member in ('owner','editor')) or bool(asset and member=='contributor' and asset['uploader_id']==uid())
         if not allowed:
             for issue in db.execute("SELECT * FROM zine_issues WHERE zine_id=? AND state='published'",(zid,)):
-                if z.visible(db,p,issue,uid()) and (p['cover_asset']==aid or any(json.loads(row['content']).get('image')==aid for row in z.pages(db,issue['id']))):allowed=True;break
+                if z.visible(db,p,issue,uid()) and (p['cover_asset']==aid or any(aid in asset_ids(json.loads(row['content'])) for row in z.pages(db,issue['id']))):allowed=True;break
         if not allowed:abort(404)
         response=send_file(io.BytesIO(asset_bytes(db,p,aid)),mimetype='image/webp',conditional=False,etag=False,max_age=0);response.headers['Content-Security-Policy']="sandbox; default-src 'none'";return response
     @bp.get('/zines/<zid>/issues/<iid>/history')
@@ -247,8 +248,7 @@ def register(app,core):
             snapshot=json.loads(row['snapshot']);allowed=True
             for page in snapshot['pages']:
                 if not z.compatible(db,page['author_id'],user):allowed=False;break
-                image_id=json.loads(page['content']).get('image')
-                if image_id:
+                for image_id in asset_ids(json.loads(page['content'])):
                     asset=db.execute('SELECT uploader_id FROM zine_assets WHERE id=? AND zine_id=?',(image_id,zid)).fetchone()
                     if not asset or not z.compatible(db,asset['uploader_id'],user):allowed=False;break
             if allowed:retained.append((row,snapshot))

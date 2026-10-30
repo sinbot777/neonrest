@@ -40,6 +40,9 @@ def paragraph(c,text,x,y,width,size=10,leading=14):
 def draw_page(c,page,x,width,height,assets,numbers=False,number=0):
     if page is None:return
     data=json.loads(page['content'])
+    if data.get('design')=='composition':
+        from .zines_composition import draw
+        return draw(c,data,x,width,height,assets,numbers,number)
     if data.get('design')=='punk':return zines_design.draw(c,page,data,x,width,height,assets,numbers,number)
     margin=30; left=x+margin; available=width-2*margin; y=height-margin
     c.saveState()
@@ -70,9 +73,10 @@ def render(reading,assets,mode='standard',paper='letter',numbers=False,title='Ne
         if not 2<=len(reading)<=64:raise ZineError('Print editions require 2–64 pages.')
         from PIL import Image
         cache={};total_bytes=0;total_pixels=0
+        from .zines_composition import asset_ids
         for page in reading:
-            image_id=json.loads(page['content']).get('image')
-            if image_id and image_id not in cache:
+          for image_id in asset_ids(json.loads(page['content'])):
+            if image_id not in cache:
                 raw=assets(image_id);total_bytes+=len(raw)
                 with Image.open(io.BytesIO(raw)) as pic:total_pixels+=pic.width*pic.height
                 if len(raw)>512*1024 or total_bytes>8*1024*1024 or total_pixels>12000000:raise ZineError('This print edition exceeds the image budget (8 MiB or 12 million pixels). Resize or split its artwork.')
