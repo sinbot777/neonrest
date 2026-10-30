@@ -3,7 +3,7 @@
 Sandbox target only. Prepared October 29; deployment verified October 30, 2026 (Pacific).
 Baseline: b30b26f5a79e1accf6b30b044f3331fd05b08421.
 
-## Implemented in this candidate
+## Implemented
 
 - Saved-page thumbnail overview and facing-spread view.
 - Drag or keyboard-accessible button ordering of interior pages; explicit Save order.
@@ -55,14 +55,9 @@ The current local layout library is browser-specific, not synchronized publicati
 storage. Preflight is advisory and cannot model overlapping backgrounds or every
 printer. PDF font metrics and browser text fit still require separate checks.
 
-## Next release gate
+## Release status
 
-Review source-only changes, upload to sinbot777/neonrest with explicit approval,
-run the isolated hosted full-app suites, then install exact reviewed files into
-Sandbox with rollback copies. Verify unchanged Production hashes, reload normally,
-and complete the signed-in walkthrough. The GitHub upload was rejected by automatic
-approval review for missing explicit source-upload authorization in this conversation.
-
+The owner authorized the source upload. Hosted acceptance and signed-in Sandbox verification passed. Source is pushed on the draft feature branch; Production rollout remains outside scope.
 
 ## Deployment verification
 
