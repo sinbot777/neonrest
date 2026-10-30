@@ -194,10 +194,10 @@ check(modify('Regular',iid,action='state',state='draft').status_code==302,'Works
 page_rows=query("SELECT * FROM zine_pages WHERE issue_id=? ORDER BY CASE kind WHEN 'cover' THEN 0 WHEN 'page' THEN 1 ELSE 2 END,position",(iid,))
 target=next(row for row in page_rows if row['kind']=='page')
 html=get('Regular',base+'/issues/'+iid+'/edit',page=2).data
-check(b'Issue outline' in html and b'Saved page preview' in html,'Outline and saved preview visible')
+check(b'class="zine-outline"' in html and b'Saved page preview' in html,'Outline and saved preview visible')
 check(html.count(b'name="action" value="page"')==1,'Only one page editor shown')
 check(all(label in html for label in (b'Body text size',b'Accent color',b'Image width',b'Image alignment')),'Granular page controls visible')
-check(b'Issue outline' not in get('Writer',base+'/issues/'+iid+'/edit').data,'Contributor workspace does not expose editorial pages')
+check(b'class="zine-outline"' not in get('Writer',base+'/issues/'+iid+'/edit').data,'Contributor workspace does not expose editorial pages')
 check(b'Issue settings' in get('Regular',base+'/issues/'+iid+'/edit',tab='settings').data,'Dedicated settings view')
 check(b'Publish &amp; print' in get('Regular',base+'/issues/'+iid+'/edit',tab='publish').data,'Dedicated publish view')
 new_values=payload(heading='Workspace custom page',text='A short fictional paragraph for layout testing.',design='punk',accent='cobalt',text_size='large',image_width='small',image_align='right',image=cover)
@@ -270,7 +270,7 @@ html=get('Regular',read,page=2).data
 check(b'zc-type-ellipse' in html and b'object-fit:cover' in html,'Reader renders composition geometry and crop')
 check(b'<script>alert(1)</script>' not in html and b'&lt;script&gt;' in html,'Composition reader escapes text')
 html=get('Regular',edit,page=2).data
-check(all(label in html for label in (b'Standard',b'Custom',b'Advanced',b'Page composition studio',b'Portable layout JSON')),'Three real composition toolsets exposed')
+check(all(label in html for label in (b'Standard',b'Custom',b'Advanced',b'Page composition',b'Portable layout JSON')),'Three real composition toolsets exposed')
 check(modify('Writer',iid,action='page',page_id=target['id'],**values).status_code in (403,404),'Composition does not bypass editorial permissions')
 stale=post('Regular',edit,action='page',page_id=target['id'],revision=0,**values)
 check(stale.status_code==409,'Composition stale save rejected')
@@ -377,3 +377,18 @@ for invalid in [[cover_id],[back_id],['foreign-page'],[order[0],order[0]],[]]:
  check(modify('Regular',iid,action='duplicate_many',page_ids=invalid).status_code==400,'Invalid bulk duplicate rejected')
  check(revision_for(iid)==rev,'Invalid bulk duplicate is atomic')
 print('PASS',checks,'T34 Advanced composition and organizer acceptance checks')
+
+# Reader views use the actual application, authorization and saved renderer.
+import re
+total=len(query('SELECT id FROM zine_pages WHERE issue_id=?',(iid,)))
+def reader_numbers(response):return list(map(int,re.findall(rb'id="zine-page-(\d+)"',response.data)))
+for n in [1,2,total]:
+ response=get('Regular',read,page=n,reading='single');check(response.status_code==200 and reader_numbers(response)==[n],'Single reader page '+str(n))
+ response=get('Regular',read,page=n,reading='spread');expected=[n] if n in (1,total) else list(range(n if n%2==0 else n-1,min((n if n%2==0 else n-1)+2,total)))
+ check(reader_numbers(response)==expected,'Facing spread membership '+str(n))
+response=get('Regular',read,reading='scroll');check(reader_numbers(response)==list(range(1,total+1)),'Scroll has every saved page once in order')
+check(reader_numbers(get('Regular',read,reading='invalid'))==[1],'Invalid view has safe default')
+check(get('Regular',read,page=total+1,reading='scroll').status_code==404,'Scroll still validates page input')
+check(b'data-outline-toggle' in get('Regular',edit,page=2).data,'Sidebar toggle available')
+check(b'zines_workspace.js' in response.data,'Reader preference script included')
+print('PASS',checks,'T34 reader views and focused workspace acceptance checks')
