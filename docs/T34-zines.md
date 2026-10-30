@@ -81,3 +81,8 @@ Validation: 323 actual-app checks (including protected page actions, contributor
 ## Authentication update
 
 Sandbox Zine authentication update - October 29, 2026: Owner confirmed activation. Zine writing uses normal login, authorization, CSRF and throttling without an extra fresh-auth challenge. Staff confirmation lasts 24 hours; account-security confirmation remains 30 minutes. Login 2FA is retained. The isolated actual-app and design/PDF suites pass. Production source and data are unchanged.
+
+
+## Visual composition studio
+
+Sandbox now has Standard beginner tools, Custom with user-selected Advanced tool groups remembered per account in this browser, and Advanced with all implemented controls. A structured live canvas supports text, artwork, shapes, layers, type, resizing, exact geometry and layout JSON; saved compositions drive reader and PDF output. Existing presets remain available. Validation: 374 isolated actual-app checks, 26 design/PDF checks and 35 toolset checks; signed-in browser saved/reloaded a private demo, checked Custom choices, Advanced precision, mode-switch preservation and desktop/390px overflow. Corrected a site day/night data-mode event collision during the walkthrough. Production source unchanged. Physical print and broader device/assistive technology acceptance remain open.
