@@ -324,3 +324,54 @@ check(get('OtherManager',nested_read+'/print',download='1').status_code==404,'Ne
 check(get('Regular',base+'/issues/'+nested_iid+'/history').status_code==200,'Authorized composition history available')
 change('DELETE FROM user_blocks WHERE user_id=? AND target_id=?',(users['Writer'],users['OtherManager']))
 print('PASS',checks,'T34 final composition and nested-artwork privacy checks')
+
+# Advanced composition persistence, PDF transforms, and whole-issue operations.
+advanced=json.loads(json.dumps(layout));advanced['blocks'][0].update(x=60,y=60,w=250,h=100,text='Rotated selectable headline',rotation=12,opacity=.6,group='headline-group',name='Main headline')
+advanced['blocks'][1].update(focal_x=15,focal_y=80,rotation=-8,opacity=.75,group='headline-group')
+advanced_values={**values,'composition':json.dumps(advanced)}
+check(modify('Regular',iid,action='page',page_id=target['id'],**advanced_values).status_code==302,'Advanced transforms save')
+roundtrip=json.loads(current('zine_pages',target['id'])['content'])['composition']
+check(roundtrip['blocks'][0]['rotation']==12 and roundtrip['blocks'][0]['opacity']==.6 and roundtrip['blocks'][0]['name']=='Main headline','Rotation opacity and element name persist')
+check(roundtrip['blocks'][0]['group']==roundtrip['blocks'][1]['group']=='headline-group','Group membership persists')
+check(roundtrip['blocks'][1]['focal_x']==15 and roundtrip['blocks'][1]['focal_y']==80,'Crop focal point persists')
+html=get('Regular',read,page=2).data
+check(b'rotate(12' in html and b'opacity:0.6' in html and b'object-position:15' in html,'Native reader applies advanced values')
+for paper in ('letter','a4'):
+ for mode in ('standard','booklet'):
+  response=get('Regular',read+'/print',download='1',mode=mode,paper=paper)
+  check(response.status_code==200,'Advanced '+paper+' '+mode+' PDF exports')
+  parsed=PdfReader(io.BytesIO(response.data));dump=' '.join(' '.join(p.extract_text() or '' for p in parsed.pages).split())
+  check('Rotated selectable headline' in dump,'Rotated PDF headline stays selectable '+paper+' '+mode)
+  check(any(b'/ca .6' in p.get_contents().get_data() or b'/gRLs' in p.get_contents().get_data() for p in parsed.pages),'PDF emits transparency state '+paper+' '+mode)
+for name,mutate in [
+ ('boolean rotation',lambda x:x['blocks'][0].update(rotation=True)),
+ ('nonfinite rotation',lambda x:x['blocks'][0].update(rotation=float('inf'))),
+ ('unbounded rotation',lambda x:x['blocks'][0].update(rotation=999)),
+ ('invisible opacity',lambda x:x['blocks'][0].update(opacity=0)),
+ ('invalid group',lambda x:x['blocks'][0].update(group='<html>')),
+ ('invalid focal x',lambda x:x['blocks'][1].update(focal_x=-1)),
+ ('invalid focal y',lambda x:x['blocks'][1].update(focal_y=101)),
+ ('off-page rotated bounds',lambda x:x['blocks'][0].update(x=0,y=0,rotation=45))]:
+ bad=json.loads(json.dumps(advanced));mutate(bad);before=current('zine_pages',target['id'])['content'];rev=revision_for(iid)
+ check(modify('Regular',iid,action='page',page_id=target['id'],**{**values,'composition':json.dumps(bad)}).status_code==400,'Reject '+name)
+ check(current('zine_pages',target['id'])['content']==before and revision_for(iid)==rev,'Invalid advanced input is atomic '+name)
+check(get('Regular',edit,tab='organize').status_code==200,'Visual page organizer renders')
+original=query("SELECT * FROM zine_pages WHERE issue_id=? ORDER BY CASE kind WHEN 'cover' THEN 0 WHEN 'back' THEN 2 ELSE 1 END,position,id",(iid,))
+order=[r['id'] for r in original if r['kind']=='page'];reversed_order=list(reversed(order));cover_id=original[0]['id'];back_id=original[-1]['id']
+check(modify('Regular',iid,action='reorder',page_order=json.dumps(reversed_order),workspace_tab='organize').status_code==302,'Whole issue reorder saves')
+actual=query("SELECT id FROM zine_pages WHERE issue_id=? AND kind='page' ORDER BY position,id",(iid,))
+check([r[0] for r in actual]==reversed_order,'Interior order matches requested permutation')
+for invalid in [order+[cover_id],order+[back_id],order[:-1],order+[order[0]],['foreign-page'],{'pages':order}]:
+ rev=revision_for(iid)
+ check(modify('Regular',iid,action='reorder',page_order=json.dumps(invalid)).status_code==400,'Invalid reorder rejected')
+ check(revision_for(iid)==rev,'Invalid reorder retains revision')
+check(modify('Writer',iid,action='reorder',page_order=json.dumps(order)).status_code==404,'Contributor cannot reorder')
+check(post('Regular',edit,action='reorder',revision=0,page_order=json.dumps(order)).status_code==409,'Stale reorder rejected')
+count=len(query('SELECT id FROM zine_pages WHERE issue_id=?',(iid,)))
+check(modify('Regular',iid,action='duplicate_many',page_ids=order[:2]).status_code==302,'Selected interior pages duplicate in one transaction')
+check(len(query('SELECT id FROM zine_pages WHERE issue_id=?',(iid,)))==count+2,'Bulk duplicate produces exact page count')
+for invalid in [[cover_id],[back_id],['foreign-page'],[order[0],order[0]],[]]:
+ rev=revision_for(iid)
+ check(modify('Regular',iid,action='duplicate_many',page_ids=invalid).status_code==400,'Invalid bulk duplicate rejected')
+ check(revision_for(iid)==rev,'Invalid bulk duplicate is atomic')
+print('PASS',checks,'T34 Advanced composition and organizer acceptance checks')

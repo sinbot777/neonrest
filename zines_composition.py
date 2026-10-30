@@ -34,7 +34,7 @@ def normalize(value):
     ids = set(); total = 0
     from .zines_core import text
     for raw in blocks:
-        keys = {'id','type','x','y','w','h','text','image','alt','font','size','leading','align','color','fill','stroke','stroke_width','fit','locked'}
+        keys = {'id','type','x','y','w','h','text','image','alt','font','size','leading','align','color','fill','stroke','stroke_width','fit','locked','rotation','opacity','group','name','focal_x','focal_y'}
         if not isinstance(raw, dict) or set(raw)-keys: fail('Unsupported composition element.')
         ident = raw.get('id'); kind = raw.get('type')
         if not isinstance(ident,str) or not re.fullmatch(r'[A-Za-z0-9_-]{1,40}',ident) or ident in ids: fail('Every composition element needs a unique ID.')
@@ -45,6 +45,15 @@ def normalize(value):
         if b['x']+b['w'] > WIDTH or b['y']+b['h'] > HEIGHT: fail('Keep each element inside the page.')
         if type(raw.get('locked',False)) is not bool: fail('Invalid element lock.')
         b['locked']=raw.get('locked',False)
+        b['rotation']=number(raw.get('rotation',0),-180,180,'rotation')
+        b['opacity']=number(raw.get('opacity',1),0.05,1,'opacity')
+        group=raw.get('group','')
+        if not isinstance(group,str) or (group and not re.fullmatch(r'[A-Za-z0-9_-]{1,40}',group)): fail('Invalid element group.')
+        b['group']=group
+        b['name']=text(raw.get('name',''),80)
+        angle=math.radians(b['rotation']);rw=abs(b['w']*math.cos(angle))+abs(b['h']*math.sin(angle));rh=abs(b['w']*math.sin(angle))+abs(b['h']*math.cos(angle))
+        cx=b['x']+b['w']/2;cy=b['y']+b['h']/2
+        if min(cx-rw/2,cy-rh/2)<-0.02 or cx+rw/2>WIDTH+0.02 or cy+rh/2>HEIGHT+0.02: fail('Keep rotated elements inside the page.')
         b['fill']=color(raw.get('fill','transparent'),True)
         b['color']=color(raw.get('color','#171717'))
         b['stroke']=color(raw.get('stroke','#171717'))
@@ -56,7 +65,7 @@ def normalize(value):
         elif kind=='image':
             image=raw.get('image','')
             if not isinstance(image,str) or len(image)>60: fail('Invalid composition artwork.')
-            b.update(image=image,alt=text(raw.get('alt',''),300),fit=raw.get('fit','contain'))
+            b.update(image=image,alt=text(raw.get('alt',''),300),fit=raw.get('fit','contain'),focal_x=number(raw.get('focal_x',50),0,100,'horizontal crop focus'),focal_y=number(raw.get('focal_y',50),0,100,'vertical crop focus'))
             if b['fit'] not in ('contain','cover'): fail('Unsupported image fit.')
         out['blocks'].append(b)
     if total>6000: fail('Use at most 6000 characters across composition text boxes.')
@@ -83,6 +92,8 @@ def draw(c, data, x, width, height, assets, numbers=False, number=0):
     for b in page['blocks']:
         bx,by,bw,bh=b['x'],HEIGHT-b['y']-b['h'],b['w'],b['h']
         c.saveState()
+        c.setFillAlpha(b['opacity']);c.setStrokeAlpha(b['opacity'])
+        c.translate(bx+bw/2,by+bh/2);c.rotate(-b['rotation']);c.translate(-bw/2,-bh/2);bx=by=0
         fill=b['fill']!='transparent'
         if fill:c.setFillColor(HexColor(b['fill']))
         c.setStrokeColor(HexColor(b['stroke']));c.setLineWidth(b['stroke_width'])
@@ -102,7 +113,7 @@ def draw(c, data, x, width, height, assets, numbers=False, number=0):
                 image=ImageReader(io.BytesIO(assets(b['image'])));iw,ih=image.getSize()
                 ratio=(max if b['fit']=='cover' else min)(bw/iw,bh/ih);dw,dh=iw*ratio,ih*ratio
                 path=c.beginPath();path.rect(bx,by,bw,bh);c.clipPath(path,stroke=0)
-                c.drawImage(image,bx+(bw-dw)/2,by+(bh-dh)/2,dw,dh,mask='auto')
+                c.drawImage(image,bx+(bw-dw)*b['focal_x']/100,by+(bh-dh)*(1-b['focal_y']/100),dw,dh,mask='auto')
         c.restoreState()
     if numbers:
         c.setFont('ZineText',7);c.setFillColor(HexColor('#171717'));c.drawRightString(384,8,str(number))

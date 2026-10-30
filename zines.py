@@ -129,6 +129,21 @@ def register(app,core):
                     z.draft(issue);z.touch_issue(db,issue,user)
                     if action=='settings':db.execute('UPDATE zine_issues SET title=?,allow_print=? WHERE id=?',(z.text(request.form.get('title',''),160,True),int(request.form.get('allow_print')=='1'),iid))
                     elif action=='add':z.add_page(db,p,issue,user,form_content())
+                    elif action in ('reorder','duplicate_many'):
+                        rows=z.pages(db,iid);middle=[r for r in rows if r['kind']=='page'];by_id={r['id']:r for r in middle}
+                        if action=='reorder':
+                            raw=request.form.get('page_order','')
+                            if len(raw)>6000:raise z.ZineError('Page order is too large.')
+                            try:order=json.loads(raw)
+                            except (ValueError,TypeError):raise z.ZineError('Invalid page order.')
+                            if not isinstance(order,list) or any(not isinstance(v,str) for v in order) or len(order)!=len(by_id) or len(set(order))!=len(order) or set(order)!=set(by_id):raise z.ZineError('Page order must contain every interior page exactly once.')
+                            for position,pid in enumerate(order):db.execute('UPDATE zine_pages SET position=? WHERE id=?',(position,pid))
+                        else:
+                            selected=request.form.getlist('page_ids')
+                            if not selected or len(selected)!=len(set(selected)) or any(pid not in by_id for pid in selected):raise z.ZineError('Select interior pages from this issue.')
+                            if len(rows)+len(selected)>64:raise z.ZineError('Use at most 64 pages.',409)
+                            for row in middle:
+                                if row['id'] in selected:z.add_page(db,p,issue,user,json.loads(row['content']),author=row['author_id'])
                     elif action in ('page','move','duplicate','delete'):
                         rows=z.pages(db,iid);target=next((r for r in rows if r['id']==request.form.get('page_id')),None)
                         if not target:abort(404)
@@ -150,7 +165,7 @@ def register(app,core):
                         db.execute('UPDATE zine_submissions SET state=?,revision=revision+1 WHERE id=?',(state,submission['id']))
                     else:raise z.ZineError('Unsupported action.')
                 budget(db,p['owner_id'])
-            tab=request.form.get('workspace_tab','pages');tab=tab if tab in ('pages','settings','submissions','publish') else 'pages'
+            tab=request.form.get('workspace_tab','pages');tab=tab if tab in ('pages','organize','settings','submissions','publish') else 'pages'
             selected=max(1,min(request.form.get('workspace_page',1,type=int) or 1,64))
             if action=='move':selected=max(1,min(64,selected+(-1 if request.form.get('direction')=='up' else 1)))
             return redirect(url_for('zines.issue_edit',zid=zid,iid=iid,tab=tab,page=selected,saved=1))
@@ -159,7 +174,7 @@ def register(app,core):
         submissions=db.execute('SELECT * FROM zine_submissions WHERE issue_id=?'+('' if member in ('owner','editor') else ' AND author_id=?')+' ORDER BY created_at,id',(iid,) if member in ('owner','editor') else (iid,user)).fetchall()
         assets=db.execute('SELECT id FROM zine_assets WHERE zine_id=?'+('' if member in ('owner','editor') else ' AND uploader_id=?'),(zid,) if member in ('owner','editor') else (zid,user)).fetchall()
         selected=max(1,min(request.args.get('page',1,type=int) or 1,len(rows) or 1))
-        tab=request.args.get('tab','pages');tab=tab if tab in ('pages','new','settings','submissions','publish') else 'pages'
+        tab=request.args.get('tab','pages');tab=tab if tab in ('pages','new','organize','settings','submissions','publish') else 'pages'
         if member=='contributor':tab='submissions'
         return render('issue_edit',selected_page=selected,workspace_tab=tab,publication=p,issue=issue,role=member,pages=[(r,json.loads(r['content'])) for r in rows],submissions=[(r,json.loads(r['content'])) for r in submissions],assets=assets)
     @bp.post('/zines/<zid>/issues/<iid>/submit')

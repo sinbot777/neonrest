@@ -1,7 +1,7 @@
 /* Tool visibility is an editor preference, never a page-content conversion. */
 (function (scope) {
  'use strict';
- const tools = Object.freeze(['shapes','layers','typography','precision','snapping','portable']);
+ const tools = Object.freeze(['shapes','layers','typography','precision','snapping','portable','composition','artwork','library','preflight']);
  function preferences(raw) {
   const value=raw&&typeof raw==='object'?raw:{};
   return {mode:['standard','custom','advanced'].includes(value.mode)?value.mode:'standard',tools:tools.filter(tool=>Array.isArray(value.tools)&&value.tools.includes(tool))};

@@ -1,0 +1,22 @@
+/* Component event tests using actual rendered Jinja markup, not a browser QA substitute. */
+const {JSDOM}=require('jsdom');const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const dom=new JSDOM(fs.readFileSync(process.argv[2]||'/tmp/zine-dom-fixture.html','utf8'),{url:'https://example.test/zines/editor',runScripts:'outside-only',pretendToBeVisual:true});const w=dom.window,d=w.document;let checks=0;
+for(const f of ['zines_toolsets.js','zines_geometry.js','zines_composer.js'])w.eval(fs.readFileSync(path.join(__dirname,'../static',f),'utf8'));
+const root=d.querySelector('[data-zc-editor]'),q=s=>root.querySelector(s),click=(s,shiftKey=false)=>q(s).dispatchEvent(new w.MouseEvent('click',{bubbles:true,shiftKey})),page=()=>JSON.parse(q('[data-zc-json]').value),check=(v,label)=>{assert.ok(v,label);checks++;};
+function input(selector,value){const el=q(selector);el.value=value;el.dispatchEvent(new w.Event('input',{bubbles:true}));}
+click('[data-mode="advanced"]');click('[data-add="text"]');click('[data-add="box"]');check(page().blocks.length===3,'Adds elements using actual events');
+click('[data-zc-action="select-all"]');click('[data-zc-action="group"]');let grouped=page();check(grouped.blocks.every(b=>b.group===grouped.blocks[0].group)&&grouped.blocks[0].group,'Groups all selected elements');
+click('[data-zc-action="deselect"]');click('[data-zc-layers] button');check(q('[data-zc-selection]').textContent.startsWith('3 selected'),'Click selects entire saved group');
+click('[data-zc-action="copy-selection"]');click('[data-zc-action="paste-selection"]');let pasted=page();check(pasted.blocks.length===6,'Pastes complete selection');check(pasted.blocks[3].group!==pasted.blocks[0].group,'Pasted group receives a fresh ID');
+click('[data-zc-action="undo"]');check(page().blocks.length===3,'Undo restores previous whole page');click('[data-zc-action="redo"]');check(page().blocks.length===6,'Redo restores group duplication');
+click('[data-zc-action="select-all"]');click('[data-zc-action="ungroup"]');check(page().blocks.every(b=>b.group===''),'Ungroups selected elements');
+click('[data-zc-action="deselect"]');const ids=page().blocks.map(b=>b.id);click(`[data-select="${ids[0]}"]`);click(`[data-select="${ids[1]}"]`,true);check(q('[data-zc-selection]').textContent.startsWith('2 selected'),'Shift-click extends selection');
+click('[data-zc-action="objects-left"]');check(Math.abs(page().blocks[0].x-page().blocks[1].x)<30,'Object alignment applies including rotation bounds');
+const beforeModes=JSON.stringify(page());for(const mode of ['standard','custom','advanced'])click(`[data-mode="${mode}"]`);check(JSON.stringify(page())===beforeModes,'Mode switches preserve composition bytes');
+click('[data-zc-action="deselect"]');click(`[data-select="${ids[0]}"]`);input('[data-prop="rotation"]','25');input('[data-prop="opacity"]','0.5');check(page().blocks[0].rotation===25&&page().blocks[0].opacity===.5,'Transform inputs update saved state');
+input('[data-layout-name]','Reusable fixture');click('[data-zc-action="save-layout"]');check(w.localStorage.getItem(root.dataset.preferenceKey+'-layouts').includes('Reusable fixture'),'Layout saved under account-scoped browser key');
+click('[data-add="image"]');input('[data-prop="image"]','art-one');click('[data-zc-action="duplicate"]');input('[data-replacement-artwork]','art-two');click('[data-zc-action="replace-artwork"]');check(page().blocks.filter(b=>b.type==='image').every(b=>b.image==='art-two'),'Artwork replacement updates every matching frame');
+input('[data-layout-name]','Artwork-free layout');click('[data-zc-action="save-layout"]');const stored=JSON.parse(w.localStorage.getItem(root.dataset.preferenceKey+'-layouts'));check(stored[0].page.blocks.filter(b=>b.type==='image').every(b=>!b.image&&!b.alt),'Reusable layout clears artwork references');
+click('[data-zc-action="select-all"]');click('[data-zc-action="remove"]');check(page().blocks.length===0,'Multi-remove clears selected elements');click('[data-zc-action="undo"]');check(page().blocks.length===8,'Undo restores removed selection');
+click('[data-zc-action="export"]');const exported=q('[data-zc-transfer]').value;check(JSON.parse(exported).blocks.length===8,'Export includes advanced elements');click('[data-zc-action="import"]');check(page().blocks.length===8,'Advanced export reimports');
+console.log('PASS',checks,'composer DOM event checks');dom.window.close();
