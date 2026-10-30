@@ -202,8 +202,18 @@ def register(app,core):
         if not z.visible(db,p,issue,uid()):abort(404)
         rows=z.pages(db,iid);page=request.args.get('page',1,type=int) or 1
         if not 1<=page<=len(rows):abort(404)
-        row=rows[page-1]
-        return render('reader',publication=p,issue=issue,page=page,total=len(rows),data=json.loads(row['content']),page_kind=row['kind'],role=z.role(db,p,uid()))
+        mode=request.args.get('reading','single')
+        if mode not in ('single','spread','scroll'):mode='single'
+        # Covers remain standalone; interior spreads pair pages 2–3, 4–5, etc.
+        groups=[[1]]
+        interior=list(range(2,len(rows)))
+        groups.extend(interior[i:i+2] for i in range(0,len(interior),2))
+        if len(rows)>1:groups.append([len(rows)])
+        group_index=next(i for i,g in enumerate(groups) if page in g)
+        shown=list(range(1,len(rows)+1)) if mode=='scroll' else (groups[group_index] if mode=='spread' else [page])
+        previous=(groups[group_index-1][0] if group_index else None) if mode=='spread' else (page-1 if page>1 else None)
+        following=(groups[group_index+1][0] if group_index+1<len(groups) else None) if mode=='spread' else (page+1 if page<len(rows) else None)
+        return render('reader',publication=p,issue=issue,page=page,total=len(rows),reading_mode=mode,reader_pages=[(n,rows[n-1],json.loads(rows[n-1]['content'])) for n in shown],previous_page=previous,next_page=following,role=z.role(db,p,uid()))
     @bp.get('/zines/<zid>/issues/<iid>/print')
     def printing(zid,iid):
         db=core.get_db();p=z.publication(db,zid);issue=z.get_issue(db,p,iid)
