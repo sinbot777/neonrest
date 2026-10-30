@@ -21,6 +21,7 @@ for (const root of document.querySelectorAll('[data-zc-editor]')) {
  function active(){return page.blocks.find(b=>b.id===selected);}
  function enable(){design.value='composition';design.dispatchEvent(new Event('change',{bubbles:true}));form.querySelector('.zc-legacy').open=false;}
  function setMode(next){
+  if(!['standard','custom','advanced'].includes(next))return;
   mode=next;
   for(const b of all('[data-mode]'))b.setAttribute('aria-pressed',String(b.dataset.mode===mode));
   q('[data-zc-custom-tools]').hidden=mode!=='custom';
@@ -74,7 +75,7 @@ for (const root of document.querySelectorAll('[data-zc-editor]')) {
   }if(chars>6000)throw Error('Use at most 6000 text characters.');return copy(raw);
  }
  root.addEventListener('click',e=>{
-  const modeButton=e.target.closest('[data-mode]');if(modeButton){setMode(modeButton.dataset.mode);return;}
+  const modeButton=e.target.closest('button[data-mode]');if(modeButton){setMode(modeButton.dataset.mode);return;}
   const layer=e.target.closest('[data-select]');if(layer){selected=layer.dataset.select;render();return;}
   const add=e.target.closest('[data-add]');if(add){if(page.blocks.length>=32)return;checkpoint();const b=base(add.dataset.add);page.blocks.push(b);selected=b.id;commit();return;}
   const action=e.target.closest('[data-zc-action]')?.dataset.zcAction;if(!action)return;
