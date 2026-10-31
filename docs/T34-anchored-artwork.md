@@ -13,3 +13,9 @@ All nested references use existing publication/uploader/contact authorization, i
 Validation: schema limits, finite geometry, foreign artwork/atomic revision checks, exact asset enumeration, four placement modes, captions and credits in Letter/A4 reading/booklet PDFs, overflow rejection, CRLF/Unicode anchors and actual DOM editing events. Physical printing, tagged PDF and broader accessibility/device certification remain separate.
 
 The publication artwork library also accepts a pasted PNG/JPEG/WebP via a labeled paste area. Pasting selects a file; Upload artwork performs the ordinary authenticated upload. The same two-MiB input limit and server-side processing/authorization apply. No automatic upload or clipboard polling.
+
+## Sandbox deployment evidence
+
+Installed after 470 isolated actual-app checks, 26 design/PDF checks and the hosted component/flow suite (54 existing component plus 50 anchored-image/print checks). Local DOM suites passed 23 existing editor, 13 anchored-image and six paste-event checks; reader, geometry and toolset regressions passed 45, 40 and 51 checks. Four-page PDF proofs were rendered and reviewed for inline, left/right wrapping and full-width artwork.
+
+The connected browser file picker requires the extension's file-URL permission; no permission was changed. Media-download and later navigation calls timed out. Consequently the live signed-in upload/insertion walkthrough and narrow-screen image-flow check remain uncompleted. These are not represented as passed tests. The feature is installed in Sandbox; Production source remains unchanged. Broad assistive-technology and physical printer acceptance remain open.

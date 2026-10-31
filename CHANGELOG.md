@@ -1,3 +1,9 @@
+# Anchored Zine artwork - October 30, 2026 (Sandbox)
+
+Sandbox text frames now support anchored inline images, left/right text wrapping and full-width images between paragraphs, with image descriptions, sizing, spacing, captions and credits. Text edits move the anchors; undo, duplication, mode changes and portable layouts preserve them. Reusable layouts clear private artwork references. The artwork library also accepts pasted PNG/JPEG/WebP images through the ordinary upload form. Reader and selectable-text PDF exports use the saved anchors; print overflow is rejected explicitly. Reflow is within the containing frame; linked text across frames/pages remains future work.
+
+Hosted acceptance passed 470 actual-app checks, 26 design/PDF checks, 54 component checks and 50 anchored-image/print checks. Local DOM suites passed 23 existing editor, 13 anchored-image and six paste-event checks; reader, geometry and toolset regressions passed 45, 40 and 51. Four-page PDF proofs were rendered and reviewed. Connected-browser file uploads require the extension's file-URL permission, and media/navigation calls timed out; the live signed-in image walkthrough and narrow-screen image-flow check remain uncompleted. No permissions were changed. No schema migration or Production deployment.
+
 # Zine reading views and focused workspace - October 30, 2026 (Sandbox)
 
 Reader views now offer Single page, Two-page spread and Continuous scroll. Covers stay separate and interior pages pair correctly; the reading choice is remembered in this browser. Editing gains collapsible page thumbnails, a larger central canvas and an inspector with expandable secondary controls. Saved-page comparison is optional. Hosted acceptance passed 447 actual-app and 26 design/PDF checks; local validation passed 213 component, reader, geometry, toolset and DOM checks. No schema migration. Linked text flow, publication-wide styles and master layouts remain future work.
