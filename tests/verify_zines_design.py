@@ -1,7 +1,7 @@
 from pathlib import Path
 import sys,os,io,json,importlib,smtplib
 smtplib.SMTP=lambda *a,**k:(_ for _ in ()).throw(AssertionError('SMTP forbidden'));smtplib.SMTP_SSL=smtplib.SMTP
-package=sys.argv[1];stage=Path(sys.argv[2]);assert str(stage).startswith('/home/sinbot/releases/T34-design-')
+package=sys.argv[1];stage=Path(sys.argv[2]);assert str(stage).startswith('/home/sinbot/releases/T34-') and stage.name=='neonrest_sandbox' and stage.parent.name=='candidate'
 bootstrap=(stage/'tests/verify_statistics_suite.py').read_text().split('from datetime import datetime,timedelta,timezone')[0];exec(compile(bootstrap,'isolated visual design bootstrap','exec'))
 z=importlib.import_module(package+'.zines_core');pdf=importlib.import_module(package+'.zines_pdf')
 from pypdf import PdfReader

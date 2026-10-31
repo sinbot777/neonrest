@@ -81,3 +81,13 @@ Validation: 323 actual-app checks (including protected page actions, contributor
 ## Authentication update
 
 Sandbox Zine authentication update - October 29, 2026: Owner confirmed activation. Zine writing uses normal login, authorization, CSRF and throttling without an extra fresh-auth challenge. Staff confirmation lasts 24 hours; account-security confirmation remains 30 minutes. Login 2FA is retained. The isolated actual-app and design/PDF suites pass. Production source and data are unchanged.
+
+
+## Visual composition studio
+
+Sandbox now has Standard beginner tools, Custom with user-selected Advanced tool groups remembered per account in this browser, and Advanced with all implemented controls. A structured live canvas supports text, artwork, shapes, layers, type, resizing, exact geometry and layout JSON; saved compositions drive reader and PDF output. Existing presets remain available. Validation: 374 isolated actual-app checks, 26 design/PDF checks and 35 toolset checks; signed-in browser saved/reloaded a private demo, checked Custom choices, Advanced precision, mode-switch preservation and desktop/390px overflow. Corrected a site day/night data-mode event collision during the walkthrough. Production source unchanged. Physical print and broader device/assistive technology acceptance remain open.
+
+
+## Advanced composition and issue overview - deployed
+
+Advanced Zine composition is deployed in Sandbox: multi-select, saved groups, alignment/distribution, rotation, opacity, named elements, crop focus, page-level artwork replacement, browser-local reusable layouts, text presets and detailed page checks. The saved-page organizer provides thumbnails, facing spreads, interior-page reordering and bulk duplication. Custom exposes selected Advanced groups. Reader and selectable-text PDFs share rotation, transparency and crop focus. Hosted acceptance: 436 application checks plus 26 design/PDF checks; local checks: 40 geometry, 51 toolset, 54 component and 19 DOM event checks. Live private-demo saving/reload, grouping, copy/paste/undo, mode preservation, Custom preferences, layout saving, four-page reordering/duplication and 390px overflow checks passed. Production source is unchanged. No schema migration; live acceptance edits were limited to the private Composition Studio Demo. Linked text flow, master pages, synchronized publication styles, advanced text wrapping, editorial review and professional print/color controls remain future work; physical print and broader accessibility/device acceptance remain open.

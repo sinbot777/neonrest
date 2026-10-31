@@ -8,6 +8,7 @@ import time
 from pathlib import Path
 from flask import Blueprint,abort,render_template,request,session,redirect,url_for,send_file
 from . import zines_core as z
+from . import zines_sizes
 
 def register(app,core):
     bp=Blueprint('zines',__name__)
@@ -23,8 +24,11 @@ def register(app,core):
     def writing():
         helpers=app.extensions['community_auth_helpers'];helpers['csrf']()
         return helpers['limited']('zines-write',80)
-    def form_content():return {**{k:request.form.get(k,'') for k in ('heading','text','caption','image','layout','print_alternative','section','pullquote','highlight','highlight_label','accent','text_size','image_width','image_align')},'design':request.form.get('design','classic'),**{key:request.form.get(key,default) for key,default in [('accent','red'),('text_size','regular'),('image_width','full'),('image_align','center')]}}
-    def render(view,**values):return render_template('zines.html',view=view,token=token(),waveform=z.wave(),**values)
+    from .zines_composition import asset_ids
+    def form_content():return {**{k:request.form.get(k,'') for k in ('heading','text','caption','image','layout','print_alternative','section','pullquote','highlight','highlight_label','accent','text_size','image_width','image_align')},'composition':request.form.get('composition',''),'design':request.form.get('design','classic'),**{key:request.form.get(key,default) for key,default in [('accent','red'),('text_size','regular'),('image_width','full'),('image_align','center')]}}
+    def render(view,**values):
+        size=zines_sizes.get(core.get_db(),values['issue']['id']) if values.get('issue') else None
+        return render_template('zines.html',view=view,token=token(),waveform=z.wave(),issue_size=size,**values)
     def budget(db,owner):
         total=0
         for sql in ["SELECT SUM(length(CAST(p.content AS BLOB))) FROM zine_pages p JOIN zine_issues i ON i.id=p.issue_id JOIN zines z ON z.id=i.zine_id WHERE z.owner_id=?", "SELECT SUM(length(CAST(p.snapshot AS BLOB))) FROM zine_revisions p JOIN zine_issues i ON i.id=p.issue_id JOIN zines z ON z.id=i.zine_id WHERE z.owner_id=?", "SELECT SUM(length(CAST(p.content AS BLOB))) FROM zine_submissions p JOIN zine_issues i ON i.id=p.issue_id JOIN zines z ON z.id=i.zine_id WHERE z.owner_id=?"]:
@@ -122,12 +126,28 @@ def register(app,core):
                         if not z.visible(db,p,issue,user):raise z.ZineError('A contributor or image is no longer eligible.',409)
                         if p['allow_print'] and issue['allow_print']:
                             from .zines_pdf import render as pdf
-                            for paper in ('letter','a4'):pdf(rows,lambda aid:asset_bytes(db,p,aid),'booklet',paper,title=issue['title'])
+                            for paper in ('letter','a4'):pdf(rows,lambda aid:asset_bytes(db,p,aid),'booklet',paper,title=issue['title'],page_size=zines_sizes.get(db,iid),guides=request.args.get('guides')=='1',panel_inset=request.args.get('panel_inset','2'),proof=request.args.get('proof')=='1')
                     z.touch_issue(db,issue,user);db.execute('UPDATE zine_issues SET state=?,published_at=? WHERE id=?',(state,int(time.time()) if state=='published' else None,iid))
                 else:
                     z.draft(issue);z.touch_issue(db,issue,user)
-                    if action=='settings':db.execute('UPDATE zine_issues SET title=?,allow_print=? WHERE id=?',(z.text(request.form.get('title',''),160,True),int(request.form.get('allow_print')=='1'),iid))
+                    if action=='page_size':zines_sizes.save(db,iid,request.form)
+                    elif action=='settings':db.execute('UPDATE zine_issues SET title=?,allow_print=? WHERE id=?',(z.text(request.form.get('title',''),160,True),int(request.form.get('allow_print')=='1'),iid))
                     elif action=='add':z.add_page(db,p,issue,user,form_content())
+                    elif action in ('reorder','duplicate_many'):
+                        rows=z.pages(db,iid);middle=[r for r in rows if r['kind']=='page'];by_id={r['id']:r for r in middle}
+                        if action=='reorder':
+                            raw=request.form.get('page_order','')
+                            if len(raw)>6000:raise z.ZineError('Page order is too large.')
+                            try:order=json.loads(raw)
+                            except (ValueError,TypeError):raise z.ZineError('Invalid page order.')
+                            if not isinstance(order,list) or any(not isinstance(v,str) for v in order) or len(order)!=len(by_id) or len(set(order))!=len(order) or set(order)!=set(by_id):raise z.ZineError('Page order must contain every interior page exactly once.')
+                            for position,pid in enumerate(order):db.execute('UPDATE zine_pages SET position=? WHERE id=?',(position,pid))
+                        else:
+                            selected=request.form.getlist('page_ids')
+                            if not selected or len(selected)!=len(set(selected)) or any(pid not in by_id for pid in selected):raise z.ZineError('Select interior pages from this issue.')
+                            if len(rows)+len(selected)>64:raise z.ZineError('Use at most 64 pages.',409)
+                            for row in middle:
+                                if row['id'] in selected:z.add_page(db,p,issue,user,json.loads(row['content']),author=row['author_id'])
                     elif action in ('page','move','duplicate','delete'):
                         rows=z.pages(db,iid);target=next((r for r in rows if r['id']==request.form.get('page_id')),None)
                         if not target:abort(404)
@@ -149,7 +169,7 @@ def register(app,core):
                         db.execute('UPDATE zine_submissions SET state=?,revision=revision+1 WHERE id=?',(state,submission['id']))
                     else:raise z.ZineError('Unsupported action.')
                 budget(db,p['owner_id'])
-            tab=request.form.get('workspace_tab','pages');tab=tab if tab in ('pages','settings','submissions','publish') else 'pages'
+            tab=request.form.get('workspace_tab','pages');tab=tab if tab in ('pages','organize','settings','submissions','publish') else 'pages'
             selected=max(1,min(request.form.get('workspace_page',1,type=int) or 1,64))
             if action=='move':selected=max(1,min(64,selected+(-1 if request.form.get('direction')=='up' else 1)))
             return redirect(url_for('zines.issue_edit',zid=zid,iid=iid,tab=tab,page=selected,saved=1))
@@ -158,7 +178,7 @@ def register(app,core):
         submissions=db.execute('SELECT * FROM zine_submissions WHERE issue_id=?'+('' if member in ('owner','editor') else ' AND author_id=?')+' ORDER BY created_at,id',(iid,) if member in ('owner','editor') else (iid,user)).fetchall()
         assets=db.execute('SELECT id FROM zine_assets WHERE zine_id=?'+('' if member in ('owner','editor') else ' AND uploader_id=?'),(zid,) if member in ('owner','editor') else (zid,user)).fetchall()
         selected=max(1,min(request.args.get('page',1,type=int) or 1,len(rows) or 1))
-        tab=request.args.get('tab','pages');tab=tab if tab in ('pages','new','settings','submissions','publish') else 'pages'
+        tab=request.args.get('tab','pages');tab=tab if tab in ('pages','new','organize','settings','submissions','publish') else 'pages'
         if member=='contributor':tab='submissions'
         return render('issue_edit',selected_page=selected,workspace_tab=tab,publication=p,issue=issue,role=member,pages=[(r,json.loads(r['content'])) for r in rows],submissions=[(r,json.loads(r['content'])) for r in submissions],assets=assets)
     @bp.post('/zines/<zid>/issues/<iid>/submit')
@@ -186,8 +206,18 @@ def register(app,core):
         if not z.visible(db,p,issue,uid()):abort(404)
         rows=z.pages(db,iid);page=request.args.get('page',1,type=int) or 1
         if not 1<=page<=len(rows):abort(404)
-        row=rows[page-1]
-        return render('reader',publication=p,issue=issue,page=page,total=len(rows),data=json.loads(row['content']),page_kind=row['kind'],role=z.role(db,p,uid()))
+        mode=request.args.get('reading','single')
+        if mode not in ('single','spread','scroll'):mode='single'
+        # Covers remain standalone; interior spreads pair pages 2–3, 4–5, etc.
+        groups=[[1]]
+        interior=list(range(2,len(rows)))
+        groups.extend(interior[i:i+2] for i in range(0,len(interior),2))
+        if len(rows)>1:groups.append([len(rows)])
+        group_index=next(i for i,g in enumerate(groups) if page in g)
+        shown=list(range(1,len(rows)+1)) if mode=='scroll' else (groups[group_index] if mode=='spread' else [page])
+        previous=(groups[group_index-1][0] if group_index else None) if mode=='spread' else (page-1 if page>1 else None)
+        following=(groups[group_index+1][0] if group_index+1<len(groups) else None) if mode=='spread' else (page+1 if page<len(rows) else None)
+        return render('reader',publication=p,issue=issue,page=page,total=len(rows),reading_mode=mode,reader_pages=[(n,rows[n-1],json.loads(rows[n-1]['content'])) for n in shown],previous_page=previous,next_page=following,role=z.role(db,p,uid()))
     @bp.get('/zines/<zid>/issues/<iid>/print')
     def printing(zid,iid):
         db=core.get_db();p=z.publication(db,zid);issue=z.get_issue(db,p,iid)
@@ -197,10 +227,12 @@ def register(app,core):
             response=app.extensions['community_auth_helpers']['limited']('zines-pdf',8,3600,subject=('user:'+str(uid()) if uid() else 'zine-guest:'+str(request.remote_addr)))
             if response is not None:return response
             from .zines_pdf import render as pdf
-            data=pdf(rows,lambda aid:asset_bytes(db,p,aid),request.args.get('mode','standard'),request.args.get('paper','letter'),request.args.get('numbers')=='1',issue['title'])
+            data=pdf(rows,lambda aid:asset_bytes(db,p,aid),request.args.get('mode','standard'),request.args.get('paper','letter'),request.args.get('numbers')=='1',issue['title'],page_size=zines_sizes.get(db,iid),guides=request.args.get('guides')=='1',panel_inset=request.args.get('panel_inset','2'),proof=request.args.get('proof')=='1')
             return send_file(io.BytesIO(data),mimetype='application/pdf',as_attachment=True,download_name='zine-'+iid+'-'+request.args.get('mode','standard')+'.pdf',conditional=False,etag=False,max_age=0)
         arrangement=[tuple(number.get(r['id']) if r else None for r in sheet) for sheet in z.impose(rows)]
-        return render('print',publication=p,issue=issue,arrangement=arrangement,blanks=(-len(rows))%4)
+        from . import zines_folds
+        slots=zines_folds.mini8(rows) if len(rows)<=8 else None
+        return render('print',publication=p,issue=issue,arrangement=arrangement,blanks=(-len(rows))%4,fold_slots=[{**slot,'label':('Front cover' if slot['page']['kind']=='cover' else 'Back cover' if slot['page']['kind']=='back' else 'Page '+str(number[slot['page']['id']])) if slot['page'] else 'Blank'} for slot in slots] if slots else None)
     @bp.post('/zines/<zid>/assets')
     def upload(zid):
         from .marketplace_assets import prepare,StudioError
@@ -235,7 +267,7 @@ def register(app,core):
         allowed=bool(asset and member in ('owner','editor')) or bool(asset and member=='contributor' and asset['uploader_id']==uid())
         if not allowed:
             for issue in db.execute("SELECT * FROM zine_issues WHERE zine_id=? AND state='published'",(zid,)):
-                if z.visible(db,p,issue,uid()) and (p['cover_asset']==aid or any(json.loads(row['content']).get('image')==aid for row in z.pages(db,issue['id']))):allowed=True;break
+                if z.visible(db,p,issue,uid()) and (p['cover_asset']==aid or any(aid in asset_ids(json.loads(row['content'])) for row in z.pages(db,issue['id']))):allowed=True;break
         if not allowed:abort(404)
         response=send_file(io.BytesIO(asset_bytes(db,p,aid)),mimetype='image/webp',conditional=False,etag=False,max_age=0);response.headers['Content-Security-Policy']="sandbox; default-src 'none'";return response
     @bp.get('/zines/<zid>/issues/<iid>/history')
@@ -247,8 +279,7 @@ def register(app,core):
             snapshot=json.loads(row['snapshot']);allowed=True
             for page in snapshot['pages']:
                 if not z.compatible(db,page['author_id'],user):allowed=False;break
-                image_id=json.loads(page['content']).get('image')
-                if image_id:
+                for image_id in asset_ids(json.loads(page['content'])):
                     asset=db.execute('SELECT uploader_id FROM zine_assets WHERE id=? AND zine_id=?',(image_id,zid)).fetchone()
                     if not asset or not z.compatible(db,asset['uploader_id'],user):allowed=False;break
             if allowed:retained.append((row,snapshot))

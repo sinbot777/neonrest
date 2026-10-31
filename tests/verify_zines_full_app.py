@@ -194,10 +194,10 @@ check(modify('Regular',iid,action='state',state='draft').status_code==302,'Works
 page_rows=query("SELECT * FROM zine_pages WHERE issue_id=? ORDER BY CASE kind WHEN 'cover' THEN 0 WHEN 'page' THEN 1 ELSE 2 END,position",(iid,))
 target=next(row for row in page_rows if row['kind']=='page')
 html=get('Regular',base+'/issues/'+iid+'/edit',page=2).data
-check(b'Issue outline' in html and b'Saved page preview' in html,'Outline and saved preview visible')
+check(b'class="zine-outline"' in html and b'Saved page preview' in html,'Outline and saved preview visible')
 check(html.count(b'name="action" value="page"')==1,'Only one page editor shown')
 check(all(label in html for label in (b'Body text size',b'Accent color',b'Image width',b'Image alignment')),'Granular page controls visible')
-check(b'Issue outline' not in get('Writer',base+'/issues/'+iid+'/edit').data,'Contributor workspace does not expose editorial pages')
+check(b'class="zine-outline"' not in get('Writer',base+'/issues/'+iid+'/edit').data,'Contributor workspace does not expose editorial pages')
 check(b'Issue settings' in get('Regular',base+'/issues/'+iid+'/edit',tab='settings').data,'Dedicated settings view')
 check(b'Publish &amp; print' in get('Regular',base+'/issues/'+iid+'/edit',tab='publish').data,'Dedicated publish view')
 new_values=payload(heading='Workspace custom page',text='A short fictional paragraph for layout testing.',design='punk',accent='cobalt',text_size='large',image_width='small',image_align='right',image=cover)
@@ -252,3 +252,167 @@ row=current('zines',zid)
 check(post('Regular',base+'/edit',action='settings',revision=row['revision'],title='No extra factor for writing',description=row['description'],visibility='private',allow_print='1').status_code==302,'Stale step-up session can save Zine')
 check(current('zines',zid)['title']=='No extra factor for writing','Zine save really occurred without reauthentication')
 print('PASS',checks,'T34 auth window acceptance checks')
+
+# Composition storage, reader/PDF parity, bounded schema and asset permissions.
+composition=importlib.import_module(package+'.zines_composition')
+layout={'version':1,'background':'#f7f3e8','blocks':[
+ {'id':'title','type':'text','x':24,'y':24,'w':348,'h':90,'text':'COMPOSITION FIXTURE <script>alert(1)</script>','font':'bold','size':22,'leading':1.2,'align':'left','color':'#174c99'},
+ {'id':'photo','type':'image','x':24,'y':140,'w':168,'h':180,'image':cover,'alt':'Fictional artwork','fit':'cover'},
+ {'id':'body','type':'text','x':204,'y':140,'w':168,'h':300,'text':'Selectable composition body.\nSecond line.','size':12,'leading':1.4,'font':'mono','align':'right'},
+ {'id':'shape','type':'ellipse','x':24,'y':350,'w':140,'h':90,'fill':'#b52525'},
+ {'id':'rule','type':'rule','x':24,'y':470,'w':348,'h':12,'color':'#171717','stroke_width':2}]}
+values=payload(heading='Composition fixture',design='composition',composition=json.dumps(layout))
+check(modify('Regular',iid,action='page',page_id=target['id'],**values).status_code==302,'Composition saved without extra authentication')
+stored=json.loads(current('zine_pages',target['id'])['content'])
+check(stored['composition']['blocks'][0]['text']==layout['blocks'][0]['text'],'Composition text round trips literally')
+check(composition.asset_ids(stored)==[cover],'Nested artwork reference enumerated')
+html=get('Regular',read,page=2).data
+check(b'zc-type-ellipse' in html and b'object-fit:cover' in html,'Reader renders composition geometry and crop')
+check(b'<script>alert(1)</script>' not in html and b'&lt;script&gt;' in html,'Composition reader escapes text')
+html=get('Regular',edit,page=2).data
+check(all(label in html for label in (b'Standard',b'Custom',b'Advanced',b'Page composition',b'Portable layout JSON')),'Three real composition toolsets exposed')
+check(modify('Writer',iid,action='page',page_id=target['id'],**values).status_code in (403,404),'Composition does not bypass editorial permissions')
+stale=post('Regular',edit,action='page',page_id=target['id'],revision=0,**values)
+check(stale.status_code==409,'Composition stale save rejected')
+for name,mutate in [
+ ('unknown page field',lambda x:x.update(css='position:fixed')),
+ ('unknown block field',lambda x:x['blocks'][0].update(html='<script>')),
+ ('unsafe color',lambda x:x.update(background='url(javascript:bad)')),
+ ('external artwork',lambda x:x['blocks'][1].update(image='https://bad.invalid/x')),
+ ('wrong publication artwork',lambda x:x['blocks'][1].update(image='unavailable-asset')),
+ ('NaN coordinate',lambda x:x['blocks'][0].update(x=float('nan'))),
+ ('off-page geometry',lambda x:x['blocks'][0].update(x=390)),
+ ('duplicate IDs',lambda x:x['blocks'][1].update(id='title')),
+ ('too many blocks',lambda x:x.update(blocks=x['blocks']*8)),
+ ('unsupported font',lambda x:x['blocks'][0].update(font='remote-font')),
+ ('oversized type',lambda x:x['blocks'][0].update(size=900)),
+ ('boolean geometry',lambda x:x['blocks'][0].update(x=True))]:
+ bad=json.loads(json.dumps(layout));mutate(bad)
+ response=modify('Regular',iid,action='page',page_id=target['id'],**{**values,'composition':json.dumps(bad)})
+ check(response.status_code in (400,404),'Reject '+name)
+check(modify('Regular',iid,action='page',page_id=target['id'],**{**values,'composition':'{"broken"'}).status_code==400,'Malformed JSON rejected')
+check(json.loads(current('zine_pages',target['id'])['content'])==stored,'Rejected composition writes leave saved page unchanged')
+for paper in ('letter','a4'):
+ for mode in ('standard','booklet'):
+  response=get('Regular',read+'/print',download='1',mode=mode,paper=paper)
+  check(response.status_code==200,'Composed '+paper+' '+mode+' PDF exports')
+  parsed=PdfReader(io.BytesIO(response.data));text_dump=' '.join(' '.join(p.extract_text() or '' for p in parsed.pages).split())
+  check('Selectable composition body' in text_dump and 'COMPOSITION FIXTURE' in text_dump,'Composition PDF text selectable '+paper+' '+mode)
+# Print overflow returns an actionable error, never silent clipping.
+over=json.loads(json.dumps(layout));over['blocks'][0].update(text='overflow '*100,h=12)
+check(modify('Regular',iid,action='page',page_id=target['id'],**{**values,'composition':json.dumps(over)}).status_code==302,'Overflowing draft can be retained for repair')
+check(get('Regular',read+'/print',download='1').status_code==400,'Print rejects overflowing composition text')
+check(modify('Regular',iid,action='page',page_id=target['id'],**values).status_code==302,'Repair overflowing draft')
+print('PASS',checks,'T34 composition acceptance checks; disposable data only')
+
+# A separate composed issue isolates nested-artwork visibility from legacy image fields.
+row=current('zines',zid)
+check(post('Regular',base+'/edit',action='settings',revision=row['revision'],title=row['title'],description=row['description'],visibility='public',allow_print='1').status_code==302,'Composition visibility fixture public')
+row=current('zines',zid)
+check(post('Regular',base+'/edit',action='issue',revision=row['revision'],title='Nested artwork only').status_code==302,'Create nested-artwork fixture issue')
+nested_iid=query("SELECT id FROM zine_issues WHERE title='Nested artwork only' AND zine_id=?",(zid,))[0][0]
+nested_layout=json.loads(json.dumps(layout));nested_layout['blocks'][1]['image']=aid
+check(modify('Regular',nested_iid,action='add',**payload(heading='Nested reference',design='composition',composition=json.dumps(nested_layout))).status_code==302,'Save contributor artwork inside composition')
+check(modify('Regular',nested_iid,action='settings',title='Nested artwork only',allow_print='1').status_code==302,'Nested fixture printable')
+check(modify('Regular',nested_iid,action='state',state='published').status_code==302,'Publish nested fixture')
+nested_read=base+'/issues/'+nested_iid
+check(get('OtherManager',nested_read,page=2).status_code==200,'Outsider can read published nested-artwork issue')
+check(get('OtherManager',nested_read+'/print',download='1').status_code==200,'Outsider can print permitted nested artwork')
+change('INSERT INTO user_blocks(user_id,target_id) VALUES (?,?)',(users['Writer'],users['OtherManager']))
+check(get('OtherManager',nested_read).status_code==404,'Nested artwork uploader block revokes reader')
+check(get('OtherManager',nested_read+'/print',download='1').status_code==404,'Nested artwork uploader block revokes PDF')
+check(get('Regular',base+'/issues/'+nested_iid+'/history').status_code==200,'Authorized composition history available')
+change('DELETE FROM user_blocks WHERE user_id=? AND target_id=?',(users['Writer'],users['OtherManager']))
+print('PASS',checks,'T34 final composition and nested-artwork privacy checks')
+
+# Advanced composition persistence, PDF transforms, and whole-issue operations.
+# Each test batch uses its own disposable rate budget; live throttles are unchanged.
+change('DELETE FROM rate_buckets WHERE action IN (?,?)',('zines-pdf','zines-write'))
+advanced=json.loads(json.dumps(layout));advanced['blocks'][0].update(x=60,y=60,w=250,h=100,text='Rotated selectable headline',rotation=12,opacity=.6,group='headline-group',name='Main headline')
+advanced['blocks'][1].update(focal_x=15,focal_y=80,rotation=-8,opacity=.75,group='headline-group')
+advanced_values={**values,'composition':json.dumps(advanced)}
+check(modify('Regular',iid,action='page',page_id=target['id'],**advanced_values).status_code==302,'Advanced transforms save')
+roundtrip=json.loads(current('zine_pages',target['id'])['content'])['composition']
+check(roundtrip['blocks'][0]['rotation']==12 and roundtrip['blocks'][0]['opacity']==.6 and roundtrip['blocks'][0]['name']=='Main headline','Rotation opacity and element name persist')
+check(roundtrip['blocks'][0]['group']==roundtrip['blocks'][1]['group']=='headline-group','Group membership persists')
+check(roundtrip['blocks'][1]['focal_x']==15 and roundtrip['blocks'][1]['focal_y']==80,'Crop focal point persists')
+html=get('Regular',read,page=2).data
+check(b'rotate(12' in html and b'opacity:0.6' in html and b'object-position:15' in html,'Native reader applies advanced values')
+for paper in ('letter','a4'):
+ for mode in ('standard','booklet'):
+  response=get('Regular',read+'/print',download='1',mode=mode,paper=paper)
+  check(response.status_code==200,'Advanced '+paper+' '+mode+' PDF exports')
+  parsed=PdfReader(io.BytesIO(response.data));dump=' '.join(' '.join(p.extract_text() or '' for p in parsed.pages).split())
+  check('Rotated selectable headline' in dump,'Rotated PDF headline stays selectable '+paper+' '+mode)
+  check(any(b'/ca .6' in p.get_contents().get_data() or b'/gRLs' in p.get_contents().get_data() for p in parsed.pages),'PDF emits transparency state '+paper+' '+mode)
+for name,mutate in [
+ ('boolean rotation',lambda x:x['blocks'][0].update(rotation=True)),
+ ('nonfinite rotation',lambda x:x['blocks'][0].update(rotation=float('inf'))),
+ ('unbounded rotation',lambda x:x['blocks'][0].update(rotation=999)),
+ ('invisible opacity',lambda x:x['blocks'][0].update(opacity=0)),
+ ('invalid group',lambda x:x['blocks'][0].update(group='<html>')),
+ ('invalid focal x',lambda x:x['blocks'][1].update(focal_x=-1)),
+ ('invalid focal y',lambda x:x['blocks'][1].update(focal_y=101)),
+ ('off-page rotated bounds',lambda x:x['blocks'][0].update(x=0,y=0,rotation=45))]:
+ bad=json.loads(json.dumps(advanced));mutate(bad);before=current('zine_pages',target['id'])['content'];rev=revision_for(iid)
+ check(modify('Regular',iid,action='page',page_id=target['id'],**{**values,'composition':json.dumps(bad)}).status_code==400,'Reject '+name)
+ check(current('zine_pages',target['id'])['content']==before and revision_for(iid)==rev,'Invalid advanced input is atomic '+name)
+check(get('Regular',edit,tab='organize').status_code==200,'Visual page organizer renders')
+original=query("SELECT * FROM zine_pages WHERE issue_id=? ORDER BY CASE kind WHEN 'cover' THEN 0 WHEN 'back' THEN 2 ELSE 1 END,position,id",(iid,))
+order=[r['id'] for r in original if r['kind']=='page'];reversed_order=list(reversed(order));cover_id=original[0]['id'];back_id=original[-1]['id']
+check(modify('Regular',iid,action='reorder',page_order=json.dumps(reversed_order),workspace_tab='organize').status_code==302,'Whole issue reorder saves')
+actual=query("SELECT id FROM zine_pages WHERE issue_id=? AND kind='page' ORDER BY position,id",(iid,))
+check([r[0] for r in actual]==reversed_order,'Interior order matches requested permutation')
+for invalid in [order+[cover_id],order+[back_id],order[:-1],order+[order[0]],['foreign-page'],{'pages':order}]:
+ rev=revision_for(iid)
+ check(modify('Regular',iid,action='reorder',page_order=json.dumps(invalid)).status_code==400,'Invalid reorder rejected')
+ check(revision_for(iid)==rev,'Invalid reorder retains revision')
+check(modify('Writer',iid,action='reorder',page_order=json.dumps(order)).status_code==404,'Contributor cannot reorder')
+check(post('Regular',edit,action='reorder',revision=0,page_order=json.dumps(order)).status_code==409,'Stale reorder rejected')
+count=len(query('SELECT id FROM zine_pages WHERE issue_id=?',(iid,)))
+check(modify('Regular',iid,action='duplicate_many',page_ids=order[:2]).status_code==302,'Selected interior pages duplicate in one transaction')
+check(len(query('SELECT id FROM zine_pages WHERE issue_id=?',(iid,)))==count+2,'Bulk duplicate produces exact page count')
+for invalid in [[cover_id],[back_id],['foreign-page'],[order[0],order[0]],[]]:
+ rev=revision_for(iid)
+ check(modify('Regular',iid,action='duplicate_many',page_ids=invalid).status_code==400,'Invalid bulk duplicate rejected')
+ check(revision_for(iid)==rev,'Invalid bulk duplicate is atomic')
+print('PASS',checks,'T34 Advanced composition and organizer acceptance checks')
+
+# Reader views use the actual application, authorization and saved renderer.
+import re
+total=len(query('SELECT id FROM zine_pages WHERE issue_id=?',(iid,)))
+def reader_numbers(response):return list(map(int,re.findall(rb'id="zine-page-(\d+)"',response.data)))
+for n in [1,2,total]:
+ response=get('Regular',read,page=n,reading='single');check(response.status_code==200 and reader_numbers(response)==[n],'Single reader page '+str(n))
+ response=get('Regular',read,page=n,reading='spread');expected=[n] if n in (1,total) else list(range(n if n%2==0 else n-1,min((n if n%2==0 else n-1)+2,total)))
+ check(reader_numbers(response)==expected,'Facing spread membership '+str(n))
+response=get('Regular',read,reading='scroll');check(reader_numbers(response)==list(range(1,total+1)),'Scroll has every saved page once in order')
+check(reader_numbers(get('Regular',read,reading='invalid'))==[1],'Invalid view has safe default')
+check(get('Regular',read,page=total+1,reading='scroll').status_code==404,'Scroll still validates page input')
+check(b'data-outline-toggle' in get('Regular',edit,page=2).data,'Sidebar toggle available')
+check(b'zines_workspace.js' in response.data,'Reader preference script included')
+print('PASS',checks,'T34 reader views and focused workspace acceptance checks')
+
+# Anchored artwork must participate in every asset authorization path.
+change('DELETE FROM rate_buckets WHERE action IN (?,?)',('zines-pdf','zines-write'))
+check(modify('Regular',nested_iid,action='state',state='draft').status_code==302,'Anchored fixture returns to draft')
+flow_target=query("SELECT * FROM zine_pages WHERE issue_id=? AND kind='page'",(nested_iid,))[0]
+flow_page=json.loads(json.dumps(advanced));flow_page['blocks']=flow_page['blocks'][:1];flow_block=flow_page['blocks'][0];flow_block.update(x=24,y=24,w=348,h=540,rotation=0,text='An image belongs with the words around it. '*12,size=11,leading=1.35)
+flow_inset={'at':0,'image':aid,'alt':'Fictional blue artwork','mode':'wrap-left','width':35,'height':70,'gap':6,'caption':'Caption stays with the image','credit':'Fictional artist'}
+for placement in ['inline','wrap-left','wrap-right','full']:
+ flow_block['insets']=[{**flow_inset,'mode':placement}]
+ check(modify('Regular',nested_iid,action='page',page_id=flow_target['id'],**payload(heading='Anchored fixture',design='composition',composition=json.dumps(flow_page))).status_code==302,'Save anchored '+placement)
+ html=get('Regular',nested_read,page=2).data;check(('zc-flow-'+placement).encode() in html and b'Caption stays with the image' in html,'Reader shows anchored '+placement)
+# Foreign asset rejection must remain atomic, including nested anchors.
+bad_flow=json.loads(json.dumps(flow_page));bad_flow['blocks'][0]['insets'][0]['image']='unavailable-foreign-art';before=revision_for(nested_iid)
+check(modify('Regular',nested_iid,action='page',page_id=flow_target['id'],**payload(design='composition',composition=json.dumps(bad_flow))).status_code==404,'Foreign anchored artwork denied');check(revision_for(nested_iid)==before,'Foreign anchor rejection atomic')
+check(modify('Regular',nested_iid,action='state',state='published').status_code==302,'Publish anchored image fixture')
+check(get('OtherManager',image_url).status_code==200,'Referenced anchored artwork available to authorized reader')
+for paper in ['letter','a4']:
+ for edition in ['standard','booklet']:
+  response=get('OtherManager',nested_read+'/print',download='1',paper=paper,mode=edition);check(response.status_code==200,'Anchored PDF '+paper+edition)
+  printed=PdfReader(io.BytesIO(response.data));text_dump=' '.join(p.extract_text() or '' for p in printed.pages);check('Caption stays with the image' in text_dump and 'Fictional artist' in text_dump,'Selectable anchored caption/credit '+paper+edition)
+change('INSERT INTO user_blocks(user_id,target_id) VALUES (?,?)',(users['Writer'],users['OtherManager']))
+check(get('OtherManager',nested_read).status_code==404,'Anchored uploader block revokes reader');check(get('OtherManager',nested_read+'/print',download='1').status_code==404,'Anchored uploader block revokes PDF')
+change('DELETE FROM user_blocks WHERE user_id=? AND target_id=?',(users['Writer'],users['OtherManager']))
+print('PASS',checks,'T34 anchored artwork acceptance checks')

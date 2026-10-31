@@ -1,3 +1,37 @@
+# Selection tools and single-sheet Zine folding - October 31, 2026 (Sandbox)
+
+Sandbox Zines gains Select & lock in Arrange (Advanced and opt-in Custom), including matching type, fill, text/rule color, typography and image-frame artwork, inverse/lock-state selection, and undoable batch locks. Print options add a single-sheet eight-panel mini-zine for 2–8 issue pages on Letter/A4, with correctly rotated panels, blanks before the back cover, independent preview guides, optional exported fold/cut lines, safe insets, a numbered test sheet and assembly instructions. Existing booklets can add a center fold line. Drawing tools, additional fold formats and effects remain planned.
+
+Local checks passed 88 print/route, 41 selection/DOM, eight print-option DOM, 55 toolset and existing 54 component checks. Hosted and live-browser acceptance are separate deployment gates; physical folding is still untested. No schema changes or Production deployment.
+
+# Compact Zine tools and issue sizes - October 31, 2026 (Sandbox)
+
+The Zine composer now groups tools under Insert, Text, Layout, Arrange and Review, with selection controls in one inspector and Save alongside common actions. A single Toolset dropdown replaces mode buttons. Custom reveals Customize with a modal of draft choices, Save and Cancel. Page size lives under Layout: business card, postcard, A6, A5, half-letter, Letter, A4 and custom inch/mm dimensions, orientation, a preview and scale/keep behavior. Minimum trim size is 3.5 × 2 inches in either orientation; maximum is 18 inches per side. Sizes apply to an entire draft issue and persist through an additive size table with editor/CSRF/revision checks. Existing issues retain their previous behavior until configured. Compositions remain on the existing logical board, scaled proportionally and centered; different page shapes can leave blank space. Full-page freeform coordinate changes, margins and bleed controls remain future work. Exact-size reading-order and double-width booklet PDF sheets are available alongside Letter/A4 fitting.
+
+Local validation passed 21 new size/PDF checks and 17 compact workspace/overlay checks, plus the existing component, image-flow, composer, style and toolset regressions. Hosted and signed-in browser acceptance are recorded separately. Sandbox only.
+
+# Zine style explanations - October 30, 2026 (Sandbox)
+
+Style & graphic elements now shows an updating native-renderer example for Classic, Punk or the current composition, with explanatory text for every graphic field. Front/interior/back contexts identify unused controls; empty fields use labeled example copy. Enlarge example provides a closer view. Previews never submit or rewrite page content. Local checks passed three native page contexts and fifteen DOM-event cases plus the existing component suite; hosted acceptance and live visual verification remain separate gates.
+
+# Anchored Zine artwork - October 30, 2026 (Sandbox)
+
+Sandbox text frames now support anchored inline images, left/right text wrapping and full-width images between paragraphs, with image descriptions, sizing, spacing, captions and credits. Text edits move the anchors; undo, duplication, mode changes and portable layouts preserve them. Reusable layouts clear private artwork references. The artwork library also accepts pasted PNG/JPEG/WebP images through the ordinary upload form. Reader and selectable-text PDF exports use the saved anchors; print overflow is rejected explicitly. Reflow is within the containing frame; linked text across frames/pages remains future work.
+
+Hosted acceptance passed 470 actual-app checks, 26 design/PDF checks, 54 component checks and 50 anchored-image/print checks. Local DOM suites passed 23 existing editor, 13 anchored-image and six paste-event checks; reader, geometry and toolset regressions passed 45, 40 and 51. Four-page PDF proofs were rendered and reviewed. Connected-browser file uploads require the extension's file-URL permission, and media/navigation calls timed out; the live signed-in image walkthrough and narrow-screen image-flow check remain uncompleted. No permissions were changed. No schema migration or Production deployment.
+
+# Zine reading views and focused workspace - October 30, 2026 (Sandbox)
+
+Reader views now offer Single page, Two-page spread and Continuous scroll. Covers stay separate and interior pages pair correctly; the reading choice is remembered in this browser. Editing gains collapsible page thumbnails, a larger central canvas and an inspector with expandable secondary controls. Saved-page comparison is optional. Hosted acceptance passed 447 actual-app and 26 design/PDF checks; local validation passed 213 component, reader, geometry, toolset and DOM checks. No schema migration. Linked text flow, publication-wide styles and master layouts remain future work.
+
+# Advanced Zine workspace - October 30, 2026 (Sandbox)
+
+Advanced Zine composition is deployed in Sandbox: multi-select, saved groups, alignment/distribution, rotation, opacity, named elements, crop focus, page-level artwork replacement, browser-local reusable layouts, text presets and detailed page checks. The saved-page organizer provides thumbnails, facing spreads, interior-page reordering and bulk duplication. Custom exposes selected Advanced groups. Reader and selectable-text PDFs share rotation, transparency and crop focus. Hosted acceptance: 436 application checks plus 26 design/PDF checks; local checks: 40 geometry, 51 toolset, 54 component and 19 DOM event checks. Live private-demo saving/reload, grouping, copy/paste/undo, mode preservation, Custom preferences, layout saving, four-page reordering/duplication and 390px overflow checks passed. Production source is unchanged. No schema migration; live acceptance edits were limited to the private Composition Studio Demo. Linked text flow, master pages, synchronized publication styles, advanced text wrapping, editorial review and professional print/color controls remain future work; physical print and broader accessibility/device acceptance remain open.
+
+# Visual Zine studio - October 29, 2026 (Sandbox)
+
+Sandbox now has Standard beginner tools, Custom with user-selected Advanced tool groups remembered per account in this browser, and Advanced with all implemented controls. A structured live canvas supports text, artwork, shapes, layers, type, resizing, exact geometry and layout JSON; saved compositions drive reader and PDF output. Existing presets remain available. Validation: 374 isolated actual-app checks, 26 design/PDF checks and 35 toolset checks; signed-in browser saved/reloaded a private demo, checked Custom choices, Advanced precision, mode-switch preservation and desktop/390px overflow. Corrected a site day/night data-mode event collision during the walkthrough. Production source unchanged. Physical print and broader device/assistive technology acceptance remain open.
+
 # Zine authentication - October 29, 2026 (Sandbox)
 
 Sandbox Zine authentication update - October 29, 2026: Owner confirmed activation. Zine writing uses normal login, authorization, CSRF and throttling without an extra fresh-auth challenge. Staff confirmation lasts 24 hours; account-security confirmation remains 30 minutes. Login 2FA is retained. The isolated actual-app and design/PDF suites pass. Production source and data are unchanged.
@@ -146,3 +180,4 @@ Production and Sandbox retain separate source checkpoints. Afterglow is Sandbox-
 - Posts authored to other users now show with `.guestbook-outbound` styling (subtle highlight and indentation)
 - Top 9 grid supports placeholder states and empty slots for drag assignment
 # Changelog
+
