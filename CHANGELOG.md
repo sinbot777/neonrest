@@ -1,3 +1,7 @@
+# Zine style explanations - October 30, 2026 (Sandbox)
+
+Style & graphic elements now shows an updating native-renderer example for Classic, Punk or the current composition, with explanatory text for every graphic field. Front/interior/back contexts identify unused controls; empty fields use labeled example copy. Enlarge example provides a closer view. Previews never submit or rewrite page content. Local checks passed three native page contexts and fifteen DOM-event cases plus the existing component suite; hosted acceptance and live visual verification remain separate gates.
+
 # Anchored Zine artwork - October 30, 2026 (Sandbox)
 
 Sandbox text frames now support anchored inline images, left/right text wrapping and full-width images between paragraphs, with image descriptions, sizing, spacing, captions and credits. Text edits move the anchors; undo, duplication, mode changes and portable layouts preserve them. Reusable layouts clear private artwork references. The artwork library also accepts pasted PNG/JPEG/WebP images through the ordinary upload form. Reader and selectable-text PDF exports use the saved anchors; print overflow is rejected explicitly. Reflow is within the containing frame; linked text across frames/pages remains future work.
