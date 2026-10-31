@@ -1,3 +1,9 @@
+# Selection tools and single-sheet Zine folding - October 31, 2026 (Sandbox)
+
+Sandbox Zines gains Select & lock in Arrange (Advanced and opt-in Custom), including matching type, fill, text/rule color, typography and image-frame artwork, inverse/lock-state selection, and undoable batch locks. Print options add a single-sheet eight-panel mini-zine for 2–8 issue pages on Letter/A4, with correctly rotated panels, blanks before the back cover, independent preview guides, optional exported fold/cut lines, safe insets, a numbered test sheet and assembly instructions. Existing booklets can add a center fold line. Drawing tools, additional fold formats and effects remain planned.
+
+Local checks passed 88 print/route, 41 selection/DOM, eight print-option DOM, 55 toolset and existing 54 component checks. Hosted and live-browser acceptance are separate deployment gates; physical folding is still untested. No schema changes or Production deployment.
+
 # Compact Zine tools and issue sizes - October 31, 2026 (Sandbox)
 
 The Zine composer now groups tools under Insert, Text, Layout, Arrange and Review, with selection controls in one inspector and Save alongside common actions. A single Toolset dropdown replaces mode buttons. Custom reveals Customize with a modal of draft choices, Save and Cancel. Page size lives under Layout: business card, postcard, A6, A5, half-letter, Letter, A4 and custom inch/mm dimensions, orientation, a preview and scale/keep behavior. Minimum trim size is 3.5 × 2 inches in either orientation; maximum is 18 inches per side. Sizes apply to an entire draft issue and persist through an additive size table with editor/CSRF/revision checks. Existing issues retain their previous behavior until configured. Compositions remain on the existing logical board, scaled proportionally and centered; different page shapes can leave blank space. Full-page freeform coordinate changes, margins and bleed controls remain future work. Exact-size reading-order and double-width booklet PDF sheets are available alongside Letter/A4 fitting.
@@ -174,3 +180,4 @@ Production and Sandbox retain separate source checkpoints. Afterglow is Sandbox-
 - Posts authored to other users now show with `.guestbook-outbound` styling (subtle highlight and indentation)
 - Top 9 grid supports placeholder states and empty slots for drag assignment
 # Changelog
+

@@ -283,3 +283,4 @@ def register(app,core):
             if allowed:retained.append((row,snapshot))
         return render('history',publication=p,issue=issue,revisions=retained)
     app.register_blueprint(bp)
+

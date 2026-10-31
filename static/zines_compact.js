@@ -20,7 +20,7 @@ for(const root of document.querySelectorAll('[data-zc-editor]')){
  for(const section of [...inspector.children]){
   const label=section.querySelector('summary')?.textContent||'';
   if(/Layout starters|Reusable layouts/.test(label))contents.Layout.append(section);
-  else if(/Selection & grouping|Arrange selected|Layers/.test(label))contents.Arrange.append(section);
+  else if(/Selection & grouping|Arrange selected|Layers|Select & lock/.test(label))contents.Arrange.append(section);
   else if(/page checks/i.test(label))contents.Review.append(section);
   else if(/Portable layout/.test(label))contents.Layout.append(section);
  }
@@ -36,3 +36,4 @@ if(sizeDialog){const f=sizeDialog.querySelector('form'),get=n=>f.elements.namedI
  const preview=()=>{const custom=get('page_preset').value==='custom';for(const n of ['page_width','page_height','page_units'])get(n).closest('label').hidden=!custom;let [w,h]=custom?[+get('page_width').value,+get('page_height').value].map(v=>v*(get('page_units').value==='mm'?72/25.4:72)):presets[get('page_preset').value];[w,h]=[Math.min(w,h),Math.max(w,h)];if(get('page_orientation').value==='landscape')[w,h]=[h,w];const scale=get('resize_content').value==='keep'?(+shell.dataset.contentScale||1):Math.min(w/396,h/612);const valid=Number.isFinite(w+h)&&Math.min(w,h)>=143.99&&Math.max(w,h)>=251.99&&Math.max(w,h)<=1296&&396*scale<=w+.01&&612*scale<=h+.01;f.querySelector('[data-size-save]').disabled=!valid;const out=f.querySelector('[data-size-description]');out.textContent=valid?(w/72).toFixed(2)+' × '+(h/72).toFixed(2)+' in · '+(w/72*25.4).toFixed(1)+' × '+(h/72*25.4).toFixed(1)+' mm':'Choose a valid size with enough room for the content.';const paper=f.querySelector('.zine-size-preview');paper.style.aspectRatio=valid?w+'/'+h:'1';paper.style.width=valid?Math.min(200,260*w/h)+'px':'160px';const content=f.querySelector('[data-size-content]');content.style.width=valid?396*scale/w*100+'%':'100%';content.style.height=valid?612*scale/h*100+'%':'100%';};
  f.addEventListener('input',preview);f.addEventListener('change',e=>{if(e.target===get('page_units')){const next=get('page_units').value,factor=next===previousUnit?1:next==='mm'?25.4:1/25.4;for(const n of ['page_width','page_height'])get(n).value=(+get(n).value*factor).toFixed(3);previousUnit=next;}preview();});const reset=()=>{f.reset();previousUnit='in';preview();};sizeDialog.addEventListener('cancel',reset);f.querySelector('[data-size-cancel]').onclick=()=>{reset();sizeDialog.close();};preview();}
 })();
+

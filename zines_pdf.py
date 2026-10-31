@@ -109,3 +109,4 @@ def render(reading,assets,mode='standard',paper='letter',numbers=False,title='Ne
         if out.tell()>32*1024*1024:raise ZineError('This print edition exceeds the 32 MiB output limit.')
         return out.getvalue()
     finally:LOCK.release()
+

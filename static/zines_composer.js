@@ -142,6 +142,19 @@ for (const root of document.querySelectorAll('[data-zc-editor]')) {
   if(action==='save-custom'){prefs.tools=all('[data-custom-tool]:checked').map(b=>b.dataset.customTool);q('[data-zc-custom-tools]').close();setMode('custom');return;}
   if(action==='all-tools'||action==='basic-tools'){for(const box of all('[data-custom-tool]'))box.checked=action==='all-tools';return;}
   const b=active(),selection=selectedBlocks();
+  if(action.startsWith('selection-')){
+   if(!policy.visible(mode,prefs.tools,'selection'))return;
+   try{
+    const kind=action.slice(10);
+    if(kind==='lock'||kind==='unlock'){
+     const next=validate(window.ZineSelection.setLocked(page,[...multi],kind==='lock'));
+     if(JSON.stringify(next)===JSON.stringify(page)){issue('Selected elements already have that lock state.');return;}
+     checkpoint();page=next;commit();issue(kind==='lock'?'Selection locked. Save page to keep changes.':'Selection unlocked. Save page to keep changes.');
+    }else{
+     const ids=window.ZineSelection.find(page,[...multi],selected,kind);multi=new Set(ids);selected=multi.has(selected)?selected:ids.at(-1)||null;render();issue(ids.length+' matching element'+(ids.length===1?'':'s')+' selected.');
+    }
+   }catch(err){issue(err.message);}return;
+  }
   if(action.startsWith('inline-')){
    if(!b||b.type!=='text'){issue('Select a text frame first.');return;}
    try{
@@ -224,3 +237,4 @@ for (const root of document.querySelectorAll('[data-zc-editor]')) {
  updateLibrary();q('[data-zc-controls]').hidden=false;json.hidden=true;setMode(prefs.mode);
 }
 })();
+
