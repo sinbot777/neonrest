@@ -1,7 +1,7 @@
 /* Component event tests using actual rendered Jinja markup, not a browser QA substitute. */
 const {JSDOM}=require('jsdom');const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 const dom=new JSDOM(fs.readFileSync(process.argv[2]||'/tmp/zine-dom-fixture.html','utf8'),{url:'https://example.test/zines/editor',runScripts:'outside-only',pretendToBeVisual:true});const w=dom.window,d=w.document;let checks=0;
-for(const f of ['zines_toolsets.js','zines_geometry.js','zines_workspace.js','zines_composer.js'])w.eval(fs.readFileSync(path.join(__dirname,'../static',f),'utf8'));
+for(const f of ['zines_toolsets.js','zines_geometry.js','zines_workspace.js','zines_flow.js','zines_composer.js'])w.eval(fs.readFileSync(path.join(__dirname,'../static',f),'utf8'));
 const root=d.querySelector('[data-zc-editor]'),q=s=>root.querySelector(s),click=(s,shiftKey=false)=>q(s).dispatchEvent(new w.MouseEvent('click',{bubbles:true,shiftKey})),page=()=>JSON.parse(q('[data-zc-json]').value),check=(v,label)=>{assert.ok(v,label);checks++;};
 function input(selector,value){const el=q(selector);el.value=value;el.dispatchEvent(new w.Event('input',{bubbles:true}));}
 check(q('[data-zc-layout-starters]').closest('.zc-inspector'),'Layout starters moved into inspector');check(q('details[data-tool="portable"]').closest('.zc-inspector'),'Portable tools moved into inspector');const toggle=d.querySelector('[data-outline-toggle]');toggle.click();check(d.querySelector('.zine-outline').hidden,'Page sidebar collapses');toggle.click();check(!d.querySelector('.zine-outline').hidden,'Page sidebar restores');

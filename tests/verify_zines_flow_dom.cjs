@@ -1,0 +1,18 @@
+const {JSDOM}=require('jsdom'),fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const dom=new JSDOM(fs.readFileSync('/tmp/zine-dom-fixture.html','utf8'),{url:'https://example.test/zines/editor',runScripts:'outside-only',pretendToBeVisual:true});const w=dom.window,d=w.document;let checks=0;
+for(const f of ['zines_toolsets.js','zines_geometry.js','zines_workspace.js','zines_flow.js','zines_composer.js'])w.eval(fs.readFileSync(path.join(__dirname,'../static',f),'utf8'));
+const root=d.querySelector('[data-zc-editor]'),q=s=>root.querySelector(s),click=s=>q(s).dispatchEvent(new w.MouseEvent('click',{bubbles:true})),page=()=>JSON.parse(q('[data-zc-json]').value),check=(v,label)=>{assert.ok(v,label);checks++;};
+function input(s,value){const el=q(s);el.value=value;el.dispatchEvent(new w.Event('input',{bubbles:true}));}
+function change(s,value){const el=q(s);el.value=value;el.dispatchEvent(new w.Event('change',{bubbles:true}));}
+function selectFirst(){click('[data-zc-layers] button');}
+click('[data-mode="standard"]');selectFirst();input('[data-prop="text"]','Alpha 😀 beta gamma.');q('[data-prop="text"]').setSelectionRange(9,9);q('[data-prop="text"]').dispatchEvent(new w.Event('select',{bubbles:true}));
+input('[data-inline-image]','art-one');input('[data-inline-alt]','Artwork description');input('[data-inline-caption]','<script>caption</script>');input('[data-inline-credit]','Fixture artist');click('[data-zc-action="inline-insert"]');
+check(page().blocks[0].insets[0].at===8,'Cursor anchors count Unicode code points');check(q('.zc-edit-canvas img').getAttribute('src').includes('art-one'),'Inline artwork appears in preview');check(!q('.zc-edit-canvas script'),'Caption is literal text, never executable markup');
+input('[data-prop="text"]','New Alpha 😀 beta gamma.');check(page().blocks[0].insets[0].at===12,'Typing before image shifts its anchor');
+change('[data-inline-selected]','0');change('[data-inline-mode]','wrap-right');click('[data-zc-action="inline-update"]');check(page().blocks[0].insets[0].mode==='wrap-right','Image placement changes');check(q('.zc-flow-wrap-right'),'Wrapped preview uses selected placement');
+const before=JSON.stringify(page());for(const mode of ['custom','advanced','standard'])click('[data-mode="'+mode+'"]');check(JSON.stringify(page())===before,'Modes preserve text and anchored artwork');
+click('[data-zc-action="duplicate"]');check(page().blocks.length===2&&page().blocks[1].insets[0].credit==='Fixture artist','Duplicate preserves artwork and credit');click('[data-zc-action="undo"]');selectFirst();check(page().blocks.length===1,'Undo restores anchored frame');
+input('[data-prop="text"]','Done.');check(page().blocks[0].insets[0].at<=5,'Deletion through anchor keeps it inside text');click('[data-zc-action="undo"]');selectFirst();
+click('[data-mode="advanced"]');input('[data-layout-name]','Flow fixture');click('[data-zc-action="save-layout"]');const saved=JSON.parse(w.localStorage.getItem(root.dataset.preferenceKey+'-layouts'));check(saved[0].page.blocks[0].insets[0].image===''&&saved[0].page.blocks[0].insets[0].credit==='','Reusable layout clears attached artwork and credit');
+click('[data-zc-action="export"]');click('[data-zc-action="import"]');check(page().blocks[0].insets.length===1,'Portable export/import retains attached image');selectFirst();change('[data-inline-selected]','0');click('[data-zc-action="inline-remove"]');check(page().blocks[0].insets.length===0,'Remove attached image retains the text');
+console.log('PASS',checks,'anchored artwork DOM checks');setTimeout(()=>dom.window.close(),30);

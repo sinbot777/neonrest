@@ -392,3 +392,27 @@ check(get('Regular',read,page=total+1,reading='scroll').status_code==404,'Scroll
 check(b'data-outline-toggle' in get('Regular',edit,page=2).data,'Sidebar toggle available')
 check(b'zines_workspace.js' in response.data,'Reader preference script included')
 print('PASS',checks,'T34 reader views and focused workspace acceptance checks')
+
+# Anchored artwork must participate in every asset authorization path.
+change('DELETE FROM rate_buckets WHERE action IN (?,?)',('zines-pdf','zines-write'))
+check(modify('Regular',nested_iid,action='state',state='draft').status_code==302,'Anchored fixture returns to draft')
+flow_target=query("SELECT * FROM zine_pages WHERE issue_id=? AND kind='page'",(nested_iid,))[0]
+flow_page=json.loads(json.dumps(advanced));flow_page['blocks']=flow_page['blocks'][:1];flow_block=flow_page['blocks'][0];flow_block.update(x=24,y=24,w=348,h=540,rotation=0,text='An image belongs with the words around it. '*12,size=11,leading=1.35)
+flow_inset={'at':0,'image':aid,'alt':'Fictional blue artwork','mode':'wrap-left','width':35,'height':70,'gap':6,'caption':'Caption stays with the image','credit':'Fictional artist'}
+for placement in ['inline','wrap-left','wrap-right','full']:
+ flow_block['insets']=[{**flow_inset,'mode':placement}]
+ check(modify('Regular',nested_iid,action='page',page_id=flow_target['id'],**payload(heading='Anchored fixture',design='composition',composition=json.dumps(flow_page))).status_code==302,'Save anchored '+placement)
+ html=get('Regular',nested_read,page=2).data;check(('zc-flow-'+placement).encode() in html and b'Caption stays with the image' in html,'Reader shows anchored '+placement)
+# Foreign asset rejection must remain atomic, including nested anchors.
+bad_flow=json.loads(json.dumps(flow_page));bad_flow['blocks'][0]['insets'][0]['image']='unavailable-foreign-art';before=revision_for(nested_iid)
+check(modify('Regular',nested_iid,action='page',page_id=flow_target['id'],**payload(design='composition',composition=json.dumps(bad_flow))).status_code==404,'Foreign anchored artwork denied');check(revision_for(nested_iid)==before,'Foreign anchor rejection atomic')
+check(modify('Regular',nested_iid,action='state',state='published').status_code==302,'Publish anchored image fixture')
+check(get('OtherManager',image_url).status_code==200,'Referenced anchored artwork available to authorized reader')
+for paper in ['letter','a4']:
+ for edition in ['standard','booklet']:
+  response=get('OtherManager',nested_read+'/print',download='1',paper=paper,mode=edition);check(response.status_code==200,'Anchored PDF '+paper+edition)
+  printed=PdfReader(io.BytesIO(response.data));text_dump=' '.join(p.extract_text() or '' for p in printed.pages);check('Caption stays with the image' in text_dump and 'Fictional artist' in text_dump,'Selectable anchored caption/credit '+paper+edition)
+change('INSERT INTO user_blocks(user_id,target_id) VALUES (?,?)',(users['Writer'],users['OtherManager']))
+check(get('OtherManager',nested_read).status_code==404,'Anchored uploader block revokes reader');check(get('OtherManager',nested_read+'/print',download='1').status_code==404,'Anchored uploader block revokes PDF')
+change('DELETE FROM user_blocks WHERE user_id=? AND target_id=?',(users['Writer'],users['OtherManager']))
+print('PASS',checks,'T34 anchored artwork acceptance checks')

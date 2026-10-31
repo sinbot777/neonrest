@@ -34,7 +34,7 @@ def normalize(value):
     ids = set(); total = 0
     from .zines_core import text
     for raw in blocks:
-        keys = {'id','type','x','y','w','h','text','image','alt','font','size','leading','align','color','fill','stroke','stroke_width','fit','locked','rotation','opacity','group','name','focal_x','focal_y'}
+        keys = {'id','type','x','y','w','h','text','image','alt','font','size','leading','align','color','fill','stroke','stroke_width','fit','locked','rotation','opacity','group','name','focal_x','focal_y','insets'}
         if not isinstance(raw, dict) or set(raw)-keys: fail('Unsupported composition element.')
         ident = raw.get('id'); kind = raw.get('type')
         if not isinstance(ident,str) or not re.fullmatch(r'[A-Za-z0-9_-]{1,40}',ident) or ident in ids: fail('Every composition element needs a unique ID.')
@@ -61,13 +61,21 @@ def normalize(value):
         if kind=='text':
             b.update(text=text(raw.get('text',''),6000),font=raw.get('font','sans'),size=number(raw.get('size',12),6,72,'font size'),leading=number(raw.get('leading',1.35),1,2,'line spacing'),align=raw.get('align','left'))
             if b['font'] not in FONTS or b['align'] not in ('left','center','right'): fail('Unsupported text typography.')
-            total+=len(b['text'])
+            if 'insets' in raw:
+                from .zines_flow import normalize as normalize_insets
+                source=raw.get('text','')
+                b['insets']=normalize_insets(raw['insets'],len(source))
+                for inset in b['insets']:inset['at']=len(source[:inset['at']].replace('\r\n','\n').replace('\r','\n'))
+                b['text']=source.replace('\r\n','\n').replace('\r','\n')
+            total+=len(b['text'])+sum(len(i['caption'])+len(i['credit']) for i in b.get('insets',[]))
         elif kind=='image':
             image=raw.get('image','')
             if not isinstance(image,str) or len(image)>60: fail('Invalid composition artwork.')
             b.update(image=image,alt=text(raw.get('alt',''),300),fit=raw.get('fit','contain'),focal_x=number(raw.get('focal_x',50),0,100,'horizontal crop focus'),focal_y=number(raw.get('focal_y',50),0,100,'vertical crop focus'))
             if b['fit'] not in ('contain','cover'): fail('Unsupported image fit.')
+        if kind!='text' and 'insets' in raw:fail('Only text frames can contain anchored images.')
         out['blocks'].append(b)
+    if sum(len(b.get('insets',[])) for b in out['blocks'])>16:fail('Use at most sixteen anchored images per page.')
     if total>6000: fail('Use at most 6000 characters across composition text boxes.')
     return out
 
@@ -75,6 +83,7 @@ def asset_ids(data):
     found = [data['image']] if data.get('image') else []
     for block in data.get('composition',{}).get('blocks',[]):
         if block.get('type')=='image' and block.get('image'): found.append(block['image'])
+        found.extend(i['image'] for i in block.get('insets',[]) if i.get('image'))
     return list(dict.fromkeys(found))
 
 def draw(c, data, x, width, height, assets, numbers=False, number=0):
@@ -102,7 +111,10 @@ def draw(c, data, x, width, height, assets, numbers=False, number=0):
             c.setStrokeColor(HexColor(b['color']));c.setLineWidth(max(1,b['stroke_width']));c.line(bx,by+bh/2,bx+bw,by+bh/2)
         else:
             if fill or b['stroke_width']:c.rect(bx,by,bw,bh,stroke=int(b['stroke_width']>0),fill=int(fill))
-            if b['type']=='text':
+            if b['type']=='text' and b.get('insets'):
+                from .zines_flow import draw as draw_flow
+                draw_flow(c,b,assets)
+            elif b['type']=='text':
                 font=FONTS[b['font']];face=pdfmetrics.getFont(font).face
                 if any(ord(ch) not in face.charToGlyph for ch in b['text'] if ch not in '\n\r\t'):fail('A composition text box contains a character unavailable in the print font.')
                 p=Paragraph(escape(b['text']).replace('\n','<br/>'),ParagraphStyle('composition',fontName=font,fontSize=b['size'],leading=b['size']*b['leading'],textColor=HexColor(b['color']),alignment={'left':0,'center':1,'right':2}[b['align']],splitLongWords=True))
