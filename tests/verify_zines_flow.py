@@ -31,6 +31,7 @@ for mode in ('inline','wrap-left','wrap-right','full'):
  proof.append({'id':'proof-'+mode,'kind':'page','content':json.dumps({'design':'composition','composition':page})})
 # Real route must reject foreign artwork atomically.
 bad=copy.deepcopy(page);bad['blocks'][0]['insets'][0]['image']='foreign-art';before=z.get_issue(db,pub,iid)['revision'];check(post(action='page',page_id=target['id'],design='composition',composition=json.dumps(bad),layout='text').status_code==404,'Foreign embedded asset denied');check(z.get_issue(db,pub,iid)['revision']==before,'Asset denial preserves revision')
+blank=copy.deepcopy(page);blank['blocks'][0]['insets'][0]['image']='';check(post(action='page',page_id=target['id'],design='composition',composition=json.dumps(blank),layout='text').status_code==302,'Artwork-free reusable flow layout saves');check(b'Select artwork' in client.get('/zines/'+pub['id']+'/issues/'+iid+'?page=2').data,'Blank anchored artwork renders a safe placeholder')
 for key,value in [('at',-1),('at',True),('at',99999),('width',101),('height',181),('gap',float('nan')),('mode','javascript:bad'),('caption','x'*201)]:
  bad=copy.deepcopy(inset);bad[key]=value
  try:flow.normalize([bad],len(body))
