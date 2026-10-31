@@ -1,3 +1,36 @@
+# Zine authentication - October 29, 2026 (Sandbox)
+
+Sandbox Zine authentication update - October 29, 2026: Owner confirmed activation. Zine writing uses normal login, authorization, CSRF and throttling without an extra fresh-auth challenge. Staff confirmation lasts 24 hours; account-security confirmation remains 30 minutes. Login 2FA is retained. The isolated actual-app and design/PDF suites pass. Production source and data are unchanged.
+
+# Zine workspace - October 28, 2026 (Sandbox)
+
+- Add focused page outline, selected-page editing and saved preview, plus separate settings, submissions and publishing views.
+- Add per-page accent, body size, image width and alignment with reader/PDF parity.
+- Add interior-page duplicate/remove actions with role checks and retained revision snapshots.
+- Add grouped controls, artwork thumbnails, publication navigation and unsaved-change warnings.
+- Pass 323 actual-app acceptance checks and 26 design/PDF checks.
+
+# Zine directory and cover uploads - October 28, 2026 (Sandbox)
+
+- Show three desktop columns and twelve publications per directory page, with responsive two/one-column layouts.
+- Show cover artwork or a title placeholder on each directory card.
+- Add owner-only upload-and-set cover control beside publication settings, including revision conflict protection.
+- Pass 294 actual-app checks and 26 visual/PDF checks.
+
+# Native Zine visual design - October 28, 2026 (Sandbox)
+
+- Add shared Punk reader/vector-PDF styles, editable graphic metadata and deterministic waveform art.
+- Preserve Classic defaults and all existing saved content; normalize browser line endings on future saves.
+- Pass 26 design checks plus the existing 287 focused Zine checks.
+
+# Collaborative Zines — October 28, 2026 (Pacific; Sandbox)
+
+- Add independent publications, issues, owner/editor/contributor collaboration, structured pages and responsive reading.
+- Add editor-controlled Letter/A4 reading-order PDFs and correctly padded saddle-stitch imposition with sheet previews.
+- Preserve current account/privacy controls, CSRF/fresh authentication, revision conflicts and uploader-attributed storage/exports.
+- Generate bounded PDFs on demand; keep Production rollout and advanced publishing/commerce separate.
+- Technical and test documentation: docs/T34-zines.md.
+
 # Attachment storage allowances — October 26, 2026 (Pacific)
 
 - Deploy cumulative ordinary-media admission: 16 MiB/account, 24 MiB shared across environments, plus separate provider headroom.

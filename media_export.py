@@ -106,7 +106,7 @@ def owner_candidates(app, db, uid, cfg):
              environment+'-media':Path(app.instance_path)/'media',
              environment+'-icons':Path(app.instance_path)/'circle_icons',
              environment+'-covers':Path(app.instance_path)/'circle_covers',
-             environment+'-marketplace':Path(app.instance_path)/'marketplace'}
+             environment+'-marketplace':Path(app.instance_path)/'marketplace',environment+'-zines':Path(app.instance_path)/'zines'}
     candidates = []
     ledger = sqlite3.connect('file:'+str(Path(cfg['ledger']).absolute())+'?mode=ro', uri=True)
     try:

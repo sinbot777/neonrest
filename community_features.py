@@ -415,9 +415,12 @@ def register(app, core):
         return bool(row and row['totp_secret'])
 
     def fresh():
-        if time.time()-session.get('fresh_at',0)>1800:
+        # Ordinary staff sessions confirm at most once per 24 hours.
+        staff_surface=request.path.startswith(('/manage','/staff')) or request.endpoint=='edit_theme'
+        max_age=86400 if staff_surface else 1800
+        if time.time()-session.get('fresh_at',0)>max_age:
             return False
-        return not second_factor(session.get('user_id')) or time.time()-session.get('factor_at',0)<=1800
+        return not second_factor(session.get('user_id')) or time.time()-session.get('factor_at',0)<=max_age
 
     def start_session(user, factor=False):
         session.clear()
@@ -957,6 +960,8 @@ def register(app, core):
         export['attachment_storage']=storage_usage()
         from .seller_studio import export_user as export_seller_studio
         export['seller_studio']=export_seller_studio(db,uid)
+        from .zines_core import export_user as export_zines
+        export['zines']=export_zines(db,uid)
         from .marketplace_assets import export_user as export_product_uploads
         from .marketplace_orders import export_user as export_test_orders
         export['product_uploads']=export_product_uploads(db,uid)
