@@ -11,3 +11,5 @@ The reader renders escaped source-order text and figures using native browser wr
 All nested references use existing publication/uploader/contact authorization, image access and print visibility checks. A block by an artwork uploader revokes reader/PDF access. No authentication or rate limits are relaxed.
 
 Validation: schema limits, finite geometry, foreign artwork/atomic revision checks, exact asset enumeration, four placement modes, captions and credits in Letter/A4 reading/booklet PDFs, overflow rejection, CRLF/Unicode anchors and actual DOM editing events. Physical printing, tagged PDF and broader accessibility/device certification remain separate.
+
+The publication artwork library also accepts a pasted PNG/JPEG/WebP via a labeled paste area. Pasting selects a file; Upload artwork performs the ordinary authenticated upload. The same two-MiB input limit and server-side processing/authorization apply. No automatic upload or clipboard polling.

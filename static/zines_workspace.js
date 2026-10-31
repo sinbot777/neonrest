@@ -1,6 +1,16 @@
 /* Presentation only: preserve the existing forms, controls and composition model. */
 (() => {
 'use strict';
+for(const target of document.querySelectorAll('[data-zine-image-paste]')){
+ target.addEventListener('paste',event=>{
+  const image=[...(event.clipboardData?.files||[])].find(file=>['image/png','image/jpeg','image/webp'].includes(file.type));
+  if(!image)return;
+  event.preventDefault();const status=target.closest('form').querySelector('[data-zine-image-paste-status]');
+  if(image.size>2*1024*1024){status.textContent='Choose artwork up to 2 MiB.';return;}
+  try{const transfer=new DataTransfer();transfer.items.add(image);const input=target.closest('form').querySelector('input[type="file"]');input.files=transfer.files;input.dispatchEvent(new Event('change',{bubbles:true}));target.value='Image ready to upload';status.textContent='Image selected. Use Upload artwork to save it to this publication.';}
+  catch{status.textContent='This browser cannot paste an image into the upload control. Use Choose file instead.';}
+ });
+}
 const reader=document.querySelector('[data-zine-reader]');
 if(reader){
  const key=reader.dataset.readerKey,select=reader.querySelector('[data-reading-select]');
