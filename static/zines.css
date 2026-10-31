@@ -53,3 +53,8 @@
 .zine-shell dialog [hidden]{display:none!important}.zc-focused button.zc-customize{color:#533079;border:0}.zc-task-panels label:has([data-page-color]){display:flex;align-items:center;gap:.5rem;margin:.5rem 0}.zc-task-panels [data-page-color]{width:44px;height:32px;padding:0}.zc-common-tools .zine-save-primary{margin-left:auto}
 
 .zine-fold-preview{grid-template-rows:repeat(2,minmax(0,1fr))}
+
+.zine-fold-preview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));aspect-ratio:11/8.5;position:relative;background:#fff;color:#172336;max-width:680px;margin:1rem auto;outline:1px solid #777}.zine-fold-panel{display:grid;place-items:center;border-right:1px dashed #666;border-bottom:1px dashed #666;padding:.25rem;text-align:center;min-width:0}.zine-fold-panel:nth-child(4n){border-right:0}.zine-fold-panel:nth-child(n+5){border-bottom:0}.zine-fold-panel small{display:block;font-size:.75rem}.zine-fold-cut{position:absolute;left:25%;right:25%;top:50%;height:0;border-top:3px solid #172336;pointer-events:none}.zine-fold-hide-guides .zine-fold-panel{border-color:transparent}.zine-fold-hide-guides .zine-fold-cut{display:none}@media(max-width:480px){.zine-fold-panel{font-size:.75rem}}
+[data-zine-print-options] [hidden]{display:none!important}
+
+.zine-fold-preview{grid-template-rows:repeat(2,minmax(0,1fr))}
