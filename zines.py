@@ -8,6 +8,7 @@ import time
 from pathlib import Path
 from flask import Blueprint,abort,render_template,request,session,redirect,url_for,send_file
 from . import zines_core as z
+from . import zines_sizes
 
 def register(app,core):
     bp=Blueprint('zines',__name__)
@@ -25,7 +26,9 @@ def register(app,core):
         return helpers['limited']('zines-write',80)
     from .zines_composition import asset_ids
     def form_content():return {**{k:request.form.get(k,'') for k in ('heading','text','caption','image','layout','print_alternative','section','pullquote','highlight','highlight_label','accent','text_size','image_width','image_align')},'composition':request.form.get('composition',''),'design':request.form.get('design','classic'),**{key:request.form.get(key,default) for key,default in [('accent','red'),('text_size','regular'),('image_width','full'),('image_align','center')]}}
-    def render(view,**values):return render_template('zines.html',view=view,token=token(),waveform=z.wave(),**values)
+    def render(view,**values):
+        size=zines_sizes.get(core.get_db(),values['issue']['id']) if values.get('issue') else None
+        return render_template('zines.html',view=view,token=token(),waveform=z.wave(),issue_size=size,**values)
     def budget(db,owner):
         total=0
         for sql in ["SELECT SUM(length(CAST(p.content AS BLOB))) FROM zine_pages p JOIN zine_issues i ON i.id=p.issue_id JOIN zines z ON z.id=i.zine_id WHERE z.owner_id=?", "SELECT SUM(length(CAST(p.snapshot AS BLOB))) FROM zine_revisions p JOIN zine_issues i ON i.id=p.issue_id JOIN zines z ON z.id=i.zine_id WHERE z.owner_id=?", "SELECT SUM(length(CAST(p.content AS BLOB))) FROM zine_submissions p JOIN zine_issues i ON i.id=p.issue_id JOIN zines z ON z.id=i.zine_id WHERE z.owner_id=?"]:
@@ -123,11 +126,12 @@ def register(app,core):
                         if not z.visible(db,p,issue,user):raise z.ZineError('A contributor or image is no longer eligible.',409)
                         if p['allow_print'] and issue['allow_print']:
                             from .zines_pdf import render as pdf
-                            for paper in ('letter','a4'):pdf(rows,lambda aid:asset_bytes(db,p,aid),'booklet',paper,title=issue['title'])
+                            for paper in ('letter','a4'):pdf(rows,lambda aid:asset_bytes(db,p,aid),'booklet',paper,title=issue['title'],page_size=zines_sizes.get(db,iid))
                     z.touch_issue(db,issue,user);db.execute('UPDATE zine_issues SET state=?,published_at=? WHERE id=?',(state,int(time.time()) if state=='published' else None,iid))
                 else:
                     z.draft(issue);z.touch_issue(db,issue,user)
-                    if action=='settings':db.execute('UPDATE zine_issues SET title=?,allow_print=? WHERE id=?',(z.text(request.form.get('title',''),160,True),int(request.form.get('allow_print')=='1'),iid))
+                    if action=='page_size':zines_sizes.save(db,iid,request.form)
+                    elif action=='settings':db.execute('UPDATE zine_issues SET title=?,allow_print=? WHERE id=?',(z.text(request.form.get('title',''),160,True),int(request.form.get('allow_print')=='1'),iid))
                     elif action=='add':z.add_page(db,p,issue,user,form_content())
                     elif action in ('reorder','duplicate_many'):
                         rows=z.pages(db,iid);middle=[r for r in rows if r['kind']=='page'];by_id={r['id']:r for r in middle}
@@ -223,7 +227,7 @@ def register(app,core):
             response=app.extensions['community_auth_helpers']['limited']('zines-pdf',8,3600,subject=('user:'+str(uid()) if uid() else 'zine-guest:'+str(request.remote_addr)))
             if response is not None:return response
             from .zines_pdf import render as pdf
-            data=pdf(rows,lambda aid:asset_bytes(db,p,aid),request.args.get('mode','standard'),request.args.get('paper','letter'),request.args.get('numbers')=='1',issue['title'])
+            data=pdf(rows,lambda aid:asset_bytes(db,p,aid),request.args.get('mode','standard'),request.args.get('paper','letter'),request.args.get('numbers')=='1',issue['title'],page_size=zines_sizes.get(db,iid))
             return send_file(io.BytesIO(data),mimetype='application/pdf',as_attachment=True,download_name='zine-'+iid+'-'+request.args.get('mode','standard')+'.pdf',conditional=False,etag=False,max_age=0)
         arrangement=[tuple(number.get(r['id']) if r else None for r in sheet) for sheet in z.impose(rows)]
         return render('print',publication=p,issue=issue,arrangement=arrangement,blanks=(-len(rows))%4)

@@ -27,6 +27,8 @@ def initialize(db):
     'CREATE INDEX IF NOT EXISTS zine_submissions_issue ON zine_submissions(issue_id,author_id)',
     'CREATE INDEX IF NOT EXISTS zine_members_user ON zine_members(user_id,zine_id)']
     for statement in statements:db.execute(statement)
+    from . import zines_sizes
+    zines_sizes.initialize(db)
 
 @request_lookup
 def eligible(db,uid):
@@ -109,7 +111,8 @@ def check_revision(row,value):
     if type(value) is not int or not 0<=value<2**63 or value!=row['revision']:raise ZineError('Someone changed this draft. Copy your unsaved entries, reload, and try again.',409)
 
 def snapshot(db,issue,uid):
-    payload={'issue':dict(issue),'pages':[dict(x) for x in pages(db,issue['id'])]}
+    from . import zines_sizes
+    payload={'issue':dict(issue),'page_size':zines_sizes.get(db,issue['id']),'pages':[dict(x) for x in pages(db,issue['id'])]}
     db.execute('INSERT INTO zine_revisions(issue_id,actor_id,revision,snapshot,created_at) VALUES (?,?,?,?,?)',(issue['id'],uid,issue['revision'],json.dumps(payload,ensure_ascii=False),int(time.time())))
     db.execute('DELETE FROM zine_revisions WHERE issue_id=? AND id NOT IN (SELECT id FROM zine_revisions WHERE issue_id=? ORDER BY id DESC LIMIT 20)',(issue['id'],issue['id']))
 

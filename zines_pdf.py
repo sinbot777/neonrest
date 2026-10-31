@@ -66,8 +66,8 @@ def draw_page(c,page,x,width,height,assets,numbers=False,number=0):
         c.setFont('ZineText',8);c.setFillColorRGB(0.25,0.25,0.25);c.drawCentredString(x+width/2,15,str(number))
     c.restoreState()
 
-def render(reading,assets,mode='standard',paper='letter',numbers=False,title='Neonrest Zine'):
-    if mode not in ('standard','booklet') or paper not in ('letter','a4'):raise ZineError('Choose a supported print format.')
+def render(reading,assets,mode='standard',paper='letter',numbers=False,title='Neonrest Zine',page_size=None):
+    if mode not in ('standard','booklet') or paper not in ('letter','a4','issue'):raise ZineError('Choose a supported print format.')
     if not LOCK.acquire(blocking=False):raise ZineError('Another print edition is being prepared. Try again shortly.',429)
     try:
         if not 2<=len(reading)<=64:raise ZineError('Print editions require 2–64 pages.')
@@ -82,18 +82,28 @@ def render(reading,assets,mode='standard',paper='letter',numbers=False,title='Ne
                 if len(raw)>512*1024 or total_bytes>8*1024*1024 or total_pixels>12000000:raise ZineError('This print edition exceeds the image budget (8 MiB or 12 million pixels). Resize or split its artwork.')
                 cache[image_id]=raw
         assets=lambda image_id:cache[image_id]
+        if paper=='issue' and not page_size:raise ZineError('Set an issue page size first.')
         out=io.BytesIO();sheet=letter if paper=='letter' else A4
-        size=landscape(sheet) if mode=='booklet' else sheet
+        if paper=='issue':sheet=(page_size['width'],page_size['height']) if mode=='standard' else (page_size['width']*2,page_size['height'])
+        size=landscape(sheet) if mode=='booklet' and paper!='issue' else sheet
+        def paint(page,x,width,height,number):
+            if page_size:
+                pw,ph=page_size['width'],page_size['height'];outer=min(width/pw,height/ph);scale=page_size['content_scale']
+                c.saveState();c.translate(x+(width-pw*outer)/2,(height-ph*outer)/2);c.scale(outer,outer)
+                c.setFillColorRGB(1,1,1);c.rect(0,0,pw,ph,fill=1,stroke=0)
+                c.translate((pw-396*scale)/2,(ph-612*scale)/2);c.scale(scale,scale)
+                draw_page(c,page,0,396,612,assets,numbers,number);c.restoreState()
+            else:draw_page(c,page,x,width,height,assets,numbers,number)
         c=canvas.Canvas(out,pagesize=size,pageCompression=1,invariant=1)
         c.setTitle(title[:160]);c.setAuthor('Neonrest');c.setSubject('Booklet: landscape, actual size, duplex flip on short edge. Do not select booklet mode again.' if mode=='booklet' else 'Standard reading-order edition.')
         labels={p['id']:i+1 for i,p in enumerate(reading)}
         if mode=='standard':
             for page in reading:
-                draw_page(c,page,0,size[0],size[1],assets,numbers,labels[page['id']]);c.showPage()
+                paint(page,0,size[0],size[1],labels[page['id']]);c.showPage()
         else:
             for outside_left,outside_right,inside_left,inside_right in impose(reading):
                 for left,right in [(outside_left,outside_right),(inside_left,inside_right)]:
-                    for p,x in [(left,0),(right,size[0]/2)]:draw_page(c,p,x,size[0]/2,size[1],assets,numbers,labels.get(p['id'],0) if p else 0)
+                    for p,x in [(left,0),(right,size[0]/2)]:paint(p,x,size[0]/2,size[1],labels.get(p['id'],0) if p else 0)
                     c.showPage()
         c.save()
         if out.tell()>32*1024*1024:raise ZineError('This print edition exceeds the 32 MiB output limit.')
