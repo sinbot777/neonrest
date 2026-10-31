@@ -1,3 +1,9 @@
+# Compact Zine tools and issue sizes - October 31, 2026 (Sandbox)
+
+The Zine composer now groups tools under Insert, Text, Layout, Arrange and Review, with selection controls in one inspector and Save alongside common actions. A single Toolset dropdown replaces mode buttons. Custom reveals Customize with a modal of draft choices, Save and Cancel. Page size lives under Layout: business card, postcard, A6, A5, half-letter, Letter, A4 and custom inch/mm dimensions, orientation, a preview and scale/keep behavior. Minimum trim size is 3.5 × 2 inches in either orientation; maximum is 18 inches per side. Sizes apply to an entire draft issue and persist through an additive size table with editor/CSRF/revision checks. Existing issues retain their previous behavior until configured. Compositions remain on the existing logical board, scaled proportionally and centered; different page shapes can leave blank space. Full-page freeform coordinate changes, margins and bleed controls remain future work. Exact-size reading-order and double-width booklet PDF sheets are available alongside Letter/A4 fitting.
+
+Local validation passed 21 new size/PDF checks and 17 compact workspace/overlay checks, plus the existing component, image-flow, composer, style and toolset regressions. Hosted and signed-in browser acceptance are recorded separately. Sandbox only.
+
 # Zine style explanations - October 30, 2026 (Sandbox)
 
 Style & graphic elements now shows an updating native-renderer example for Classic, Punk or the current composition, with explanatory text for every graphic field. Front/interior/back contexts identify unused controls; empty fields use labeled example copy. Enlarge example provides a closer view. Previews never submit or rewrite page content. Local checks passed three native page contexts and fifteen DOM-event cases plus the existing component suite; hosted acceptance and live visual verification remain separate gates.
