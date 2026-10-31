@@ -52,3 +52,4 @@
 @media(max-width:600px){.zc-command-bar{flex-wrap:wrap}.zc-mode{margin-left:auto!important}.zc-tool-choices{grid-template-columns:1fr}.zc-task-tabs button{width:auto!important}.zc-dialog-actions button{width:auto}.zc-common-tools{flex-wrap:wrap}}
 .zine-shell dialog [hidden]{display:none!important}.zc-focused button.zc-customize{color:#533079;border:0}.zc-task-panels label:has([data-page-color]){display:flex;align-items:center;gap:.5rem;margin:.5rem 0}.zc-task-panels [data-page-color]{width:44px;height:32px;padding:0}.zc-common-tools .zine-save-primary{margin-left:auto}
 
+.zine-fold-preview{grid-template-rows:repeat(2,minmax(0,1fr))}
