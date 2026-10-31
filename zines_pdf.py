@@ -66,15 +66,19 @@ def draw_page(c,page,x,width,height,assets,numbers=False,number=0):
         c.setFont('ZineText',8);c.setFillColorRGB(0.25,0.25,0.25);c.drawCentredString(x+width/2,15,str(number))
     c.restoreState()
 
-def render(reading,assets,mode='standard',paper='letter',numbers=False,title='Neonrest Zine',page_size=None):
-    if mode not in ('standard','booklet') or paper not in ('letter','a4','issue'):raise ZineError('Choose a supported print format.')
+def render(reading,assets,mode='standard',paper='letter',numbers=False,title='Neonrest Zine',page_size=None,guides=False,panel_inset=2,proof=False):
+    if mode not in ('standard','booklet','mini8') or paper not in ('letter','a4','issue'):raise ZineError('Choose a supported print format.')
+    if mode=='mini8' and paper=='issue':raise ZineError('Choose Letter or A4 paper for a single-sheet fold.')
+    from . import zines_folds
+    slots=zines_folds.mini8(reading) if mode=='mini8' else None
+    safe=zines_folds.inset(panel_inset) if mode=='mini8' else 0
     if not LOCK.acquire(blocking=False):raise ZineError('Another print edition is being prepared. Try again shortly.',429)
     try:
         if not 2<=len(reading)<=64:raise ZineError('Print editions require 2–64 pages.')
         from PIL import Image
         cache={};total_bytes=0;total_pixels=0
         from .zines_composition import asset_ids
-        for page in reading:
+        for page in ([] if proof and mode=='mini8' else reading):
           for image_id in asset_ids(json.loads(page['content'])):
             if image_id not in cache:
                 raw=assets(image_id);total_bytes+=len(raw)
@@ -85,7 +89,7 @@ def render(reading,assets,mode='standard',paper='letter',numbers=False,title='Ne
         if paper=='issue' and not page_size:raise ZineError('Set an issue page size first.')
         out=io.BytesIO();sheet=letter if paper=='letter' else A4
         if paper=='issue':sheet=(page_size['width'],page_size['height']) if mode=='standard' else (page_size['width']*2,page_size['height'])
-        size=landscape(sheet) if mode=='booklet' and paper!='issue' else sheet
+        size=landscape(sheet) if mode in ('booklet','mini8') and paper!='issue' else sheet
         def paint(page,x,width,height,number):
             if page_size:
                 pw,ph=page_size['width'],page_size['height'];outer=min(width/pw,height/ph);scale=page_size['content_scale']
@@ -95,18 +99,35 @@ def render(reading,assets,mode='standard',paper='letter',numbers=False,title='Ne
                 draw_page(c,page,0,396,612,assets,numbers,number);c.restoreState()
             else:draw_page(c,page,x,width,height,assets,numbers,number)
         c=canvas.Canvas(out,pagesize=size,pageCompression=1,invariant=1)
-        c.setTitle(title[:160]);c.setAuthor('Neonrest');c.setSubject('Booklet: landscape, actual size, duplex flip on short edge. Do not select booklet mode again.' if mode=='booklet' else 'Standard reading-order edition.')
+        c.setTitle(title[:160]);c.setAuthor('Neonrest');c.setSubject('Booklet: landscape, actual size, duplex flip on short edge. Do not select booklet mode again.' if mode=='booklet' else 'Single-sided eight-panel fold: actual size, center slit, no staples.' if mode=='mini8' else 'Standard reading-order edition.')
         labels={p['id']:i+1 for i,p in enumerate(reading)}
-        if mode=='standard':
+        if mode=='mini8':
+            panel_w,panel_h=size[0]/4,size[1]/2
+            for slot in slots:
+                page=slot['page'];x=slot['column']*panel_w;y=(1-slot['row'])*panel_h
+                c.saveState();c.translate(x,y)
+                if slot['rotation']:c.translate(panel_w,panel_h);c.rotate(180)
+                if proof:
+                    c.setFillColorRGB(.15,.15,.15);c.setFont('ZineText',12)
+                    label=('Front cover' if page['kind']=='cover' else 'Back cover' if page['kind']=='back' else 'Page '+str(labels[page['id']])) if page else 'Blank'
+                    c.drawCentredString(panel_w/2,panel_h/2,label);c.setFont('ZineText',8);c.drawCentredString(panel_w/2,panel_h-18,'TOP')
+                elif page:
+                    scale=min((panel_w-2*safe)/396,(panel_h-2*safe)/612)
+                    c.translate((panel_w-396*scale)/2,(panel_h-612*scale)/2);c.scale(scale,scale);paint(page,0,396,612,labels[page['id']])
+                c.restoreState()
+            if guides or proof:zines_folds.guides(c,*size)
+            c.showPage()
+        elif mode=='standard':
             for page in reading:
                 paint(page,0,size[0],size[1],labels[page['id']]);c.showPage()
         else:
             for outside_left,outside_right,inside_left,inside_right in impose(reading):
                 for left,right in [(outside_left,outside_right),(inside_left,inside_right)]:
                     for p,x in [(left,0),(right,size[0]/2)]:paint(p,x,size[0]/2,size[1],labels.get(p['id'],0) if p else 0)
+                    if guides:
+                        c.saveState();c.setStrokeColorRGB(.35,.35,.35);c.setLineWidth(.45);c.setDash(3,3);c.line(size[0]/2,0,size[0]/2,size[1]);c.restoreState()
                     c.showPage()
         c.save()
         if out.tell()>32*1024*1024:raise ZineError('This print edition exceeds the 32 MiB output limit.')
         return out.getvalue()
     finally:LOCK.release()
-

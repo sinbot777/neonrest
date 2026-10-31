@@ -126,7 +126,7 @@ def register(app,core):
                         if not z.visible(db,p,issue,user):raise z.ZineError('A contributor or image is no longer eligible.',409)
                         if p['allow_print'] and issue['allow_print']:
                             from .zines_pdf import render as pdf
-                            for paper in ('letter','a4'):pdf(rows,lambda aid:asset_bytes(db,p,aid),'booklet',paper,title=issue['title'],page_size=zines_sizes.get(db,iid))
+                            for paper in ('letter','a4'):pdf(rows,lambda aid:asset_bytes(db,p,aid),'booklet',paper,title=issue['title'],page_size=zines_sizes.get(db,iid),guides=request.args.get('guides')=='1',panel_inset=request.args.get('panel_inset','2'),proof=request.args.get('proof')=='1')
                     z.touch_issue(db,issue,user);db.execute('UPDATE zine_issues SET state=?,published_at=? WHERE id=?',(state,int(time.time()) if state=='published' else None,iid))
                 else:
                     z.draft(issue);z.touch_issue(db,issue,user)
@@ -227,10 +227,12 @@ def register(app,core):
             response=app.extensions['community_auth_helpers']['limited']('zines-pdf',8,3600,subject=('user:'+str(uid()) if uid() else 'zine-guest:'+str(request.remote_addr)))
             if response is not None:return response
             from .zines_pdf import render as pdf
-            data=pdf(rows,lambda aid:asset_bytes(db,p,aid),request.args.get('mode','standard'),request.args.get('paper','letter'),request.args.get('numbers')=='1',issue['title'],page_size=zines_sizes.get(db,iid))
+            data=pdf(rows,lambda aid:asset_bytes(db,p,aid),request.args.get('mode','standard'),request.args.get('paper','letter'),request.args.get('numbers')=='1',issue['title'],page_size=zines_sizes.get(db,iid),guides=request.args.get('guides')=='1',panel_inset=request.args.get('panel_inset','2'),proof=request.args.get('proof')=='1')
             return send_file(io.BytesIO(data),mimetype='application/pdf',as_attachment=True,download_name='zine-'+iid+'-'+request.args.get('mode','standard')+'.pdf',conditional=False,etag=False,max_age=0)
         arrangement=[tuple(number.get(r['id']) if r else None for r in sheet) for sheet in z.impose(rows)]
-        return render('print',publication=p,issue=issue,arrangement=arrangement,blanks=(-len(rows))%4)
+        from . import zines_folds
+        slots=zines_folds.mini8(rows) if len(rows)<=8 else None
+        return render('print',publication=p,issue=issue,arrangement=arrangement,blanks=(-len(rows))%4,fold_slots=[{**slot,'label':('Front cover' if slot['page']['kind']=='cover' else 'Back cover' if slot['page']['kind']=='back' else 'Page '+str(number[slot['page']['id']])) if slot['page'] else 'Blank'} for slot in slots] if slots else None)
     @bp.post('/zines/<zid>/assets')
     def upload(zid):
         from .marketplace_assets import prepare,StudioError
@@ -283,4 +285,3 @@ def register(app,core):
             if allowed:retained.append((row,snapshot))
         return render('history',publication=p,issue=issue,revisions=retained)
     app.register_blueprint(bp)
-
