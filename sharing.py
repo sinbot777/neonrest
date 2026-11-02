@@ -9,6 +9,9 @@ from neonrest.community_features import visible_post
 
 
 def draft(db, kind, reference, uid):
+    if kind=='zine':
+        from .zines_sharing import prepare as prepare_zine
+        return prepare_zine(db,reference,uid)['content']
     if not kind and not reference:
         return None
     if not uid or kind not in ('post', 'image', 'circle', 'vibe') or not reference or len(reference) > 200:
@@ -46,6 +49,9 @@ def draft(db, kind, reference, uid):
 
 
 def prepare(db, kind, reference, uid):
+    if kind=='zine':
+        from .zines_sharing import prepare as prepare_zine
+        return prepare_zine(db,reference,uid)
     """Render a viewer-only preview; the form still publishes only its link text."""
     content = draft(db, kind, reference, uid)
     if content is None:

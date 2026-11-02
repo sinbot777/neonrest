@@ -2735,3 +2735,6 @@ from .marketplace_assets import register as register_marketplace_assets
 register_marketplace_assets(app,sys.modules[__name__])
 from .marketplace_orders import register as register_marketplace_orders
 register_marketplace_orders(app,sys.modules[__name__])
+# Collaborative Zines.
+from .zines import register as register_zines
+register_zines(app,sys.modules[__name__])
