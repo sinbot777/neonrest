@@ -9,8 +9,9 @@ for(const root of document.querySelectorAll('[data-zc-editor]')){
  const contents={};const uid='zc-task-'+[...document.querySelectorAll('[data-zc-editor]')].indexOf(root);
  for(const name of ['Insert','Text','Layout','Arrange','Review']){
   const button=document.createElement('button'),panel=document.createElement('div');button.type='button';button.textContent=name;button.setAttribute('role','tab');button.id=uid+'-'+name;button.setAttribute('aria-controls',button.id+'-panel');panel.id=button.id+'-panel';panel.setAttribute('role','tabpanel');panel.setAttribute('aria-labelledby',button.id);contents[name]=panel;
-  button.onclick=()=>{for(const b of tabs.children)b.setAttribute('aria-selected',String(b===button));for(const p of panels.children)p.hidden=p!==panel;};tabs.append(button);panels.append(panel);button.setAttribute('aria-selected',String(name==='Text'));panel.hidden=name!=='Text';
+  button.onclick=()=>{for(const b of tabs.children){b.setAttribute('aria-selected',String(b===button));b.tabIndex=b===button?0:-1;}for(const p of panels.children)p.hidden=p!==panel;};tabs.append(button);panels.append(panel);button.setAttribute('aria-selected',String(name==='Text'));button.tabIndex=name==='Text'?0:-1;panel.hidden=name!=='Text';
  }
+ tabs.addEventListener('keydown',event=>{const buttons=[...tabs.children],index=buttons.indexOf(event.target);if(index<0)return;let next;if(event.key==='ArrowRight')next=(index+1)%buttons.length;else if(event.key==='ArrowLeft')next=(index+buttons.length-1)%buttons.length;else if(event.key==='Home')next=0;else if(event.key==='End')next=buttons.length-1;else return;event.preventDefault();buttons[next].click();buttons[next].focus();});
  const mode=root.querySelector('.zc-mode');chrome.append(tabs,mode);root.querySelector('[data-zc-mode-help]').after(chrome,panels);
  const common=controls.querySelector('.zc-toolbar');common.classList.add('zc-common-tools');chrome.before(common);
  const save=root.closest('form').querySelector('.zine-save-bar button');if(save)common.append(save);
