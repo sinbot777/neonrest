@@ -2,6 +2,9 @@
 (() => {
 'use strict';
 for(const target of document.querySelectorAll('[data-zine-image-paste]')){
+ const uploadForm=target.closest('form'),fileInput=uploadForm.querySelector('input[type="file"]'),uploadStatus=uploadForm.querySelector('[data-zine-image-paste-status]');
+ const showSelection=()=>{uploadStatus.textContent=fileInput.files.length?'Image selected. Use Upload artwork to save it to this publication.':'Choose an image file or paste an image here, then use Upload artwork.';};
+ fileInput.addEventListener('change',showSelection);showSelection();
  target.addEventListener('paste',event=>{
   const image=[...(event.clipboardData?.files||[])].find(file=>['image/png','image/jpeg','image/webp'].includes(file.type));
   if(!image)return;
