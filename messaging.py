@@ -364,7 +364,7 @@ def register(app,core):
             item=message_payload(row,uid)
             if not item['mine']:item['report_url']=url_for('messaging_report',thread_id=thread_id,message_id=item['key'])
             payload.append(item)
-        return jsonify(messages=payload,removed=removed,more=len(rows)>50,state=thread['state'],can_send=send_allowed(db,thread,uid),unread=min(unread_threads(db,uid),100))
+        return jsonify(messages=payload,removed=removed,more=len(rows)>50,state=thread['state'],can_send=send_allowed(db,thread,uid),unread=None if request.args.get('badge') == '0' else min(unread_threads(db,uid),100))
     @app.post('/messages/settings')
     @protected
     def messaging_settings():
