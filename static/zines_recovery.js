@@ -14,6 +14,7 @@ for(const [index,form] of [...document.querySelectorAll('form[data-zine-editor]'
  const field=n=>form.elements.namedItem(n)?.value||'';
  const key='zine-recovery-v1:'+account+':'+location.pathname+':'+[field('action')||field('studio_action'),field('page_id')||field('item_id')||index].join(':');
  const revision=field('revision');
+ const submissionKey='zine-recovery-v1:'+account+':'+location.pathname+':submitted';
  function read(){const values={};for(const el of form.elements){if(!el.name||exclude.has(el.name)||['file','submit','button'].includes(el.type))continue;if(el.type==='checkbox'){if(!values[el.name])values[el.name]=[];if(el.checked)values[el.name].push(el.value);}else values[el.name]=el.value;}return values;}
  const baseline=fingerprint(read());let timer,dirty=false,conflict=false,submitted=false;
  const bar=document.createElement('div');bar.className='zine-recovery-bar';
@@ -21,13 +22,22 @@ for(const [index,form] of [...document.querySelectorAll('form[data-zine-editor]'
  const restore=document.createElement('button'),discard=document.createElement('button');restore.type=discard.type='button';restore.textContent='Review recovered draft';discard.textContent='Discard recovery';restore.hidden=discard.hidden=true;bar.append(status,restore,discard);form.prepend(bar);
  let recovered;
  function stored(){try{const raw=localStorage.getItem(key);if(!raw)return null;if(raw.length>180000)return null;const value=JSON.parse(raw);return value&&value.version===1&&value.values&&typeof value.values==='object'&&!Array.isArray(value.values)?value:null;}catch{return null;}}
+ // A successful add redirects from the new-page form to a different page form.
+ // Clear only this tab's acknowledged submission, never another unsaved draft.
+ try{
+  const pending=JSON.parse(sessionStorage.getItem(submissionKey)||'null');
+  const prefix='zine-recovery-v1:'+account+':'+location.pathname+':';
+  if(new URLSearchParams(location.search).get('saved')==='1'&&pending&&typeof pending.key==='string'&&pending.key.startsWith(prefix)&&Number.isFinite(Number(pending.revision))&&Number(revision)>Number(pending.revision)){
+   localStorage.removeItem(pending.key);sessionStorage.removeItem(pending.key+':pending');sessionStorage.removeItem(submissionKey);
+  }
+ }catch{}
  recovered=stored();
  try{if(new URLSearchParams(location.search).get('saved')==='1'&&sessionStorage.getItem(key+':pending')===recovered?.revision&&Number(revision)>Number(recovered.revision)){localStorage.removeItem(key);sessionStorage.removeItem(key+':pending');recovered=null;}}catch{}
  if(recovered&&fingerprint(recovered.values)!==baseline){status.textContent='An unsaved local draft is available'+(recovered.revision!==revision?' from a different server revision. Review before restoring.':'.');restore.hidden=discard.hidden=false;}else if(recovered){try{localStorage.removeItem(key);}catch{}}
  function save(){clearTimeout(timer);if(!dirty||conflict||!restore.hidden)return;try{const value={version:1,revision,at:Date.now(),values:read()};if(JSON.stringify(value).length>175000)throw Error();localStorage.setItem(key,JSON.stringify(value));status.textContent='Recovery saved in this browser at '+new Date().toLocaleTimeString()+'. Save commits to Neonrest.';discard.hidden=false;}catch{status.textContent='Local recovery unavailable. Save to Neonrest or copy your work before leaving.';}}
  const changed=e=>{if(e.target?.matches('[data-zc-preference],[data-zc-mode]'))return;dirty=true;submitted=false;if(recovered&&!restore.hidden){status.textContent='Existing recovery kept. Review or discard it before replacing it.';return;}clearTimeout(timer);timer=setTimeout(save,700);};
  form.addEventListener('input',changed);form.addEventListener('change',changed);
- form.addEventListener('submit',e=>{queueMicrotask(()=>{submitted=!e.defaultPrevented;dirty=true;save();if(submitted)try{sessionStorage.setItem(key+':pending',revision);}catch{}});});
+ form.addEventListener('submit',e=>{queueMicrotask(()=>{submitted=!e.defaultPrevented;dirty=true;save();if(submitted)try{sessionStorage.setItem(key+':pending',revision);sessionStorage.setItem(submissionKey,JSON.stringify({key,revision}));}catch{}});});
  const flush=()=>{if(dirty&&!conflict&&restore.hidden)save();};addEventListener('pagehide',flush);document.addEventListener('visibilitychange',()=>{if(document.hidden)flush();});
  addEventListener('beforeunload',e=>{if(dirty&&!submitted){e.preventDefault();e.returnValue='';}});
  addEventListener('storage',e=>{if(e.key===key&&e.newValue){conflict=true;status.textContent='Another tab changed this recovery. Save or copy your work; this tab will not overwrite its backup.';}});
