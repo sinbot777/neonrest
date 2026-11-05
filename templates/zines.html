@@ -84,7 +84,7 @@
 {% if data.image and data.layout!='image-top' %}<figure><img src="{{ url_for('zines.image',zid=zid,aid=data.image) }}" alt="{{ data.caption }}"><figcaption>{{ data.caption }}</figcaption></figure>{% endif %}
 </div>{% endif %}{%- endmacro %}
 {% block content %}
-<link rel="stylesheet" href="{{ url_for('static',filename='zines.css') }}?v=20261104-dialog">
+<link rel="stylesheet" href="{{ url_for('static',filename='zines.css') }}?v=20261105-atlas-dialog">
 <link rel="stylesheet" href="{{ url_for('static',filename='zines_appearance.css',v='20261102') }}">
 <main data-zine-atmosphere data-zine-view="{{ view }}" data-zine-tone="{{ 'dark' if backdrop_dark else 'light' }}" data-zine-pattern="{{ backdrop.pattern }}" data-backdrop-preference="neonrest-zine-backdrop-{{ session.user_id|default('guest') }}" style="{{ backdrop_css }}" class="zine-backdrop zine-shell {% if view=='issue_edit' %}zine-workspace{% endif %}" {% if issue_size %}data-issue-width="{{ issue_size.width }}" data-issue-height="{{ issue_size.height }}" data-content-scale="{{ issue_size.content_scale }}"{% endif %}>
 <nav aria-label="Zines"><a href="{{ url_for('zines.directory') }}">Zines</a> · <a href="{{ url_for('zines.create') }}">Create a publication</a>{% if publication %} · <a href="{{ url_for('zines.home',zid=publication.id) }}">{{ publication.title }}</a>{% endif %}</nav>
