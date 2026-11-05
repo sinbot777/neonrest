@@ -115,7 +115,7 @@ def upload_busy():
 
 
 def write(outputs, category):
-    if category not in ('media','avatars','legacy_posts','circle_icons','circle_covers','marketplace'):
+    if category not in ('media','avatars','legacy_posts','circle_icons','circle_covers','marketplace','zines'):
         raise ValueError('Unknown upload category.')
     outputs=list(outputs)
     pending = _batch.get()
@@ -149,7 +149,7 @@ def write(outputs, category):
                 pending = ledger.db.execute("SELECT COALESCE(SUM(reserved),0) FROM upload_reservations WHERE state IN ('reserved','writing')").fetchone()[0]
                 if measured+pending+maximum+cfg['headroom'] > cfg['provider_quota']:
                     raise OSError(getattr(errno,'EDQUOT',errno.ENOSPC), 'Provider storage headroom unavailable.')
-            names={'media':'media','avatars':'uploads/avatars','legacy_posts':'uploads/posts','circle_icons':'icons','circle_covers':'covers','marketplace':'marketplace'}
+            names={'media':'media','avatars':'uploads/avatars','legacy_posts':'uploads/posts','circle_icons':'icons','circle_covers':'covers','marketplace':'marketplace','zines':'zines'}
             return write_outputs(outputs, ledger, who, who.split(':user:')[0]+'-'+names[category], headroom)
         except QuotaExceeded:
             abort(413, description='This upload exceeds the available attachment allowance. Your existing files are unchanged; keep your text before returning.')

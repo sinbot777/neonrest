@@ -53,10 +53,19 @@ for kind in ['anonymous','invalid','missing','other-owner','success']:
   row=None if kind=='missing' else {'id':1,'user_id':2 if kind=='other-owner' else 1,'content':'Synthetic','last_edited':None}
   with patch.object(core,'decode_prefixed_id',decode),patch.object(core,'get_db',lambda:DB(row)):
    response=core.edit_comment('test');check(response.status_code==302 and response.location==prefix+'/feed','Safe comment return '+kind)
-with context('/delete_comment/test',method='POST'):
- core.session['user_id']=1
- with patch.object(core,'decode_prefixed_id',lambda _:1),patch.object(core,'get_db',lambda:DB({'id':1,'user_id':1})):
-  response=core.delete_comment('test');check(response.location==prefix+'/feed','Safe delete return')
+# Deletion now requires real transaction and preservation checks. Use the
+# disposable database rather than a query-only double for this redirect case.
+with app.app_context():
+ db=core.get_db()
+ uid=db.execute('INSERT INTO users(handle,email,password_hash,dob,verified,created_at) VALUES (?,?,?,?,1,CURRENT_TIMESTAMP)',('@SecurityRedirectFixture','security-redirect@example.invalid','!disabled-fixture','1990-01-01')).lastrowid
+ pid=db.execute('INSERT INTO posts(user_id,content,circle) VALUES (?,?,?)',(uid,'Synthetic redirect fixture','public')).lastrowid
+ cid=db.execute('INSERT INTO comments(user_id,post_id,content) VALUES (?,?,?)',(uid,pid,'Synthetic comment')).lastrowid
+ db.commit()
+ with context('/delete_comment/test',method='POST'):
+  core.session['user_id']=uid
+  with patch.object(core,'decode_prefixed_id',lambda _:cid):
+   response=core.delete_comment('test');check(response.location==prefix+'/feed','Safe delete return')
+  check(not db.execute('SELECT 1 FROM comments WHERE id=?',(cid,)).fetchone(),'Redirect fixture comment removed transactionally')
 for func in [friends.follow,friends.unfollow]:
  with context('/follow/2',method='POST'):
   core.session['user_id']=1
