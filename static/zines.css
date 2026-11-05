@@ -62,3 +62,9 @@
 /* ZINE_TOOL_FIELD_GAPS_V1: separate stacked fields from their actions. */
 .zine-shell .zc-editor :not(.zc-toolbar)>:is(label,input,select,textarea,.zc-control-grid)+:is(button,.zc-toolbar){margin-block-start:.45rem}
 .zine-shell .zc-editor :is(details,fieldset)>button+label{margin-block-start:.45rem}
+
+/* Keep Custom choices scrollable while confirmation actions stay visible. */
+.zine-shell dialog[data-zc-custom-tools][open]{display:flex;flex-direction:column;gap:.65rem;max-height:85vh;max-height:85dvh;overflow:hidden}
+.zine-shell dialog[data-zc-custom-tools]>h3,.zine-shell dialog[data-zc-custom-tools]>p,.zine-shell dialog[data-zc-custom-tools]>.zc-toolbar,.zine-shell dialog[data-zc-custom-tools]>.zc-dialog-actions{flex:0 0 auto;margin:0}
+.zine-shell dialog[data-zc-custom-tools]>.zc-tool-choices{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:.15rem .3rem .15rem 0}
+.zine-shell dialog[data-zc-custom-tools]>.zc-toolbar{flex-wrap:wrap}
