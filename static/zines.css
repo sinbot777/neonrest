@@ -70,4 +70,4 @@
 .zine-shell dialog[data-zc-custom-tools]>.zc-toolbar{flex-wrap:wrap}
 
 /* Dialogs use their own dark surface, independent of the publication atmosphere. */
-.zine-shell dialog :is(h1,h2,h3,h4,h5,h6){color:inherit}
+.zine-shell dialog :is(h1,h2,h3,h4,h5,h6),.zine-shell.zine-backdrop dialog :is(h1,h2,h3,h4,h5,h6){color:inherit}
