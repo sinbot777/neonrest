@@ -105,12 +105,17 @@ for (const root of document.querySelectorAll('[data-zc-editor]')) {
   issue(`${page.blocks.length} / 32 elements · ${multi.size} selected · ${design.value==='composition'?'Visual composition active.':'Legacy preset active; choose Use visual composition.'} ${count?'Open Page checks for details.':''}`);
  }
  function commit(){enable();dirty();render();}
+ function splitColumnCopy(text){
+  const chars=Array.from(text),middle=Math.ceil(chars.length/2);
+  for(let distance=0;distance<chars.length;distance++)for(const at of [middle+distance,middle-distance])if(at>0&&at<chars.length&&/\s/u.test(chars[at]))return [chars.slice(0,at).join(''),chars.slice(at).join('')];
+  return [text,''];
+ }
  function starter(name){
   const heading=value('heading')||'YOUR HEADLINE',text=value('text')||'Write your story here. Select this text box to replace the sample copy.',image=value('image');const blocks=[];
   const txt=(x,y,w,h,t,size=12,font='sans',color='#171717')=>({...base('text',x,y,w,h),text:t,size,font,color});
   const pic=(x,y,w,h)=>({...base('image',x,y,w,h),image,alt:value('caption')});
   if(name==='article'){blocks.push(txt(24,24,348,96,heading,28,'bold'),{...base('rule',24,126,348,12)},txt(24,150,348,330,text));if(image)blocks.push(pic(24,492,348,96));}
-  if(name==='columns'){blocks.push(txt(24,24,348,90,heading,26,'bold'),txt(24,132,168,450,text.slice(0,Math.ceil(text.length/2))),txt(204,132,168,450,text.slice(Math.ceil(text.length/2))));}
+  if(name==='columns'){const [left,right]=splitColumnCopy(text);blocks.push(txt(24,24,348,90,heading,26,'bold'),txt(24,132,168,450,left),txt(204,132,168,450,right));}
   if(name==='photo'){blocks.push(txt(24,24,348,72,heading,24,'bold'),pic(24,108,348,300),txt(24,432,348,156,text,11));}
   if(name==='poster'){page.background='#171717';blocks.push({...base('box',0,180,396,100),fill:'#b52525'},txt(24,30,348,138,heading,36,'bold','#f7f3e8'),txt(24,198,348,72,value('pullquote')||'MAKE SOME NOISE.',24,'bold','#ffffff'),pic(24,306,348,150),txt(24,480,348,108,text,12,'bold','#f7f3e8'));}
   if(name==='collage'){blocks.push({...base('box',12,12,372,588),fill:'#f7f3e8'},txt(24,24,348,96,heading,28,'bold'),pic(24,138,216,228),pic(252,138,120,150),txt(252,312,120,270,text,10),txt(24,390,216,192,value('pullquote')||'Your pull quote',22,'bold'));}
