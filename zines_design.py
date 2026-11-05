@@ -77,8 +77,10 @@ def draw(c,page,data,x,width,height,assets,numbers,number):
     c.drawString(24,y,word);y-=52
   else:para(c,data['heading'],24,530,348,34,40,PAPER,'ZineHeavy',bottom=205)
   c.setFillColor(RED);c.rect(24,190,348,8,fill=1,stroke=0)
-  blocks=data['text'].split('\n\n');para(c,blocks[0] if blocks else '',24,167,348,9.2,14,PAPER,bottom=90)
-  para(c,data.get('pullquote') or (blocks[1] if len(blocks)>1 else ''),24,82,348,11,15,PAPER,'ZineHeavy',bottom=33)
+  blocks=data['text'].split('\n\n');y=para(c,blocks[0] if blocks else '',24,167,348,9.2,14,PAPER,bottom=90)
+  footer='\n\n'.join(blocks[1:])
+  if data.get('pullquote'):footer+='\n\n'+data['pullquote']
+  para(c,footer,24,y,348,11,15,PAPER,'ZineHeavy',bottom=33)
  else:
   c.setFillColor(RED);c.rect(0,592,396,20,fill=1,stroke=0);c.setFillColor(PAPER);c.setFont('ZineMono',6.8);c.drawString(24,599,section[:80])
   y=para(c,data['heading'],24,572,348,26,30,INK,'ZineHeavy')
