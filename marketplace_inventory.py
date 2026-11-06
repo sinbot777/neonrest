@@ -80,7 +80,7 @@ def identity(env, *refs):
 
 
 def clock(now):
-    if type(now) is not int or now < 0:
+    if type(now) is not int or not 0 <= now <= 2**63 - 901:
         raise InventoryError('invalid time')
 
 

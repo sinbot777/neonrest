@@ -1,4 +1,4 @@
-# Marketplace foundations — implementation increments 1–2
+# Marketplace foundations — implementation increments 1–3
 
 Prepared November 5, 2026 (Pacific). This is an inactive, provider-independent
 increment toward MP-03/MP-06/MP-07, not a finished checkout or commerce release.
@@ -75,8 +75,9 @@ by this source audit. No provider calls, agreements, charges or payouts occurred
    activation. Test-only snapshots and reservation binding now exist. Stock consumption
    must be atomic with the verified payment transition;
    late payment after expiry needs an explicit refund/manual-review policy.
-3. Authenticated provider inbox with provider/account/environment/event uniqueness,
-   duplicate/out-of-order recovery, reconciliation and seller-scoped journal rules.
+3. Complete provider transports, PayPal verification, durable event retry jobs,
+   reconciliation and seller-scoped journal rules. A test-only Stripe signature
+   verifier and minimal durable inbox now exist, as described in increment 3.
    A generic journal balances numerically; it does not authorize a seller transfer.
 4. Listing fees/expiry/opt-in renewals, taxes/shipping and commission-refund policies
    wired to snapshots. Six percent excludes shipping/tax; owner exemption is trusted
@@ -142,3 +143,81 @@ privacy, cancellation, expiry and variation identity changes. Five tests exercis
 the existing seller/Page/catalog policy modules with controlled age/contact service
 inputs. This does not establish full Flask/session or hosted acceptance. Tests
 use temporary databases; neither hosted application/database was changed.
+
+## Increment 3: account bindings and Stripe event reconciliation
+
+`marketplace_payments.py` adds opt-in, test-only records for owner-bound onboarding
+requests, provider accounts, shop/account links, synthetic payment expectations and
+minimal event receipts. All records are separate from the old test-order tables.
+Both schema and service reject live mode. It is not registered with Flask or any
+hosted application, and no provider credentials are included.
+
+Only eligible shop owners can begin a bound onboarding request. Completion calls
+a configured server-side resolver with that opaque request ID, then rechecks owner
+authority after the resolver returns. The resolver must establish provider-side
+ownership/consent using authenticated platform calls and the server-created request;
+browser-return parameters or merchant-entered IDs cannot serve as that proof.
+Actual provider account creation, consent URLs and those authenticated resolvers
+are **not implemented or tested against provider APIs** in this increment. Tests
+use explicit synthetic resolver fixtures. An onboarding completion record is not
+evidence that the site's Stripe/PayPal platform has been approved for live commerce.
+
+Account identity, owner and provider/platform/environment binding cannot change
+through an update. Multiple shops belonging to one owner can share an account;
+another owner cannot claim it. Shop relinking requires a future explicit support
+workflow. Capability refreshes validate the original identity, reject older server
+observations and retain restrictions when another shop is linked. Request, account
+and receipt identifiers are opaque references; secrets and identity documents are
+not stored in these tables.
+
+`StripeTestWebhookAdapter` supports **v1 connected-account snapshot events** only.
+It verifies HMAC-SHA256 over the exact raw body, a five-minute signing-time window,
+multiple v1 signatures and configured signing-secret rotation. It rejects live
+payloads, duplicate JSON keys, invalid/nonfinite JSON and oversized input. These
+direct-charge test fixtures do not select the Production charge/responsibility
+model. Thin events, platform-scoped destination charges and PayPal verification
+are not implemented here.
+
+Receipt identity is unique by environment/provider/platform/event, with account,
+event type, payment object, creation time and a semantic fingerprint retained.
+The first body hash is retained, but raw bodies, signatures, API exceptions,
+client secrets and customer fields are discarded. Validly re-signed redeliveries
+may differ in incidental delivery fields without creating a second receipt; a
+conflicting event identity is rejected.
+
+Known payment references are reconciled through a configured canonical
+PaymentIntent resolver, outside a database write transaction. That resolver must
+use the pinned platform's test credentials and the exact connected-account context;
+the authenticated network implementation is still absent. Reconciliation checks
+canonical object/test mode, order reference, currency, amount, linked owner,
+capabilities, current permissions and active reservation. It uses canonical status,
+rather than trusting the event label; terminal success/cancellation observations
+cannot regress. Provider outages produce a durable `retry` receipt, while unknown
+payments, mismatches and late success need review. A future endpoint must have a
+working retry worker or appropriate provider redelivery behavior; recording a
+receipt alone does not justify returning success and abandoning reconciliation.
+
+The expectation API is deliberately named `track_test_payment`: it matches a
+synthetic object to the existing rehearsal's **item subtotal**, which remains
+nonpayable. An `observed_test` result does not pay an order, consume stock, post a
+journal, send a receipt, purchase postage or grant downloads. Real attempts must
+instead bind a final immutable shipping/tax quote, with one winning settlement per
+order across processors and the full refund/reconciliation path. Expired/canceled
+reservations and changed ownership/capabilities never acquire fulfillment rights.
+
+Validation: all **76 tests plus 38 existing money/shipping checks** pass locally.
+The 28 new tests cover signature forgery/body changes/rotation/replay windows,
+test/live separation, duplicate concurrent receipts, canonical mismatches/outages,
+out-of-order events, late success, redacted receipt storage, owner-bound onboarding,
+capability refresh and cross-owner/relink rejection. Test signatures are generated
+fixtures, and API resolvers are simulated. Provider sandbox, SDK interoperability,
+actual account consent/capabilities, request/session and hosted acceptance remain
+unverified. No live configuration or database changed, and no provider API call,
+payment, payout, postage or commercial agreement occurred.
+
+Provider references checked November 5, 2026 (Pacific):
+
+- Stripe webhooks: https://docs.stripe.com/webhooks
+- Connect event/account scopes: https://docs.stripe.com/connect/webhooks
+- Signature and delivery guidance: https://docs.stripe.com/events/manage-webhook-endpoints
+- PayPal's separate verification/registered-webhook requirements: https://developer.paypal.com/api/rest/webhooks/rest/
