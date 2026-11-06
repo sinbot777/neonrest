@@ -141,6 +141,22 @@ CREATE TRIGGER IF NOT EXISTS marketplace_payment_event_delete BEFORE DELETE ON m
 BEGIN SELECT RAISE(ABORT,'event receipt is retained'); END;
 CREATE TRIGGER IF NOT EXISTS marketplace_payment_attempt_delete BEFORE DELETE ON marketplace_payment_test_attempts
 BEGIN SELECT RAISE(ABORT,'payment expectation is retained'); END;
+CREATE TABLE IF NOT EXISTS marketplace_payment_quote_links (
+    attempt_id TEXT PRIMARY KEY REFERENCES marketplace_payment_test_attempts(id),
+    quote_id TEXT NOT NULL REFERENCES marketplace_checkout_quote_acceptances(quote_id),expires_at INTEGER NOT NULL
+);
+CREATE TRIGGER IF NOT EXISTS marketplace_payment_quote_link_insert BEFORE INSERT ON marketplace_payment_quote_links
+WHEN NOT EXISTS (SELECT 1 FROM marketplace_payment_test_attempts a
+ JOIN marketplace_checkout_quote_acceptances c ON c.quote_id=NEW.quote_id
+ JOIN marketplace_checkout_quotes q ON q.id=c.quote_id
+ WHERE a.id=NEW.attempt_id AND a.order_id=q.order_id AND c.order_id=q.order_id
+ AND c.buyer_id=q.buyer_id AND a.environment=q.environment AND NEW.expires_at=q.expires_at
+ AND a.created_at>=c.accepted_at AND a.created_at<q.expires_at)
+BEGIN SELECT RAISE(ABORT,'invalid accepted quote/payment binding'); END;
+CREATE TRIGGER IF NOT EXISTS marketplace_payment_quote_link_update BEFORE UPDATE ON marketplace_payment_quote_links
+BEGIN SELECT RAISE(ABORT,'payment quote binding is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS marketplace_payment_quote_link_delete BEFORE DELETE ON marketplace_payment_quote_links
+BEGIN SELECT RAISE(ABORT,'payment quote binding is retained'); END;
 CREATE INDEX IF NOT EXISTS marketplace_payment_events_retry
 ON marketplace_payment_events(environment,outcome,received_at,id);
 """
@@ -183,8 +199,9 @@ def begin_onboarding(db, uid, shop_id, scope, request_key, now, policy=checkout.
 def complete_onboarding(db, uid, request_id, adapter, now, policy=checkout.NeonrestPolicy):
     """Resolve a server-owned request through an authenticated provider adapter.
 
-    Provider account creation/consent and that resolver are not implemented here.
-    The resolver is configured code, not a user-selectable callback or verified flag.
+    Provider account creation/consent and its server-created association are separate.
+    The resolver is configured code, not a user-selectable callback or verified flag;
+    marketplace_provider_api now supplies a test-key authenticated read adapter.
     """
     inventory.clock(now)
     if db.in_transaction:
@@ -262,32 +279,59 @@ def track_test_payment(db, uid, order_id, account_id, payment_ref, now, policy=c
     This is deliberately not a payable amount/authorization or provider creation.
     A future real attempt must require an immutable final shipping/tax quote.
     """
+    with inventory.transaction(db):
+        return _track_test_payment_locked(db, uid, order_id, account_id, payment_ref, now, policy)
+
+
+def _track_test_payment_locked(db, uid, order_id, account_id, payment_ref, now, policy, quote_row=None):
+    """Internal shared writer; caller owns BEGIN IMMEDIATE."""
+    if not db.in_transaction:
+        raise PaymentError('transaction required')
     ref(payment_ref)
     inventory.clock(now)
+    checkout.actor(policy, db, uid)
+    order = db.execute("SELECT * FROM marketplace_checkout_orders WHERE id=? AND environment='test' AND buyer_id=?", (order_id, uid)).fetchone()
+    account = db.execute('SELECT * FROM marketplace_payment_accounts WHERE id=?', (account_id,)).fetchone()
+    if not order or not account or account['environment'] != 'test':
+        raise PaymentError('test order/account unavailable')
+    _owner(db, order['seller_owner_id'], order['seller_ref'], policy)
+    link = db.execute("SELECT 1 FROM marketplace_payment_shop_links WHERE environment='test' AND seller_ref=? AND account_id=? AND owner_id=?", (order['seller_ref'], account_id, order['seller_owner_id'])).fetchone()
+    if not link or account['owner_id'] != order['seller_owner_id'] or not account['charges_enabled'] or not account['payouts_enabled']:
+        raise PaymentError('payment account unavailable')
+    old = db.execute('SELECT * FROM marketplace_payment_test_attempts WHERE order_id=? AND account_id=?', (order_id, account_id)).fetchone()
+    if old:
+        link=db.execute('SELECT quote_id FROM marketplace_payment_quote_links WHERE attempt_id=?',(old['id'],)).fetchone()
+        if old['payment_ref'] != payment_ref or (quote_row is None and link) or (quote_row is not None and (not link or link['quote_id']!=quote_row['id'])):
+            raise PaymentError('payment reference conflict')
+        return old['id']
+    if order['state'] != 'awaiting_payment' or order['expires_at'] <= now:
+        raise PaymentError('reservation no longer active')
+    snapshot = json.loads(order['snapshot'])
+    if snapshot.get('test_only') is not True or snapshot.get('payment_enabled') is not False:
+        raise PaymentError('only nonpayable rehearsal orders are accepted')
+    attempt = uuid.uuid4().hex
+    amount=snapshot['subtotal_cents'] if quote_row is None else json.loads(quote_row['snapshot'])['total_cents']
+    db.execute('INSERT INTO marketplace_payment_test_attempts VALUES (?,?,?,?,?,?,?,\'tracking\',?,NULL)',
+        (attempt, 'test', order_id, account_id, payment_ref, amount, snapshot['currency'], now))
+    if quote_row is not None:
+        db.execute('INSERT INTO marketplace_payment_quote_links VALUES (?,?,?)',(attempt,quote_row['id'],quote_row['expires_at']))
+    return attempt
+
+
+def track_quoted_test_payment(db,uid,quote_id,account_id,payment_ref,location_resolver,now,policy=checkout.NeonrestPolicy):
+    """Bind a synthetic test payment to a complete explicitly accepted quote."""
+    if __package__:
+        from . import marketplace_quotes as quotes
+    else:
+        import marketplace_quotes as quotes
+    result=quotes.get_quote(db,uid,quote_id,location_resolver,now,policy)
+    location=quotes.Location(**result['snapshot']['location'])
     with inventory.transaction(db):
-        checkout.actor(policy, db, uid)
-        order = db.execute("SELECT * FROM marketplace_checkout_orders WHERE id=? AND environment='test' AND buyer_id=?", (order_id, uid)).fetchone()
-        account = db.execute('SELECT * FROM marketplace_payment_accounts WHERE id=?', (account_id,)).fetchone()
-        if not order or not account or account['environment'] != 'test':
-            raise PaymentError('test order/account unavailable')
-        _owner(db, order['seller_owner_id'], order['seller_ref'], policy)
-        link = db.execute("SELECT 1 FROM marketplace_payment_shop_links WHERE environment='test' AND seller_ref=? AND account_id=? AND owner_id=?", (order['seller_ref'], account_id, order['seller_owner_id'])).fetchone()
-        if not link or account['owner_id'] != order['seller_owner_id'] or not account['charges_enabled'] or not account['payouts_enabled']:
-            raise PaymentError('payment account unavailable')
-        old = db.execute('SELECT * FROM marketplace_payment_test_attempts WHERE order_id=? AND account_id=?', (order_id, account_id)).fetchone()
-        if old:
-            if old['payment_ref'] != payment_ref:
-                raise PaymentError('payment reference conflict')
-            return old['id']
-        if order['state'] != 'awaiting_payment' or order['expires_at'] <= now:
-            raise PaymentError('reservation no longer active')
-        snapshot = json.loads(order['snapshot'])
-        if snapshot.get('test_only') is not True or snapshot.get('payment_enabled') is not False:
-            raise PaymentError('only nonpayable rehearsal orders are accepted')
-        attempt = uuid.uuid4().hex
-        db.execute('INSERT INTO marketplace_payment_test_attempts VALUES (?,?,?,?,?,?,?,\'tracking\',?,NULL)',
-            (attempt, 'test', order_id, account_id, payment_ref, snapshot['subtotal_cents'], snapshot['currency'], now))
-        return attempt
+        fresh=quotes._fresh_quote(db,uid,quote_id,location,now,policy)
+        if not db.execute('SELECT 1 FROM marketplace_checkout_quote_acceptances WHERE quote_id=? AND buyer_id=? AND order_id=?',
+                (quote_id,uid,fresh['order_id'])).fetchone():
+            raise PaymentError('explicit quote acceptance required')
+        return _track_test_payment_locked(db,uid,fresh['order_id'],account_id,payment_ref,now,policy,fresh)
 
 
 def _json_pairs(pairs):
@@ -308,8 +352,9 @@ class StripeTestWebhookAdapter:
 
     fetch_payment(account_ref, payment_ref) must retrieve canonical PaymentIntent
     state through the configured platform's test API using that connected-account
-    context. There is no network implementation in this increment. Direct-charge
-    fixtures do not decide the Production charge/responsibility model.
+    context. marketplace_provider_api.StripeTestAPI supplies an optional credentialed
+    read adapter; network use is never automatic. Direct-charge fixtures do not
+    decide the Production charge/responsibility model.
     """
     TYPES = {'payment_intent.succeeded','payment_intent.payment_failed','payment_intent.canceled','payment_intent.processing'}
 
@@ -372,7 +417,10 @@ class StripeTestWebhookAdapter:
         metadata = payment.get('metadata')
         if not isinstance(metadata, dict):
             raise PaymentError('canonical order binding missing')
-        return dict(order=ref(metadata.get('neonrest_order')), amount=amount, currency=payment.get('currency'), status=states[status])
+        quote_id=metadata.get('neonrest_quote')
+        if quote_id is not None:
+            ref(quote_id)
+        return dict(order=ref(metadata.get('neonrest_order')),quote=quote_id,amount=amount,currency=payment.get('currency'),status=states[status])
 
 
 def receive_stripe(db, adapter, raw, signature, now, policy=checkout.NeonrestPolicy):
@@ -416,6 +464,17 @@ def receive_stripe(db, adapter, raw, signature, now, policy=checkout.NeonrestPol
         attempt = db.execute('SELECT * FROM marketplace_payment_test_attempts WHERE id=?', (attempt['id'],)).fetchone()
         account = db.execute('SELECT * FROM marketplace_payment_accounts WHERE id=?', (account['id'],)).fetchone()
         order = db.execute('SELECT * FROM marketplace_checkout_orders WHERE id=?', (attempt['order_id'],)).fetchone()
+        quote_link=db.execute('SELECT * FROM marketplace_payment_quote_links WHERE attempt_id=?',(attempt['id'],)).fetchone()
+        quote_current=True
+        if quote_link:
+            if __package__:
+                from . import marketplace_quotes as quotes
+            else:
+                import marketplace_quotes as quotes
+            try:
+                quotes._fresh_order(db,order['buyer_id'],order['id'],now,policy)
+            except ValueError:
+                quote_current=False
         if canonical:
             try:
                 _owner(db, order['seller_owner_id'], order['seller_ref'], policy)
@@ -427,6 +486,8 @@ def receive_stripe(db, adapter, raw, signature, now, policy=checkout.NeonrestPol
             linked = db.execute("SELECT 1 FROM marketplace_payment_shop_links WHERE environment='test' AND seller_ref=? AND owner_id=? AND account_id=?", (order['seller_ref'],order['seller_owner_id'],account['id'])).fetchone()
             if canonical['order'] != order['id'] or canonical['currency'] != 'usd' or canonical['amount'] != attempt['expected_amount_cents']:
                 outcome, reason = 'needs_review', 'payment_binding_mismatch'
+            elif quote_link and (not quote_current or canonical['quote']!=quote_link['quote_id'] or quote_link['expires_at']<=now):
+                outcome, reason = 'needs_review', 'quote_binding_mismatch_or_expired'
             elif not permitted or not linked or account['owner_id'] != order['seller_owner_id'] or not account['charges_enabled'] or not account['payouts_enabled']:
                 outcome, reason = 'needs_review', 'seller_or_buyer_unavailable'
             elif order['state'] != 'awaiting_payment' or order['expires_at'] <= now:

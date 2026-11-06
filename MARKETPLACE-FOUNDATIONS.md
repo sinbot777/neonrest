@@ -1,4 +1,4 @@
-# Marketplace foundations — implementation increments 1–3
+# Marketplace foundations — implementation increments 1–4
 
 Prepared November 5, 2026 (Pacific). This is an inactive, provider-independent
 increment toward MP-03/MP-06/MP-07, not a finished checkout or commerce release.
@@ -221,3 +221,79 @@ Provider references checked November 5, 2026 (Pacific):
 - Connect event/account scopes: https://docs.stripe.com/connect/webhooks
 - Signature and delivery guidance: https://docs.stripe.com/events/manage-webhook-endpoints
 - PayPal's separate verification/registered-webhook requirements: https://developer.paypal.com/api/rest/webhooks/rest/
+
+## Increment 4: complete test quotes and authenticated provider reads
+
+`marketplace_quotes.py` adds immutable, expiring complete test totals and explicit
+buyer acceptance. Owned/versioned location lookup and shipping/tax calculations
+are configured service boundaries. Actual address storage, shipping rates and tax
+calculation/remittance policy are not implemented by those boundaries. Tests use
+fictional reference-only locations and explicit assessment fixtures. A missing
+calculator or response never becomes an assumed zero tax/shipping amount.
+
+Each quote binds order terms, buyer, shop, address reference/version and assessment
+context hashes. The tax calculator receives the selected shipping assessment, so
+its shipping-taxability decision can be explicit. Amounts are bounded integer USD
+cents, the platform commission remains item-only, and complete totals expire at
+the earliest of five minutes, reservation expiry and either assessment's expiry.
+Order/listing/shop/fee-policy changes, hidden/transferred ownership, canceled holds,
+address-version changes and mismatched evidence invalidate use. Raw addresses are
+not persisted in quote records. A future address store must preserve the accepted
+immutable version for delivery/retention rather than reusing a mutable current address.
+
+An accepted quote can be bound to a new synthetic test-payment expectation using
+the complete amount, including shipping/tax. Canonical Stripe metadata must match
+both order and quote. Quote expiry or stale terms route the observation to review.
+Unquoted subtotal-only expectations cannot be upgraded or downgraded into a quoted
+attempt; test records still cannot become live orders. Even a matching full-total
+observation leaves the order unpaid and creates no entitlement or financial posting.
+The snapshot explicitly keeps commercial payment authorization disabled, publication
+eligibility unestablished and purchased digital versions unbound.
+
+`marketplace_provider_api.py` now supplies real HTTPS request code for:
+
+- Stripe test-key reads: verify the key's configured platform identity, retrieve
+  connected-account capability/owner-binding metadata, and retrieve canonical
+  PaymentIntents using an explicit `Stripe-Account` context. Requests pin API version
+  `2026-10-28.endive`. Onboarding resolution also requires a trusted server-created
+  account/request association; account metadata alone or a browser-return ID is
+  insufficient. No account creation/consent URL or charge model is selected here.
+- PayPal sandbox OAuth and remote signature verification using the registered
+  sandbox app webhook ID. It validates verification headers, rejects untrusted
+  certificate scopes, never downloads the certificate URL, and requires an explicit
+  `SUCCESS` response. PayPal simulator mock events cannot use the postback method.
+  Durable PayPal receipt processing and canonical order/capture reconciliation
+  remain unfinished; verification alone grants no order rights.
+
+The default HTTP implementation pins provider HTTPS origins and an endpoint/method
+allowlist, disables redirects and environment proxies, uses certificate verification,
+sets ten-second network timeouts, bounds response sizes and redacts provider errors.
+Stripe live keys and PayPal live origins are rejected. No automatic credential
+discovery occurs. The allowed operations contain **no payment creation, confirmation,
+refund, transfer, payout, account creation or postage purchase**. Configured credentials
+must remain private; API responses may contain sensitive fields in memory and must
+not be logged or sent to a browser. The receipt adapter persists only minimal IDs/hashes.
+
+Validation: **109 tests plus 38 existing money/shipping checks pass locally**.
+The 33 new tests cover complete amounts/evidence, missing-vs-zero components,
+context mutation, consent, expiry, changed terms/addresses, quote/payment binding,
+forced-write rollback, backup/restore with foreign-key verification, provider request
+authentication/account scoping, live-origin/key rejection, path/header/host attacks,
+remote verification failures, bounds and redacted timeouts. HTTP is mocked; no real
+credentials or provider API requests were used. Actual provider sandbox access,
+network egress, registered webhook behavior, SDK equivalence and hosted acceptance
+are still unverified. No Sandbox/Production deployment or live migration occurred.
+
+Additional primary request-contract references checked November 5, 2026 (Pacific):
+
+- https://docs.stripe.com/connect/authentication
+- https://docs.stripe.com/api/accounts/retrieve
+- https://docs.stripe.com/api/payment_intents/create (version/amount contract only; creation is not implemented)
+- https://developer.paypal.com/api/rest/authentication/
+- https://developer.paypal.com/api/rest/webhooks/rest/
+
+Next: actual provider account/operating approval and consent, real owned/versioned
+address storage, shipping/tax services/policy, publishable listing eligibility,
+idempotent provider attempt creation, PayPal canonical event processing and durable
+retries. Then add one winning settlement per order across processors with atomic
+stock/accounting/refund effects, before hosted UI/acceptance and any live pilot.
