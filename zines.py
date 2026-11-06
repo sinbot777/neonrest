@@ -35,6 +35,9 @@ def register(app,core):
                 for i,b in enumerate(master['blocks']):
                     if b['type']=='text':linked[pid+':m'+mid+'_'+str(i)]='Master: '+master['name']
         appearance=zines_appearance.context(core.get_db(),values['publication']['id'] if values.get('publication') else None,values['issue']['id'] if values.get('issue') else None)
+        if view=='home':
+            preview=zines_sharing.publication_descriptor(core.get_db(),values['publication']['id'])
+            if preview:values['social_preview']=preview
         if view=='reader':
             values['issue_sharing'],preview=zines_sharing.context(core.get_db(),values['publication'],values['issue'])
             if preview:values['social_preview']=preview
