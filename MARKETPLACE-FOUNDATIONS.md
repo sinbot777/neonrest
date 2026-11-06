@@ -1,4 +1,4 @@
-# Marketplace foundations — implementation increment 1
+# Marketplace foundations — implementation increments 1–2
 
 Prepared November 5, 2026 (Pacific). This is an inactive, provider-independent
 increment toward MP-03/MP-06/MP-07, not a finished checkout or commerce release.
@@ -12,7 +12,8 @@ owner fee benefits (`marketplace_catalog`), fee/shipping calculations
 (`marketplace_core`), and private unpaid test orders (`marketplace_orders`).
 The test-order tables and flows are retained unchanged. No real payment adapter,
 provider-event processor, completed real-order lifecycle or fulfillment engine
-is included in this increment.
+is included in these increments. The second increment adds test-only immutable
+order rehearsals, described below; these are not payable real orders.
 
 Read-only hosted inspection found both Production and Sandbox have the same
 SHA-256 values for the three audited modules:
@@ -67,10 +68,12 @@ by this source audit. No provider calls, agreements, charges or payouts occurred
 
 ## Next implementation dependencies
 
-1. Stable seller-owned SKU/variant mapping, adult eligibility checks and owner-benefit
-   binding, followed by seller onboarding and protected integration into Sandbox.
-2. Real immutable order/line/fee snapshots, attempt IDs and reservation-to-order
-   binding. Stock consumption must be atomic with the verified payment transition;
+1. Seller onboarding and protected integration into Sandbox. Test-only stock mapping,
+   eligibility/owner checks and owner-benefit binding now exist, but publishing and
+   live seller/payment account capabilities remain unavailable.
+2. Complete immutable payable quotes/order terms, payment attempt IDs and real-order
+   activation. Test-only snapshots and reservation binding now exist. Stock consumption
+   must be atomic with the verified payment transition;
    late payment after expiry needs an explicit refund/manual-review policy.
 3. Authenticated provider inbox with provider/account/environment/event uniqueness,
    duplicate/out-of-order recovery, reconciliation and seller-scoped journal rules.
@@ -91,3 +94,51 @@ Tests use temporary databases only and include last-unit contention from separat
 SQLite connections, rollback, buyer/seller/environment isolation, expiry boundaries,
 idempotency, immutable journal SQL guards, reversal accounting and proportional
 refund rounding. Also run the existing `python tests/verify_marketplace_core.py`.
+
+## Increment 2: order/reservation rehearsal
+
+`marketplace_checkout.py` adds opt-in `marketplace_checkout_skus` and
+`marketplace_checkout_orders` tables. Only `test` environment records are accepted,
+both by the API and SQL constraints. They cannot be relabeled as live orders.
+There is no `paid` state, application registration, public endpoint or provider call.
+Existing `seller_test_orders` and `seller_test_quotes` remain untouched.
+
+Owner-authorized synchronization gives each listing option an opaque stable SKU.
+Because the current editor identifies variations by row position, this adapter
+matches existing variations by case-insensitive label. Reordering preserves IDs;
+renaming creates a new ID and deactivates the old one. Changing the set of variation
+identities is rejected while the listing has active reservations, preventing a
+renamed option from duplicating stock. Explicit editor-level immutable variation
+IDs and editor integration remain future work. Provisioning is a test operation,
+not a fulfilled-stock reconciliation mechanism.
+
+Checkout accepts SKU, quantity and expected listing revision; it reads prices,
+descriptions, policies and owner-bound fee benefits on the server. Orders preserve
+that snapshot after later edits. Reservation and order insertion share one SQLite
+transaction; a failed order write rolls back its hold. SQL triggers protect order
+identity/snapshot and synchronize cancellation/expiry when a hold is released.
+Bounded internal expiry maintenance closes timed-out rehearsals. Request retries
+return the existing order without new stock or repricing; conflicting reuse fails.
+
+The default policy adapter reuses existing `seller_studio` eligibility/owner checks
+and `marketplace_catalog` visibility/fee policy. Buyers and shop owners must be
+eligible adults; blocked/muted/hidden or ownership-transferred contexts are rejected.
+Stock provisioning and seller-side order reads require actual shop ownership;
+Page listing-edit authority does not grant order access. Buyers retain their own
+snapshot access if a shop later freezes, subject to their own current eligibility.
+
+Shipping, tax and payable total are explicitly `null`, payment is disabled, and
+digital file versions are explicitly unbound. These orders cannot authorize a
+purchase or grant a digital entitlement. US eligibility, shipping/tax quotation,
+listing publication, immutable digital manifests, provider capability checks,
+signed event handling, stock consumption and financial posting remain prerequisites
+for a real checkout. No address is collected in this increment.
+
+Validation: `python -m unittest discover -s tests -p 'verify_marketplace_*.py' -v`
+passes 48 tests plus the existing 38 money/shipping checks. The new checkout tests
+cover rollback after order-write failure, simultaneous duplicate checkout, last-unit
+contention, stale revisions, cross-seller rejection, snapshots, fee exemptions,
+privacy, cancellation, expiry and variation identity changes. Five tests exercise
+the existing seller/Page/catalog policy modules with controlled age/contact service
+inputs. This does not establish full Flask/session or hosted acceptance. Tests
+use temporary databases; neither hosted application/database was changed.

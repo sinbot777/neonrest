@@ -47,6 +47,8 @@ CREATE TABLE IF NOT EXISTS marketplace_inventory_hold_lines (
 );
 CREATE INDEX IF NOT EXISTS marketplace_inventory_active_holds
 ON marketplace_inventory_holds(environment,seller_ref,state,expires_at);
+CREATE INDEX IF NOT EXISTS marketplace_inventory_hold_stock
+ON marketplace_inventory_hold_lines(environment,seller_ref,sku,hold_id);
 """
 
 
@@ -102,11 +104,18 @@ def set_stock(db, env, seller, sku, quantity, now):
     if type(quantity) is not int or not 0 <= quantity <= 1_000_000:
         raise InventoryError('invalid quantity')
     with transaction(db):
-        old = db.execute('SELECT quantity FROM marketplace_inventory_stock WHERE environment=? AND seller_ref=? AND sku=?', (env, seller, sku)).fetchone()
-        if old and quantity < old[0] - available(db, env, seller, sku, now):
-            raise InventoryError('stock is reserved')
-        db.execute('''INSERT INTO marketplace_inventory_stock VALUES (?,?,?,?)
-            ON CONFLICT(environment,seller_ref,sku) DO UPDATE SET quantity=excluded.quantity''', (env, seller, sku, quantity))
+        _set_stock_locked(db, env, seller, sku, quantity, now)
+
+
+def _set_stock_locked(db, env, seller, sku, quantity, now):
+    """Internal composition helper; caller owns BEGIN IMMEDIATE and validation."""
+    if not db.in_transaction:
+        raise InventoryError('transaction required')
+    old = db.execute('SELECT quantity FROM marketplace_inventory_stock WHERE environment=? AND seller_ref=? AND sku=?', (env, seller, sku)).fetchone()
+    if old and quantity < old[0] - available(db, env, seller, sku, now):
+        raise InventoryError('stock is reserved')
+    db.execute('''INSERT INTO marketplace_inventory_stock VALUES (?,?,?,?)
+        ON CONFLICT(environment,seller_ref,sku) DO UPDATE SET quantity=excluded.quantity''', (env, seller, sku, quantity))
 
 
 def reserve(db, env, seller, buyer, request_key, lines, now, ttl=900):
@@ -115,6 +124,14 @@ def reserve(db, env, seller, buyer, request_key, lines, now, ttl=900):
     Expired/released idempotent requests return their old ID, never a fresh hold.
     TTL/time must come from the server, never request form fields.
     """
+    with transaction(db):
+        return _reserve_locked(db, env, seller, buyer, request_key, lines, now, ttl)
+
+
+def _reserve_locked(db, env, seller, buyer, request_key, lines, now, ttl=900):
+    """Internal helper for atomic order-plus-reservation creation."""
+    if not db.in_transaction:
+        raise InventoryError('transaction required')
     identity(env, seller, buyer, request_key)
     clock(now)
     if type(ttl) is not int or not 1 <= ttl <= 900:
@@ -134,19 +151,18 @@ def reserve(db, env, seller, buyer, request_key, lines, now, ttl=900):
     if len({sku for sku, _ in normalized}) != len(normalized):
         raise InventoryError('duplicate SKU')
     digest = hashlib.sha256(json.dumps([seller, normalized, ttl], separators=(',', ':')).encode()).hexdigest()
-    with transaction(db):
-        old = db.execute('SELECT id,payload_hash FROM marketplace_inventory_holds WHERE environment=? AND buyer_ref=? AND request_key=?', (env, buyer, request_key)).fetchone()
-        if old:
-            if old[1] != digest:
-                raise InventoryError('idempotency conflict')
-            return old[0]
-        for sku, quantity in normalized:
-            if available(db, env, seller, sku, now) < quantity:
-                raise InventoryError('insufficient stock')
-        hold = uuid.uuid4().hex
-        db.execute('INSERT INTO marketplace_inventory_holds VALUES (?,?,?,?,?,?,?,?,?)', (hold, env, seller, buyer, request_key, digest, now, now + ttl, 'reserved'))
-        db.executemany('INSERT INTO marketplace_inventory_hold_lines VALUES (?,?,?,?,?)', [(hold, env, seller, sku, n) for sku, n in normalized])
-        return hold
+    old = db.execute('SELECT id,payload_hash FROM marketplace_inventory_holds WHERE environment=? AND buyer_ref=? AND request_key=?', (env, buyer, request_key)).fetchone()
+    if old:
+        if old[1] != digest:
+            raise InventoryError('idempotency conflict')
+        return old[0]
+    for sku, quantity in normalized:
+        if available(db, env, seller, sku, now) < quantity:
+            raise InventoryError('insufficient stock')
+    hold = uuid.uuid4().hex
+    db.execute('INSERT INTO marketplace_inventory_holds VALUES (?,?,?,?,?,?,?,?,?)', (hold, env, seller, buyer, request_key, digest, now, now + ttl, 'reserved'))
+    db.executemany('INSERT INTO marketplace_inventory_hold_lines VALUES (?,?,?,?,?)', [(hold, env, seller, sku, n) for sku, n in normalized])
+    return hold
 
 
 def release(db, env, buyer, hold, now):
