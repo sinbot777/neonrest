@@ -327,6 +327,7 @@ def track_quoted_test_payment(db,uid,quote_id,account_id,payment_ref,location_re
     result=quotes.get_quote(db,uid,quote_id,location_resolver,now,policy)
     location=quotes.Location(**result['snapshot']['location'])
     with inventory.transaction(db):
+        quotes._assert_local_location(location_resolver,uid,result['snapshot']['location']['seller_ref'],location)
         fresh=quotes._fresh_quote(db,uid,quote_id,location,now,policy)
         if not db.execute('SELECT 1 FROM marketplace_checkout_quote_acceptances WHERE quote_id=? AND buyer_id=? AND order_id=?',
                 (quote_id,uid,fresh['order_id'])).fetchone():

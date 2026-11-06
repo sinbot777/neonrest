@@ -133,6 +133,12 @@ def _hash(context):
     return hashlib.sha256(json.dumps(context,sort_keys=True,separators=(',',':')).encode()).hexdigest()
 
 
+def _assert_local_location(resolver,buyer,seller,location):
+    """Optional DB-local recheck, safe under a write lock; no provider calls here."""
+    method=getattr(resolver,'assert_current_location',None)
+    if method is not None: method(buyer,seller,location)
+
+
 def _assessment(value, kind, context_hash, now):
     if not isinstance(value,Assessment) or value.kind!=kind or value.context_hash!=context_hash or value.environment!='test' or value.currency!='USD':
         raise QuoteError('missing or mismatched '+kind+' evidence')
@@ -182,7 +188,6 @@ def create_quote(db, buyer, order_id, location_ref, request_key, location_resolv
         total_cents=totals['total'],platform_fee_cents=snapshot['platform_fee_cents'],fee_version=snapshot['fee_version'],
         location=asdict(location),shipping_evidence=asdict(shipping),tax_evidence=asdict(tax),
         payment_authorization_enabled=False,catalog_publication_checked=False,digital_versions_bound=False)
-    raw=json.dumps(result,sort_keys=True,separators=(',',':'))
     with inventory.transaction(db):
         current,_ = _fresh_order(db,buyer,order_id,now,policy)
         if current['snapshot']!=order['snapshot']:
@@ -192,6 +197,13 @@ def create_quote(db, buyer, order_id, location_ref, request_key, location_resolv
             if repeated['order_id']!=order_id or repeated['location_ref']!=location_ref:
                 raise QuoteError('quote idempotency conflict')
             return repeated['id']
+        _assert_local_location(location_resolver,buyer,current['seller_ref'],location)
+        binder=getattr(location_resolver,'bind_location_snapshot',None)
+        bound=binder(buyer,current['seller_ref'],location) if binder is not None else None
+        if binder is not None and bound!=location.version:
+            raise QuoteError('address snapshot binding failed')
+        result['location_snapshot_bound']=bound is not None
+        raw=json.dumps(result,sort_keys=True,separators=(',',':'))
         quote_id=uuid.uuid4().hex
         db.execute('INSERT INTO marketplace_checkout_quotes VALUES (?,?,?,?,?,?,?,?,?,?,?)',
             (quote_id,'test',order_id,buyer,request_key,location.reference,location.version,context_hash,raw,now,expires))
@@ -219,6 +231,7 @@ def accept_quote(db,buyer,quote_id,location_resolver,now,policy=checkout.Neonres
     order,_=_fresh_order(db,buyer,row['order_id'],now,policy)
     location=_location(location_resolver,buyer,order['seller_ref'],row['location_ref'])
     with inventory.transaction(db):
+        _assert_local_location(location_resolver,buyer,order['seller_ref'],location)
         fresh=_fresh_quote(db,buyer,quote_id,location,now,policy)
         old=db.execute('SELECT quote_id FROM marketplace_checkout_quote_acceptances WHERE order_id=?',(fresh['order_id'],)).fetchone()
         if old:

@@ -1,4 +1,4 @@
-# Marketplace foundations — implementation increments 1–4
+# Marketplace foundations — implementation increments 1–5
 
 Prepared November 5, 2026 (Pacific). This is an inactive, provider-independent
 increment toward MP-03/MP-06/MP-07, not a finished checkout or commerce release.
@@ -297,3 +297,80 @@ address storage, shipping/tax services/policy, publishable listing eligibility,
 idempotent provider attempt creation, PayPal canonical event processing and durable
 retries. Then add one winning settlement per order across processors with atomic
 stock/accounting/refund effects, before hosted UI/acceptance and any live pilot.
+
+## Increment 5: encrypted address versions and fixed domestic shipping
+
+`marketplace_addresses.py` replaces the address-only fixture boundary with a native,
+test-only encrypted store and location resolver. It uses `cryptography==50.0.2`,
+already in the repository lock and matching the local validation environment.
+Fernet/MultiFernet perform authenticated encryption and key rotation. Keys must be
+explicit server configuration, kept separately from databases, source and logs.
+No key is created automatically and no missing-key/plaintext fallback exists.
+
+Buyer destinations and seller origins are owner-bound. Edits create new encrypted
+versions and use optimistic concurrency/idempotent replay, rather than replacing
+past address data. The authenticated encrypted envelope binds owner, book/version,
+purpose, shop and environment; ciphertext moved to another row is rejected. ZIPs
+remain strings, including leading zeros. Validation covers format/bounds, not postal
+deliverability. This initial format supports US states plus DC; territories and
+military address formats remain outside this test implementation.
+
+Regular reads are owner-only and record metadata-only view events. Listing address
+references and audit rows does not reveal recipient/street/city fields. Buyers do
+not gain access to seller origins; sellers/Page editors do not gain access to buyer
+addresses. Shop changes never transfer address ownership. Archive/restore prevents
+new use without erasing retained history. Paid-order seller access, support access,
+retention/erasure policy and customer UI are separate unfinished work; no blanket
+seller-address-read endpoint is introduced.
+
+Quotes now retain an immutable opaque binding to the exact origin and destination
+versions used. A buyer can recover their own historical destination through that
+binding, without receiving the seller origin. Native resolver checks run again
+inside the quote/consent/payment-binding write transaction, closing the gap between
+initial resolution and committing use of an address. Address edits, archive/restore,
+origin changes and shipping-profile changes invalidate pending quote use. Rotation
+rewrites ciphertext while preserving semantic version IDs, so it does not invalidate
+an otherwise-current quote. This is not a claim of protection against a compromised
+application runtime holding the encryption keys.
+
+`marketplace_shipping.py` adds explicit owner-configured fixed domestic charges:
+one base charge per order plus a charge per physical unit, optionally capped. The
+seller can explicitly configure free shipping. Digital-only carts have zero shipping.
+Profile versions are immutable; owner checks, stale-write handling and current-profile
+bindings prevent silent changes to a pending quote. This is a seller-defined shipping
+charge, **not** a carrier rate, label purchase or replacement for the agreed Shippo
+integration and Pirate Ship/manual fulfillment workflow.
+
+The combined resolver connects encrypted locations and shipping profiles to the
+existing complete-quote/consent/payment-expectation flow. It also provides a private,
+version-bound calculation handoff containing minimum street/city/state/ZIP/country
+fields, excluding recipient/company. It does not transmit that data anywhere.
+External tax/carrier adapters still need their disclosed, approved data flow and
+actual service integration. Tax is still required explicitly and is never assumed
+to be zero. The native integration tests use a clearly fictional tax assessment and
+simulated canonical payment state; actual tax responsibility/calculation remains open.
+
+Validation: **136 tests plus 38 existing money/shipping checks pass locally**.
+The 27 new tests use actual encryption, not a mock cipher, with fictional addresses
+and ephemeral generated keys. Coverage includes ciphertext/metadata privacy, wrong
+keys/swapped tokens, authorization, archive/history, key rotation, concurrent edits,
+write rollback, encrypted backup/restore/FK checks, fixed combined/capped/free shipping,
+quote invalidation, historical binding recovery and native quote-to-test-reconciliation.
+Successful reconciliation still leaves an order unpaid and stock unconsumed.
+
+No dependency changes, real customer data, external data transmissions, provider
+calls, deployed key configuration, application registration or Sandbox/Production
+migrations/deployments occurred. Before collecting real addresses, configure and
+rehearse private key backup/recovery and rotation, authorize the retention policy,
+implement scoped UI/CSRF/rate limits and complete hosted privacy/permission checks.
+Backups of ciphertext need the separate keys to be recoverable; retiring keys must
+account for historical versions and retained backups. Fernet exposes token creation
+timestamps, not address contents, as described in its documentation.
+
+Primary encryption reference checked November 6, 2026 (Pacific):
+https://cryptography.io/en/50.0.2/fernet/
+
+Next: real tax/carrier services and policy, seller consent/provider associations,
+publishable listing eligibility, durable event retries/PayPal canonical processing,
+one-winning-payment stock/accounting/refund settlement and scoped customer/seller UI,
+then hosted acceptance. All commerce activation gates remain open.
