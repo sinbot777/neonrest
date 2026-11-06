@@ -1,3 +1,10 @@
+{# Keep the stored timezone and exact timestamp available; only shorten its display. #}
+{%- macro display_post_time(value) -%}
+  {%- set raw = value|string -%}
+  {%- set readable = raw.replace('T', ' ') -%}
+  <time datetime="{{ raw }}" title="{{ raw }}">{{ readable[:10] }}{% if readable|length >= 16 %} at {{ readable[11:16] }}{% else %}{{ readable[10:] }}{% endif %}</time>
+{%- endmacro -%}
+
 {% set posts = _posts if _posts is defined else posts %}
 {% set post_reactors = _reactors if _reactors is defined else {} %}
 {% set VALID_REACTS = _reacts if _reacts is defined else [] %}
@@ -15,7 +22,7 @@
         </a>
         {% if comment.reply_to_handle %}<span class="reply-recipient">→ @{{ comment.reply_to_handle.lstrip('@') }}</span>{% elif comment.parent_comment_id %}<span class="reply-recipient">(reply)</span>{% endif %}
         {% if comment.last_edited %}
-          <small class="edited-label">(edited {{ comment.last_edited }})</small>
+          <small class="edited-label">(edited {{ display_post_time(comment.last_edited) }})</small>
         {% endif %}
         {% if comment.prefix %}
           <span class="comment-prefix">{{ comment.prefix }}-</span>
@@ -70,8 +77,8 @@
         <strong>@{{ post.author_handle }}</strong>
       </a>
       {% if post.target_handle %}&rarr; <a class="user-handle" href="{{ url_for('user_by_handle', handle=post.target_handle.lstrip('@')) }}">@{{ post.target_handle.lstrip('@') }}</a>{% endif %}
-      <small><a class="post-permalink" href="{{ url_for('post_detail', post_id=post.id) }}" aria-label="Open this post">{{ post.created_at }}</a></small>
-      {% if post.last_edited %}<small>(edited {{ post.last_edited }})</small>{% endif %}
+      <small><a class="post-permalink" href="{{ url_for('post_detail', post_id=post.id) }}" aria-label="Open this post">{{ display_post_time(post.created_at) }}</a></small>
+      {% if post.last_edited %}<small>(edited {{ display_post_time(post.last_edited) }})</small>{% endif %}
         {% set private_circle=circle_for_post(post.id) %}{% if private_circle %}<small class="post-circle">{{ 'Public Circle post' if circle_post_public(post.id) else 'Circle members' }} · <a href="{{ url_for('circle_page',circle_id=private_circle.id) }}">{{ circle_label(private_circle) }}</a></small>{% endif %}
         {# Updated Vibe Links #}
         {% if post.vibes %}
