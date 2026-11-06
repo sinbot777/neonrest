@@ -519,11 +519,29 @@ successes, rollback at journal/stock/final-record writes, other active reservati
 cancellation/expiry, changed addresses/terms, revoked eligibility/capabilities,
 immutable history, concurrency, crash recovery, foreign-key enforcement and
 migration/backup restoration. Provider observations, shipping and tax remain
-fixtures. Hosted proof below applies only to the earlier pinned component commit
-until the expanded suite is separately rehearsed.
+fixtures. The earlier 160-test hosted proof remains historical; the expanded
+settlement rehearsal is recorded below.
 
 No app registration, route/UI, settings/key change, live migration, scheduler or
 live payment was introduced. Refund/dispute accounting, actual processor settlement,
 PayPal canonical handling, provider consent/creation, tax/carrier integration,
 customer/seller screens, receipts, entitlements and fulfillment remain unfinished.
 This increment does not complete MP-06, MP-08, MP-10, MP-16 or MP-20.
+
+### Expanded hosted proof
+
+Component commit `3e12cd08096cd5a08554f85db4598be266c094ae` passed the
+expanded **193 tests and 38 money/shipping checks** on PythonAnywhere: Python
+3.13.1, SQLite 3.37.2, cryptography 50.0.2. There were zero failures, errors or
+skips. The refreshed manifest driver at commit
+`060f3223f498cc17eca8742c95e02ba0ac69ce4c` verified 24 source files totaling
+356,787 bytes. The receipt reports 394,935 logical bytes for QA evidence/source.
+Run ID: `f9fa556292a54e76bf5a27c66460bbeb`.
+
+The isolated folder is
+`/home/sinbot/releases/T31-marketplace-qa-20261106-3e12cd0/` with result,
+manifest, test output and folder-status notes. Execution safeguards recorded zero
+network, external SQLite, live path/import or subprocess attempts. No dependencies
+were installed and no running application, real database, settings or scheduler
+was changed. This proves these test components on the host, not full Flask/session,
+provider sandbox, scheduled-worker, checkout UI or financial release acceptance.
