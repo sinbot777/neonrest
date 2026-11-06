@@ -438,3 +438,33 @@ charge, payout or fulfillment occurred. Queue completion and canonical test succ
 still do not mark an order paid, consume inventory, post a journal or grant downloads.
 PayPal canonical receipt processing and the real one-winning-payment settlement/
 refund lifecycle remain open; this increment does not complete MP-08 or MP-20.
+
+## Hosted component rehearsal — November 6, 2026
+
+The pinned component commit `0f19084e03e72296353694bd23f32660314d6d45`
+passed on PythonAnywhere using the existing application virtualenv interpreter:
+Python 3.13.1, SQLite 3.37.2 and cryptography 50.0.2. All **160 unittest cases
+and 38 money/shipping checks passed**, with zero failures, errors or skips.
+Run ID: `85d72ac013034e35af81ba1cd8dc3f12`.
+
+`rehearse_marketplace.py` (harness commit
+`8d6a15148da229f02b0532dfb12f96177ab70170`) fetched only 22 public,
+Git-blob-verified files totaling 314,992 bytes. The driver itself was fetched at
+its commit and SHA-256 verified before execution. It required a fresh isolated
+folder, used fictional fixtures/ephemeral keys and did not install dependencies.
+The receipt reports 347,335 logical file bytes, approximately 340 KiB; allocated
+disk usage can be larger. Full output, manifest, result and folder-status notes
+are retained in the isolated QA folder, not in either running application.
+
+During test execution, Python audit guards recorded zero network, external SQLite,
+live path, live app import or subprocess attempts. These are safeguards for this
+known, reviewed candidate, not an OS security sandbox for arbitrary Python.
+Public GitHub source downloads happened before those guards were installed.
+No real database or customer records were copied, no provider calls were made,
+and no app startup, migration, scheduler, reload or deployment occurred.
+
+This establishes component compatibility on the host, including the existing
+SQLite/encryption stack and simulated recovery/concurrency tests. It does not
+establish full Flask/session authorization, browser checkout, real provider sandbox
+behavior, a scheduled worker service, tax/carrier integration, financial settlement
+or production readiness. All corresponding acceptance gates remain open.
