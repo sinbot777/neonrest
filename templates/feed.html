@@ -9,7 +9,7 @@
   <h1 class="glow large">{{ 'Post' if single_post else 'Feed' }}</h1>
 
   <div class="recent-posts">
-    {% if not single_post %}<h3>{{ reading_views[reading_view] }}</h3><nav class="reading-feed-nav" aria-label="Feed views">{% for value,title in reading_views.items() %}<a href="{{ url_for('feed',view=value) }}" {% if reading_view==value %}aria-current="page"{% endif %}>{{ title }}</a>{% endfor %}</nav>{% include 'partials/reading_links.html' %}<p><a href="{{ url_for('page_social.feed') }}">Followed page updates</a> · <a href="{{ url_for('page_social.explore') }}">Discover pages</a></p>{% if reading_view=='vibes' %}<p>Posts from your selected active Vibes. <a href="{{ url_for('reading_settings') }}">Choose your Vibes</a>.</p>{% elif reading_view=='bookmarks' %}<p>Saved posts, newest post first. <a href="{{ url_for('reading_bookmark_settings') }}">Manage all bookmarks</a>, including unavailable posts.</p>{% endif %}{% include 'partials/reading_style.html' %}{% endif %}
+    {% if not single_post %}<h3>{{ reading_views[reading_view] }}</h3><nav class="reading-feed-nav" aria-label="Feed views">{% for value,title in reading_views.items() %}<a href="{{ url_for('feed',view=value) }}" {% if reading_view==value %}aria-current="page"{% endif %}>{{ title }}</a>{% endfor %}</nav>{% include 'partials/reading_links.html' %}<p class="feed-page-links"><a href="{{ url_for('page_social.feed') }}">Followed page updates</a> · <a href="{{ url_for('page_social.explore') }}">Discover pages</a></p>{% if reading_view=='vibes' %}<p>Posts from your selected active Vibes. <a href="{{ url_for('reading_settings') }}">Choose your Vibes</a>.</p>{% elif reading_view=='bookmarks' %}<p>Saved posts, newest post first. <a href="{{ url_for('reading_bookmark_settings') }}">Manage all bookmarks</a>, including unavailable posts.</p>{% endif %}{% include 'partials/reading_style.html' %}{% endif %}
     {% if posts %}
       {% set _viewer_id = session.get('user_id') %}
       {% set _posts = posts %}
@@ -32,6 +32,16 @@ body.feed-page > #main-content { flex: 0 0 auto; width: calc(100% - 2rem); max-w
 .feed-ad-layout.with-ads { max-width: 1040px; display: grid; grid-template-columns: minmax(0, 760px) minmax(190px, 240px); gap: 1.25rem; align-items: start; }
 .feed-ad-layout .feed-main, .feed-ad-rail { min-width: 0; }
 .feed-main .post-preview { box-sizing: border-box; max-width: 100%; overflow-wrap: anywhere; }
+/* Feed utilities share the same readable link treatment as the view controls. */
+.feed-main .recent-posts > p a:link, .feed-main .recent-posts > p a:visited { color: var(--link-color, #ffd0ad); text-decoration: underline; text-underline-offset: .18em; }
+.feed-main .recent-posts > p a:hover { color: var(--link-hover-color, #fff2e8); }
+.feed-main .recent-posts > p a:focus-visible, .feed-main .reaction-people-link:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; border-radius: 2px; }
+.feed-main .post-reactions-box .reaction-people-link:link, .feed-main .post-reactions-box .reaction-people-link:visited { color: #102239; text-decoration: underline; text-underline-offset: .18em; font-weight: 600; }
+.feed-main .post-reactions-box .reaction-people-link:hover { color: #071422; text-decoration-thickness: .12em; }
+.feed-main .post-reactions-box .reaction-status { color: #102239; }
+.feed-main .post-preview .comment-input { color: #f4f7fd; background: #172235; border-color: #92a7be; }
+.feed-main .post-preview .comment-input::placeholder { color: #c2ccdb; opacity: 1; }
+.feed-main .post-preview .comment-input:focus-visible { outline: 2px solid #ffd0ad; outline-offset: 2px; }
 @media(max-width:800px) { .feed-ad-layout.with-ads { display: block; max-width: 760px; } .feed-ad-rail { margin-top: 1.5rem; } }
 </style>
 {% endblock %}
