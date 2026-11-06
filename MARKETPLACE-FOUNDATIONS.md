@@ -1,4 +1,4 @@
-# Marketplace foundations — implementation increments 1–5
+# Marketplace foundations — implementation increments 1–6
 
 Prepared November 5, 2026 (Pacific). This is an inactive, provider-independent
 increment toward MP-03/MP-06/MP-07, not a finished checkout or commerce release.
@@ -374,3 +374,67 @@ Next: real tax/carrier services and policy, seller consent/provider associations
 publishable listing eligibility, durable event retries/PayPal canonical processing,
 one-winning-payment stock/accounting/refund settlement and scoped customer/seller UI,
 then hosted acceptance. All commerce activation gates remain open.
+
+## Increment 6: durable event recovery and canonical-state polling
+
+`marketplace_payment_jobs.py` adds a SQLite-backed, test-only recovery queue for
+Stripe receipts. Signature verification still happens before receipt creation;
+the verified minimal receipt and its job are then committed in the same transaction.
+Backfill preserves existing receipts and derives initial states without resetting
+already-recorded job attempts or leases. Historical processing counts that were
+never recorded by older code cannot be reconstructed and start at zero on backfill.
+
+The synchronous receiver and bounded worker use the same leased reconciliation
+path. A worker claims a receipt in a short `BEGIN IMMEDIATE` transaction, releases
+the write lock before canonical provider retrieval, then rechecks its random lease
+token/attempt and expiry before atomically committing the observation, receipt and
+job result. A crash leaves the job recoverable after its 60-second lease expires.
+A stale/expired worker cannot overwrite another worker's result. Clock handling
+accounts for elapsed lookup time; reservation/quote/permission checks use completion
+time rather than trusting the time the request began.
+
+Worker retries use exponential delay starting at 30 seconds, capped at 15 minutes,
+with eight total processing attempts per receipt. Provider outages retry; pending
+or retryable failed canonical states are polled using the existing verified receipt,
+so a missing completion webhook can be recovered. No raw payload/signature is stored,
+replayed or forged for recovery. Canonical reads retain the exact provider/platform/
+account/payment scope, amount, order/quote and permission checks already described.
+
+Definite binding/eligibility/expiry conflicts go to review rather than an automatic
+retry loop. Exhausted jobs remain visible for review instead of disappearing. A
+newly signature-verified provider redelivery may expedite a delayed/reviewed job,
+but cannot override an active lease, cached terminal success or the attempt cap.
+Internal scheduled processing respects backoff. Terminal observations are cached
+for duplicate deliveries. Queue summaries expose only aggregate states/due counts,
+without customer records, keys, payment references or lease tokens.
+
+`StripeTestPaymentReader` separates canonical lookup from webhook verification:
+the recovery process needs its configured read credentials, not the endpoint's
+signing secret. It cannot be used to ingest a new webhook. The existing webhook
+adapter inherits the same canonical validation, while keeping signature checks
+mandatory at ingestion. All adapters and receipt schemas remain test-only.
+
+`run_due(db, adapter, now, limit=25, ...)` performs one worker tick with a maximum
+batch of 100; it does not sleep or install a schedule. `reap_exhausted` handles final
+crash leases, and `summary` provides internal diagnostics. These are server-only
+functions, not seller/public endpoints. No cron, task service, heartbeat, alerting
+or operator review UI has been configured or deployed. Before operational use,
+configure scoped test credentials, polling frequency, process limits, failure alerts,
+authorized review procedures and hosted crash/recovery acceptance. Do not treat a
+persisted receipt as permission to acknowledge and abandon a real event without a
+working recovery process.
+
+Validation: **160 tests plus 38 existing money/shipping checks pass locally**.
+The 24 new tests cover atomic receipt/job persistence, backoff/exhaustion, recovery
+without redelivery, missing completion events, crashes before/during processing,
+expired and reclaimed leases, stale-worker fencing, reservation expiry during a
+lookup, concurrent claims on separate SQLite connections, final-write rollback,
+scope/clock/batch guards, legacy backfill, lease-preserving backup/restore, eligibility
+revocation and operation without signing-secret access. Provider responses remain
+fixtures; actual provider sandbox and hosted-worker acceptance are unverified.
+
+No app registration, scheduler, live DB migration, deployment, provider API call,
+charge, payout or fulfillment occurred. Queue completion and canonical test success
+still do not mark an order paid, consume inventory, post a journal or grant downloads.
+PayPal canonical receipt processing and the real one-winning-payment settlement/
+refund lifecycle remain open; this increment does not complete MP-08 or MP-20.

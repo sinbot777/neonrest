@@ -167,6 +167,12 @@ def initialize(db):
         raise PaymentError('dedicated connection required')
     db.execute('PRAGMA foreign_keys=ON')
     db.executescript('BEGIN IMMEDIATE;\n' + SCHEMA + '\nCOMMIT;')
+    if __package__:
+        from . import marketplace_payment_jobs as jobs
+    else:
+        import marketplace_payment_jobs as jobs
+    jobs.initialize(db)
+
 
 
 def _owner(db, uid, shop_id, policy):
@@ -348,7 +354,36 @@ def _invalid_constant(value):
     raise PaymentError('invalid JSON constant')
 
 
-class StripeTestWebhookAdapter:
+class StripeTestPaymentReader:
+    """Canonical read adapter for durable workers; no signing secret required."""
+    TYPES = {'payment_intent.succeeded','payment_intent.payment_failed','payment_intent.canceled','payment_intent.processing'}
+    def __init__(self,platform,fetch_payment):
+        self.scope=Scope('stripe',platform)
+        if not callable(fetch_payment):
+            raise PaymentError('configured canonical payment resolver required')
+        self._fetch=fetch_payment
+
+    def canonical(self, account_ref, payment_ref):
+        payment = self._fetch(account_ref, payment_ref)
+        if not isinstance(payment, dict) or payment.get('id') != payment_ref or payment.get('object') != 'payment_intent' or payment.get('livemode') is not False:
+            raise PaymentError('canonical payment scope mismatch')
+        status = payment.get('status')
+        states = {'succeeded':'succeeded','canceled':'canceled','processing':'pending','requires_payment_method':'failed','requires_confirmation':'pending','requires_action':'pending','requires_capture':'pending'}
+        if type(status) is not str or status not in states:
+            raise PaymentError('unknown canonical payment status')
+        amount = payment.get('amount_received') if status == 'succeeded' else payment.get('amount')
+        if type(amount) is not int or not 0 <= amount <= 100_000_000:
+            raise PaymentError('invalid canonical payment amount')
+        metadata = payment.get('metadata')
+        if not isinstance(metadata, dict):
+            raise PaymentError('canonical order binding missing')
+        quote_id=metadata.get('neonrest_quote')
+        if quote_id is not None:
+            ref(quote_id)
+        return dict(order=ref(metadata.get('neonrest_order')),quote=quote_id,amount=amount,currency=payment.get('currency'),status=states[status])
+
+
+class StripeTestWebhookAdapter(StripeTestPaymentReader):
     """Stripe v1 connected-account snapshot events only, test mode only.
 
     fetch_payment(account_ref, payment_ref) must retrieve canonical PaymentIntent
@@ -357,16 +392,11 @@ class StripeTestWebhookAdapter:
     read adapter; network use is never automatic. Direct-charge fixtures do not
     decide the Production charge/responsibility model.
     """
-    TYPES = {'payment_intent.succeeded','payment_intent.payment_failed','payment_intent.canceled','payment_intent.processing'}
-
     def __init__(self, platform, signing_secrets, fetch_payment):
-        self.scope = Scope('stripe', platform)
+        super().__init__(platform,fetch_payment)
         if not isinstance(signing_secrets, (list, tuple)) or not 1 <= len(signing_secrets) <= 3 or any(type(s) is not bytes or not 16 <= len(s) <= 512 for s in signing_secrets):
             raise PaymentError('configured signing secrets required')
-        if not callable(fetch_payment):
-            raise PaymentError('configured canonical payment resolver required')
         self._secrets = tuple(signing_secrets)
-        self._fetch = fetch_payment
 
     def verify(self, raw, signature, now):
         inventory.clock(now)
@@ -404,28 +434,68 @@ class StripeTestWebhookAdapter:
         return dict(id=event_id, account=account, kind=event['type'], payment=payment, created=created,
             body_hash=hashlib.sha256(raw).hexdigest(), fingerprint=hashlib.sha256(json.dumps(identity, separators=(',', ':')).encode()).hexdigest())
 
-    def canonical(self, account_ref, payment_ref):
-        payment = self._fetch(account_ref, payment_ref)
-        if not isinstance(payment, dict) or payment.get('id') != payment_ref or payment.get('object') != 'payment_intent' or payment.get('livemode') is not False:
-            raise PaymentError('canonical payment scope mismatch')
-        status = payment.get('status')
-        states = {'succeeded':'succeeded','canceled':'canceled','processing':'pending','requires_payment_method':'failed','requires_confirmation':'pending','requires_action':'pending','requires_capture':'pending'}
-        if type(status) is not str or status not in states:
-            raise PaymentError('unknown canonical payment status')
-        amount = payment.get('amount_received') if status == 'succeeded' else payment.get('amount')
-        if type(amount) is not int or not 0 <= amount <= 100_000_000:
-            raise PaymentError('invalid canonical payment amount')
-        metadata = payment.get('metadata')
-        if not isinstance(metadata, dict):
-            raise PaymentError('canonical order binding missing')
-        quote_id=metadata.get('neonrest_quote')
-        if quote_id is not None:
-            ref(quote_id)
-        return dict(order=ref(metadata.get('neonrest_order')),quote=quote_id,amount=amount,currency=payment.get('currency'),status=states[status])
 
 
-def receive_stripe(db, adapter, raw, signature, now, policy=checkout.NeonrestPolicy):
-    """Verify -> durable minimal receipt -> canonical lookup -> test observation.
+def _receipt_binding_locked(db,adapter,receipt_id):
+    receipt=db.execute('SELECT * FROM marketplace_payment_events WHERE id=?',(receipt_id,)).fetchone()
+    scope=adapter.scope
+    if not receipt or (receipt['environment'],receipt['provider'],receipt['platform_ref'])!=('test','stripe',scope.platform):
+        raise PaymentError('receipt/provider scope mismatch')
+    account=db.execute("SELECT * FROM marketplace_payment_accounts WHERE environment='test' AND provider='stripe' AND platform_ref=? AND account_ref=?",(scope.platform,receipt['account_ref'])).fetchone()
+    attempt=db.execute('SELECT * FROM marketplace_payment_test_attempts WHERE account_id=? AND payment_ref=?',(account['id'],receipt['payment_ref'])).fetchone() if account else None
+    early=('ignored','unsupported_event') if receipt['event_type'] not in adapter.TYPES else (('needs_review','unbound_payment') if not attempt else None)
+    return receipt,account,attempt,early
+
+
+def _reconcile_receipt_locked(db,adapter,receipt_id,canonical,outcome,reason,now,policy):
+    """Internal writer; retry worker owns the transaction and fencing lease."""
+    if not db.in_transaction:
+        raise PaymentError('transaction required')
+    receipt,account,attempt,early=_receipt_binding_locked(db,adapter,receipt_id)
+    if early:
+        outcome,reason=early
+        db.execute('UPDATE marketplace_payment_events SET outcome=?,reason=?,checked_at=? WHERE id=?',(outcome,reason,now,receipt_id))
+        return dict(receipt_id=receipt_id,outcome=outcome,reason=reason)
+    order = db.execute('SELECT * FROM marketplace_checkout_orders WHERE id=?', (attempt['order_id'],)).fetchone()
+    quote_link=db.execute('SELECT * FROM marketplace_payment_quote_links WHERE attempt_id=?',(attempt['id'],)).fetchone()
+    quote_current=True
+    if quote_link:
+        if __package__:
+            from . import marketplace_quotes as quotes
+        else:
+            import marketplace_quotes as quotes
+        try:
+            quotes._fresh_order(db,order['buyer_id'],order['id'],now,policy)
+        except ValueError:
+            quote_current=False
+    if canonical:
+        try:
+            _owner(db, order['seller_owner_id'], order['seller_ref'], policy)
+            checkout.actor(policy, db, order['buyer_id'])
+            shop = checkout.shop_row(db, order['seller_ref'])
+            permitted = policy.visible(db, shop, order['buyer_id'])
+        except (ValueError, KeyError):
+            permitted = False
+        linked = db.execute("SELECT 1 FROM marketplace_payment_shop_links WHERE environment='test' AND seller_ref=? AND owner_id=? AND account_id=?", (order['seller_ref'],order['seller_owner_id'],account['id'])).fetchone()
+        if canonical['order'] != order['id'] or canonical['currency'] != 'usd' or canonical['amount'] != attempt['expected_amount_cents']:
+            outcome, reason = 'needs_review', 'payment_binding_mismatch'
+        elif quote_link and (not quote_current or canonical['quote']!=quote_link['quote_id'] or quote_link['expires_at']<=now):
+            outcome, reason = 'needs_review', 'quote_binding_mismatch_or_expired'
+        elif not permitted or not linked or account['owner_id'] != order['seller_owner_id'] or not account['charges_enabled'] or not account['payouts_enabled']:
+            outcome, reason = 'needs_review', 'seller_or_buyer_unavailable'
+        elif order['state'] != 'awaiting_payment' or order['expires_at'] <= now:
+            outcome, reason = 'needs_review', 'reservation_no_longer_active'
+        elif attempt['observed_status'] in ('succeeded','canceled') and attempt['observed_status'] != canonical['status']:
+            outcome, reason = 'needs_review', 'terminal_observation_conflict'
+        else:
+            outcome, reason = 'observed_test', 'nonpayable_rehearsal_only'
+            db.execute('UPDATE marketplace_payment_test_attempts SET observed_status=?,observed_at=? WHERE id=?', (canonical['status'],now,attempt['id']))
+    db.execute('UPDATE marketplace_payment_events SET outcome=?,reason=?,checked_at=?,attempt_id=? WHERE id=?', (outcome,reason,now,attempt['id'],receipt_id))
+    return {'receipt_id':receipt_id,'outcome':outcome,'reason':reason}
+
+
+def receive_stripe(db, adapter, raw, signature, now, policy=checkout.NeonrestPolicy, clock=None):
+    """Verify -> atomic receipt/job persistence -> leased test reconciliation.
 
     Errors from a configured network resolver are retryable; raw payloads, API
     error messages, signatures, secrets and customer fields are never persisted.
@@ -445,58 +515,9 @@ def receive_stripe(db, adapter, raw, signature, now, policy=checkout.NeonrestPol
             receipt_id = cursor.lastrowid
         else:
             receipt_id = receipt['id']
-        account = db.execute("SELECT * FROM marketplace_payment_accounts WHERE environment='test' AND provider='stripe' AND platform_ref=? AND account_ref=?", (scope.platform, event['account'])).fetchone()
-        attempt = db.execute('SELECT * FROM marketplace_payment_test_attempts WHERE account_id=? AND payment_ref=?', (account['id'], event['payment'])).fetchone() if account else None
-        early = ('ignored','unsupported_event') if event['kind'] not in adapter.TYPES else (('needs_review','unbound_payment') if not attempt else None)
-        if early:
-            db.execute('UPDATE marketplace_payment_events SET outcome=?,reason=?,checked_at=? WHERE id=?', (*early,now,receipt_id))
-            return {'receipt_id':receipt_id,'outcome':early[0],'reason':early[1]}
-    try:
-        canonical = adapter.canonical(event['account'], event['payment'])
-    except PaymentError:
-        canonical = None
-        outcome, reason = 'needs_review', 'invalid_canonical_payment'
-    except Exception:
-        canonical = None
-        outcome, reason = 'retry', 'provider_lookup_unavailable'
-    with inventory.transaction(db):
-        # Re-read after the provider call: cancellation, owner/capability changes
-        # and another worker may have occurred while no database lock was held.
-        attempt = db.execute('SELECT * FROM marketplace_payment_test_attempts WHERE id=?', (attempt['id'],)).fetchone()
-        account = db.execute('SELECT * FROM marketplace_payment_accounts WHERE id=?', (account['id'],)).fetchone()
-        order = db.execute('SELECT * FROM marketplace_checkout_orders WHERE id=?', (attempt['order_id'],)).fetchone()
-        quote_link=db.execute('SELECT * FROM marketplace_payment_quote_links WHERE attempt_id=?',(attempt['id'],)).fetchone()
-        quote_current=True
-        if quote_link:
-            if __package__:
-                from . import marketplace_quotes as quotes
-            else:
-                import marketplace_quotes as quotes
-            try:
-                quotes._fresh_order(db,order['buyer_id'],order['id'],now,policy)
-            except ValueError:
-                quote_current=False
-        if canonical:
-            try:
-                _owner(db, order['seller_owner_id'], order['seller_ref'], policy)
-                checkout.actor(policy, db, order['buyer_id'])
-                shop = checkout.shop_row(db, order['seller_ref'])
-                permitted = policy.visible(db, shop, order['buyer_id'])
-            except (ValueError, KeyError):
-                permitted = False
-            linked = db.execute("SELECT 1 FROM marketplace_payment_shop_links WHERE environment='test' AND seller_ref=? AND owner_id=? AND account_id=?", (order['seller_ref'],order['seller_owner_id'],account['id'])).fetchone()
-            if canonical['order'] != order['id'] or canonical['currency'] != 'usd' or canonical['amount'] != attempt['expected_amount_cents']:
-                outcome, reason = 'needs_review', 'payment_binding_mismatch'
-            elif quote_link and (not quote_current or canonical['quote']!=quote_link['quote_id'] or quote_link['expires_at']<=now):
-                outcome, reason = 'needs_review', 'quote_binding_mismatch_or_expired'
-            elif not permitted or not linked or account['owner_id'] != order['seller_owner_id'] or not account['charges_enabled'] or not account['payouts_enabled']:
-                outcome, reason = 'needs_review', 'seller_or_buyer_unavailable'
-            elif order['state'] != 'awaiting_payment' or order['expires_at'] <= now:
-                outcome, reason = 'needs_review', 'reservation_no_longer_active'
-            elif attempt['observed_status'] in ('succeeded','canceled') and attempt['observed_status'] != canonical['status']:
-                outcome, reason = 'needs_review', 'terminal_observation_conflict'
-            else:
-                outcome, reason = 'observed_test', 'nonpayable_rehearsal_only'
-                db.execute('UPDATE marketplace_payment_test_attempts SET observed_status=?,observed_at=? WHERE id=?', (canonical['status'],now,attempt['id']))
-        db.execute('UPDATE marketplace_payment_events SET outcome=?,reason=?,checked_at=?,attempt_id=? WHERE id=?', (outcome,reason,now,attempt['id'],receipt_id))
-        return {'receipt_id':receipt_id,'outcome':outcome,'reason':reason}
+        if __package__:
+            from . import marketplace_payment_jobs as jobs
+        else:
+            import marketplace_payment_jobs as jobs
+        jobs.enqueue_locked(db,receipt_id,now)
+    return jobs.process_delivery(db,adapter,receipt_id,now,policy,clock)
