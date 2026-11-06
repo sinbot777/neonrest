@@ -45,6 +45,48 @@ CREATE TABLE IF NOT EXISTS marketplace_inventory_hold_lines (
     FOREIGN KEY(hold_id,environment,seller_ref) REFERENCES marketplace_inventory_holds(id,environment,seller_ref),
     FOREIGN KEY(environment,seller_ref,sku) REFERENCES marketplace_inventory_stock(environment,seller_ref,sku)
 );
+CREATE TABLE IF NOT EXISTS marketplace_inventory_consumptions (
+    hold_id TEXT PRIMARY KEY REFERENCES marketplace_inventory_holds(id),
+    consumed_at INTEGER NOT NULL CHECK(typeof(consumed_at)='integer' AND consumed_at>=0)
+);
+CREATE TRIGGER IF NOT EXISTS marketplace_inventory_consume_validate
+BEFORE INSERT ON marketplace_inventory_consumptions
+BEGIN
+ SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM marketplace_inventory_holds h
+   WHERE h.id=NEW.hold_id AND h.environment='test' AND h.state='reserved'
+   AND h.created_at<=NEW.consumed_at AND h.expires_at>NEW.consumed_at)
+   OR NOT EXISTS (SELECT 1 FROM marketplace_inventory_hold_lines WHERE hold_id=NEW.hold_id)
+   OR EXISTS (SELECT 1 FROM marketplace_inventory_hold_lines l JOIN marketplace_inventory_stock s
+   ON s.environment=l.environment AND s.seller_ref=l.seller_ref AND s.sku=l.sku
+   WHERE l.hold_id=NEW.hold_id AND s.quantity<l.quantity)
+ THEN RAISE(ABORT,'active test reservation and stock required') END;
+END;
+CREATE TRIGGER IF NOT EXISTS marketplace_inventory_consume_stock
+AFTER INSERT ON marketplace_inventory_consumptions
+BEGIN
+ UPDATE marketplace_inventory_stock SET quantity=quantity-(SELECT l.quantity
+ FROM marketplace_inventory_hold_lines l WHERE l.hold_id=NEW.hold_id
+ AND l.environment=marketplace_inventory_stock.environment
+ AND l.seller_ref=marketplace_inventory_stock.seller_ref AND l.sku=marketplace_inventory_stock.sku)
+ WHERE (environment,seller_ref,sku) IN
+ (SELECT environment,seller_ref,sku FROM marketplace_inventory_hold_lines WHERE hold_id=NEW.hold_id);
+END;
+CREATE TRIGGER IF NOT EXISTS marketplace_inventory_consumption_update BEFORE UPDATE ON marketplace_inventory_consumptions
+BEGIN SELECT RAISE(ABORT,'consumption is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS marketplace_inventory_consumption_delete BEFORE DELETE ON marketplace_inventory_consumptions
+BEGIN SELECT RAISE(ABORT,'consumption is retained'); END;
+CREATE TRIGGER IF NOT EXISTS marketplace_inventory_consumed_hold_update BEFORE UPDATE ON marketplace_inventory_holds
+WHEN EXISTS (SELECT 1 FROM marketplace_inventory_consumptions WHERE hold_id=OLD.id)
+BEGIN SELECT RAISE(ABORT,'consumed reservation is retained'); END;
+CREATE TRIGGER IF NOT EXISTS marketplace_inventory_consumed_line_insert BEFORE INSERT ON marketplace_inventory_hold_lines
+WHEN EXISTS (SELECT 1 FROM marketplace_inventory_consumptions WHERE hold_id=NEW.hold_id)
+BEGIN SELECT RAISE(ABORT,'consumed lines are retained'); END;
+CREATE TRIGGER IF NOT EXISTS marketplace_inventory_consumed_line_update BEFORE UPDATE ON marketplace_inventory_hold_lines
+WHEN EXISTS (SELECT 1 FROM marketplace_inventory_consumptions WHERE hold_id=OLD.hold_id OR hold_id=NEW.hold_id)
+BEGIN SELECT RAISE(ABORT,'consumed lines are retained'); END;
+CREATE TRIGGER IF NOT EXISTS marketplace_inventory_consumed_line_delete BEFORE DELETE ON marketplace_inventory_hold_lines
+WHEN EXISTS (SELECT 1 FROM marketplace_inventory_consumptions WHERE hold_id=OLD.hold_id)
+BEGIN SELECT RAISE(ABORT,'consumed lines are retained'); END;
 CREATE INDEX IF NOT EXISTS marketplace_inventory_active_holds
 ON marketplace_inventory_holds(environment,seller_ref,state,expires_at);
 CREATE INDEX IF NOT EXISTS marketplace_inventory_hold_stock
@@ -93,7 +135,8 @@ def available(db, env, seller, sku, now):
     held = db.execute('''SELECT COALESCE(SUM(l.quantity),0) FROM marketplace_inventory_hold_lines l
         JOIN marketplace_inventory_holds h ON h.id=l.hold_id
         WHERE l.environment=? AND l.seller_ref=? AND l.sku=?
-        AND h.state='reserved' AND h.expires_at>?''', (env, seller, sku, now)).fetchone()[0]
+        AND h.state='reserved' AND h.expires_at>?
+        AND NOT EXISTS (SELECT 1 FROM marketplace_inventory_consumptions c WHERE c.hold_id=h.id)''', (env, seller, sku, now)).fetchone()[0]
     return row[0] - held
 
 
@@ -172,8 +215,14 @@ def release(db, env, buyer, hold, now):
         row = db.execute('SELECT state,expires_at FROM marketplace_inventory_holds WHERE id=? AND environment=? AND buyer_ref=?', (hold, env, buyer)).fetchone()
         if not row:
             raise InventoryError('unknown reservation')
+        if consumed(db,hold):
+            raise InventoryError('settled test reservation cannot be released')
         state = row[0]
         if state == 'reserved':
             state = 'expired' if row[1] <= now else 'released'
             db.execute('UPDATE marketplace_inventory_holds SET state=? WHERE id=?', (state, hold))
         return state
+
+
+def consumed(db,hold):
+    return db.execute('SELECT 1 FROM marketplace_inventory_consumptions WHERE hold_id=?',(hold,)).fetchone() is not None

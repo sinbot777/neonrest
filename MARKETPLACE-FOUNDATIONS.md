@@ -468,3 +468,62 @@ SQLite/encryption stack and simulated recovery/concurrency tests. It does not
 establish full Flask/session authorization, browser checkout, real provider sandbox
 behavior, a scheduled worker service, tax/carrier integration, financial settlement
 or production readiness. All corresponding acceptance gates remain open.
+
+## Increment 7: explicit atomic test settlement
+
+`marketplace_settlement.py` composes a successful reconciled Stripe test attempt,
+its complete accepted quote, stock consumption and a sealed balanced test journal
+in one `BEGIN IMMEDIATE` transaction. The immutable settlement record permits
+one winning attempt per order. A different already-observed successful attempt is
+retained for review rather than consuming stock or applying another platform fee.
+Subtotal-only observations cannot settle. No browser-return field is accepted as
+payment evidence. Native same-connection address validation is required.
+
+The transaction rechecks buyer/seller permissions, current shop/listing/fee terms,
+account capabilities/link, quote expiry, native location version and reservation
+identity/lines. Expired/canceled/changed checkouts are retained for manual review;
+there is no automatic re-reservation or refund. Retry returns the original winning
+record even after quote expiry. A new verified canonical success event for the
+same winning payment is acknowledged without repeating effects. Reversals and
+refunds still require their own future lifecycle; terminal conflicts go to review.
+
+Inventory records append an immutable consumption fact and deduct stock once.
+Availability excludes consumed holds, preventing a second subtraction or automatic
+stock restoration at expiry. Cancellation cannot release a consumed hold. Existing
+prepayment order/hold snapshots and state columns remain unchanged for additive
+migration compatibility: the checkout reader derives `test_settled` from the
+consumption fact; it must not be interpreted as live payment or fulfillment.
+Queries for awaiting orders must also exclude consumed holds. The bounded expiry
+helper does so. Seller listing sync refuses to reset sold test SKUs from stale
+listing quantities; trusted explicit stock adjustment remains a separate action.
+
+The ledger exposes an internal transaction composition writer while preserving the
+public transaction-owning API. Test allocation debits scoped test payment clearing
+and credits seller obligation (items plus separately stated shipping minus platform
+fee), platform fee and unallocated tax. Owner fee exemptions remain snapshotted.
+Processor cost stays unknown; these rehearsal allocations do not establish actual
+processor transfers, approved charge/funds flow or tax remittance responsibility.
+No financial account represents spendable customer credit.
+
+`run_ready` is one bounded server-only tick over durable successful observations
+without a settlement or review. Each transaction commits independently; failed
+writes remain discoverable for retry without webhook redelivery. Overlapping ticks
+are idempotent. Supply a trusted advancing clock for a real worker loop. This is
+not scheduled, alerted or exposed as a request endpoint. Review records are
+retained and terminal for automation; an authorized resolution workflow is still
+required before operational use.
+
+Validation: **193 tests plus 38 money/shipping checks pass locally**. The 33 new
+cases cover complete allocations, owner exemption, duplicate events, competing
+successes, rollback at journal/stock/final-record writes, other active reservations,
+cancellation/expiry, changed addresses/terms, revoked eligibility/capabilities,
+immutable history, concurrency, crash recovery, foreign-key enforcement and
+migration/backup restoration. Provider observations, shipping and tax remain
+fixtures. Hosted proof below applies only to the earlier pinned component commit
+until the expanded suite is separately rehearsed.
+
+No app registration, route/UI, settings/key change, live migration, scheduler or
+live payment was introduced. Refund/dispute accounting, actual processor settlement,
+PayPal canonical handling, provider consent/creation, tax/carrier integration,
+customer/seller screens, receipts, entitlements and fulfillment remain unfinished.
+This increment does not complete MP-06, MP-08, MP-10, MP-16 or MP-20.

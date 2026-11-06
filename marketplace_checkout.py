@@ -1,6 +1,6 @@
 """Inactive checkout rehearsal using real-order-shaped, immutable records.
 
-No routes, startup registration, provider calls or paid-state transition. Only
+No routes, startup registration, provider calls or live paid-state transition. Only
 test mode is accepted until onboarding, publication, shipping/tax and canonical
 payment processing are integrated. Test records can never be promoted to live.
 """
@@ -164,6 +164,11 @@ def sync_listing(db, env, uid, shop_id, listing_id, revision, now, policy=Neonre
         listing = db.execute('SELECT * FROM seller_listings WHERE id=? AND shop_id=?', (listing_id, shop_id)).fetchone()
         if not listing or listing['state'] != 'draft' or type(revision) is not int or listing['revision'] != revision:
             raise CheckoutError('listing changed or unavailable')
+        if db.execute('''SELECT 1 FROM marketplace_checkout_skus m
+            JOIN marketplace_inventory_hold_lines l ON l.sku=m.id AND l.environment=m.environment AND l.seller_ref=m.seller_ref
+            JOIN marketplace_inventory_consumptions c ON c.hold_id=l.hold_id
+            WHERE m.listing_id=?''',(listing_id,)).fetchone():
+            raise CheckoutError('sold test stock requires explicit inventory adjustment; listing sync cannot reset it')
         options = listing_options(listing)
         previous = db.execute('SELECT id,variant_key FROM marketplace_checkout_skus WHERE environment=? AND listing_id=? AND active=1', (env, listing_id)).fetchall()
         if {row['variant_key'] for row in previous} != {o[0] for o in options}:
@@ -278,7 +283,7 @@ def get_order(db, env, uid, order_id, now, policy=NeonrestPolicy):
         shop = shop_row(db, order['seller_ref'])
         if uid != order['seller_owner_id'] or shop['owner_id'] != uid or not policy.owner(db, uid, shop):
             raise CheckoutError('order unavailable')
-    state = order['state']
+    state = 'test_settled' if inventory.consumed(db,order['hold_id']) else order['state']
     if state == 'awaiting_payment' and order['expires_at'] <= now:
         state = 'expired'
     return dict(id=order['id'], state=state, snapshot=json.loads(order['snapshot']), expires_at=order['expires_at'])
@@ -292,6 +297,8 @@ def cancel_order(db, env, buyer, order_id, now, policy=NeonrestPolicy):
         order = db.execute('SELECT * FROM marketplace_checkout_orders WHERE id=? AND environment=? AND buyer_id=?', (order_id, env, buyer)).fetchone()
         if not order:
             raise CheckoutError('order unavailable')
+        if inventory.consumed(db,order['hold_id']):
+            return 'test_settled'
         if order['state'] == 'awaiting_payment':
             state = 'expired' if order['expires_at'] <= now else 'released'
             db.execute("UPDATE marketplace_inventory_holds SET state=? WHERE id=? AND state='reserved'", (state, order['hold_id']))
@@ -307,6 +314,7 @@ def expire_orders(db, env, now, limit=100):
     with inventory.transaction(db):
         holds = db.execute('''SELECT hold_id FROM marketplace_checkout_orders
             WHERE environment=? AND state='awaiting_payment' AND expires_at<=?
+            AND NOT EXISTS (SELECT 1 FROM marketplace_inventory_consumptions c WHERE c.hold_id=marketplace_checkout_orders.hold_id)
             ORDER BY expires_at,id LIMIT ?''', (env, now, limit)).fetchall()
         db.executemany("UPDATE marketplace_inventory_holds SET state='expired' WHERE id=? AND state='reserved'", [(h[0],) for h in holds])
         return len(holds)

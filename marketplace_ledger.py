@@ -1,7 +1,8 @@
-"""USD double-entry journal foundation. No payment/provider or Flask integration.
+"""USD double-entry journal foundation. No provider calls or Flask integration.
 
 Call initialize explicitly on a dedicated connection. Each post owns its transaction;
-callers must not wrap it in another transaction. Amounts are integer cents. Positive
+callers must not wrap it in another transaction. Internal test settlement uses the
+locked composition writer within its own transaction. Amounts are integer cents. Positive
 entries are debits and negative entries are credits. Corrections are new journals.
 """
 import hashlib
@@ -117,6 +118,24 @@ def post(db, env, request_key, event_ref, entries, now):
     The future provider adapter must authenticate and reconcile events first. Replay
     returns the original journal; conflicting reuse of a key fails without writing.
     """
+    if db.in_transaction:
+        raise LedgerError('dedicated connection required')
+    if db.execute('PRAGMA foreign_keys').fetchone()[0] != 1:
+        raise LedgerError('foreign keys must be enabled on this connection')
+    db.execute('BEGIN IMMEDIATE')
+    try:
+        result = _post_locked(db, env, request_key, event_ref, entries, now)
+        db.commit()
+        return result
+    except BaseException:
+        db.rollback()
+        raise
+
+
+def _post_locked(db, env, request_key, event_ref, entries, now):
+    """Internal composition writer; the caller owns the entire transaction."""
+    if not db.in_transaction or db.execute('PRAGMA foreign_keys').fetchone()[0] != 1:
+        raise LedgerError('foreign-key-enabled transaction required')
     environment(env)
     label(request_key)
     label(event_ref)
@@ -137,27 +156,16 @@ def post(db, env, request_key, event_ref, entries, now):
     if len({a for a, _ in normalized}) != len(normalized) or sum(n for _, n in normalized):
         raise LedgerError('entries must be distinct and balance')
     digest = hashlib.sha256(json.dumps([env, event_ref, normalized], separators=(',', ':')).encode()).hexdigest()
-    if db.execute('PRAGMA foreign_keys').fetchone()[0] != 1:
-        raise LedgerError('foreign keys must be enabled on this connection')
-    if db.in_transaction:
-        raise LedgerError('dedicated connection required')
-    db.execute('BEGIN IMMEDIATE')
-    try:
-        old = db.execute('SELECT id,payload_hash,posted FROM marketplace_ledger_journals WHERE environment=? AND request_key=?', (env, request_key)).fetchone()
-        if old:
-            if old[1] != digest or old[2] != 1:
-                raise LedgerError('idempotency conflict')
-            db.commit()
-            return old[0]
-        cursor = db.execute('INSERT INTO marketplace_ledger_journals (environment,request_key,payload_hash,event_ref,created_at) VALUES (?,?,?,?,?)', (env, request_key, digest, event_ref, now))
-        journal_id = cursor.lastrowid
-        db.executemany('INSERT INTO marketplace_ledger_entries VALUES (?,?,?,?)', [(journal_id, env, a, n) for a, n in normalized])
-        db.execute('UPDATE marketplace_ledger_journals SET posted=1 WHERE id=?', (journal_id,))
-        db.commit()
-        return journal_id
-    except BaseException:
-        db.rollback()
-        raise
+    old = db.execute('SELECT id,payload_hash,posted FROM marketplace_ledger_journals WHERE environment=? AND request_key=?', (env, request_key)).fetchone()
+    if old:
+        if old[1] != digest or old[2] != 1:
+            raise LedgerError('idempotency conflict')
+        return old[0]
+    cursor = db.execute('INSERT INTO marketplace_ledger_journals (environment,request_key,payload_hash,event_ref,created_at) VALUES (?,?,?,?,?)', (env, request_key, digest, event_ref, now))
+    journal_id = cursor.lastrowid
+    db.executemany('INSERT INTO marketplace_ledger_entries VALUES (?,?,?,?)', [(journal_id, env, a, n) for a, n in normalized])
+    db.execute('UPDATE marketplace_ledger_journals SET posted=1 WHERE id=?', (journal_id,))
+    return journal_id
 
 
 def balances(db, env):

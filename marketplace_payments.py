@@ -310,7 +310,7 @@ def _track_test_payment_locked(db, uid, order_id, account_id, payment_ref, now, 
         if old['payment_ref'] != payment_ref or (quote_row is None and link) or (quote_row is not None and (not link or link['quote_id']!=quote_row['id'])):
             raise PaymentError('payment reference conflict')
         return old['id']
-    if order['state'] != 'awaiting_payment' or order['expires_at'] <= now:
+    if order['state'] != 'awaiting_payment' or order['expires_at'] <= now or inventory.consumed(db,order['hold_id']):
         raise PaymentError('reservation no longer active')
     snapshot = json.loads(order['snapshot'])
     if snapshot.get('test_only') is not True or snapshot.get('payment_enabled') is not False:
@@ -458,6 +458,9 @@ def _reconcile_receipt_locked(db,adapter,receipt_id,canonical,outcome,reason,now
         return dict(receipt_id=receipt_id,outcome=outcome,reason=reason)
     order = db.execute('SELECT * FROM marketplace_checkout_orders WHERE id=?', (attempt['order_id'],)).fetchone()
     quote_link=db.execute('SELECT * FROM marketplace_payment_quote_links WHERE attempt_id=?',(attempt['id'],)).fetchone()
+    settled=None
+    if inventory.consumed(db,order['hold_id']) and db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='marketplace_test_settlements'").fetchone():
+        settled=db.execute('SELECT attempt_id,quote_id FROM marketplace_test_settlements WHERE order_id=?',(order['id'],)).fetchone()
     quote_current=True
     if quote_link:
         if __package__:
@@ -479,11 +482,13 @@ def _reconcile_receipt_locked(db,adapter,receipt_id,canonical,outcome,reason,now
         linked = db.execute("SELECT 1 FROM marketplace_payment_shop_links WHERE environment='test' AND seller_ref=? AND owner_id=? AND account_id=?", (order['seller_ref'],order['seller_owner_id'],account['id'])).fetchone()
         if canonical['order'] != order['id'] or canonical['currency'] != 'usd' or canonical['amount'] != attempt['expected_amount_cents']:
             outcome, reason = 'needs_review', 'payment_binding_mismatch'
+        elif settled and settled['attempt_id']==attempt['id'] and quote_link and settled['quote_id']==quote_link['quote_id'] and canonical['quote']==quote_link['quote_id'] and canonical['status']=='succeeded':
+            outcome, reason = 'observed_test', 'already_test_settled'
         elif quote_link and (not quote_current or canonical['quote']!=quote_link['quote_id'] or quote_link['expires_at']<=now):
             outcome, reason = 'needs_review', 'quote_binding_mismatch_or_expired'
         elif not permitted or not linked or account['owner_id'] != order['seller_owner_id'] or not account['charges_enabled'] or not account['payouts_enabled']:
             outcome, reason = 'needs_review', 'seller_or_buyer_unavailable'
-        elif order['state'] != 'awaiting_payment' or order['expires_at'] <= now:
+        elif order['state'] != 'awaiting_payment' or order['expires_at'] <= now or inventory.consumed(db,order['hold_id']):
             outcome, reason = 'needs_review', 'reservation_no_longer_active'
         elif attempt['observed_status'] in ('succeeded','canceled') and attempt['observed_status'] != canonical['status']:
             outcome, reason = 'needs_review', 'terminal_observation_conflict'

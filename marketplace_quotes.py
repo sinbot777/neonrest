@@ -93,7 +93,7 @@ def _reference(value):
 def _fresh_order(db, buyer, order_id, now, policy):
     checkout.actor(policy, db, buyer)
     order = db.execute("SELECT * FROM marketplace_checkout_orders WHERE id=? AND buyer_id=? AND environment='test'", (order_id,buyer)).fetchone()
-    if not order or order['state']!='awaiting_payment' or order['expires_at']<=now:
+    if not order or order['state']!='awaiting_payment' or order['expires_at']<=now or inventory.consumed(db,order['hold_id']):
         raise QuoteError('active buyer reservation required')
     snapshot = json.loads(order['snapshot'])
     shop = checkout.shop_row(db, order['seller_ref'])
