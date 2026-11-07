@@ -730,3 +730,12 @@ options is rejected as an unknown field by the pinned API version. The hosted fo
 now requires an account password after the fictional example email. No password,
 real identity/bank details or seller agreement was submitted. This browser step
 requires the owner's handoff; it does not establish seller consent or capabilities.
+
+The HTTP boundary also passed the manifest-pinned isolated PythonAnywhere rehearsal:
+**258 tests plus 38 money/shipping checks**, zero failures/errors/skips. Component
+commit `74672373509ab16c98d173bdbf1465081ea251d8`; harness
+`5875621d39c1651ad77b18f62d0b57fb8bac60ee`; run ID
+`37a0b56b69bc4092a44ad0ddaa3f167e`. All 30 source blobs matched; footprint
+489,438 bytes. Test execution recorded zero network, external SQLite, live path,
+live import or subprocess attempts. This is hosted component verification, not
+real provider webhook delivery or an end-to-end purchase/refund.
