@@ -163,11 +163,14 @@ class PayPalSandboxAPI:
     with PayPal's postback verification endpoint. No certificate URL is fetched.
     A successful verification alone does not reconcile, pay or fulfill an order.
     """
-    def __init__(self,client_id,client_secret,webhook_id,http=None):
-        for value in (client_id,client_secret,webhook_id):
+    def __init__(self,client_id,client_secret,webhook_id=None,http=None):
+        for value in (client_id,client_secret):
             if not isinstance(value,str) or not 8<=len(value)<=512 or any(ord(c)<33 or ord(c)>126 for c in value):
                 raise PaymentError('configured PayPal sandbox credentials/webhook required')
-        ref(webhook_id)
+        if webhook_id is not None:
+            if not isinstance(webhook_id,str) or not 8<=len(webhook_id)<=160:
+                raise PaymentError('configured PayPal sandbox webhook required')
+            ref(webhook_id)
         self._client=client_id;self._secret=client_secret;self._webhook=webhook_id
         self._http=http or TestProviderHTTP()
 
@@ -180,7 +183,19 @@ class PayPalSandboxAPI:
             raise ProviderUnavailable('provider authorization unavailable')
         return token
 
+    def check_credentials(self):
+        """Authenticate sandbox credentials without returning/storing the token.
+
+        A successful check does not establish webhook registration or marketplace
+        production approval. No payment, refund or payout operation is performed.
+        """
+        self._token()
+        return dict(provider='paypal',environment='sandbox',authenticated=True,
+            webhook_configured=self._webhook is not None)
+
     def verify_webhook(self,raw,headers):
+        if self._webhook is None:
+            raise PaymentError('configured PayPal sandbox webhook required')
         if type(raw) is not bytes or not 0<len(raw)<=1_048_576 or not isinstance(headers,dict):
             raise PaymentError('invalid PayPal webhook payload')
         normalized={}

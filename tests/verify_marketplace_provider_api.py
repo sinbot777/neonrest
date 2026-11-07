@@ -74,6 +74,32 @@ class ProviderAPITests(unittest.TestCase):
         for account,payment in [('acct_seller/../charges','pi_fixture'),('acct_seller','pi_fixture?expand=secret'),('acct_seller','https://attacker')]:
             with self.subTest(payment=payment),self.assertRaises(PaymentError): self.stripe().fetch_payment(account,payment)
 
+    def test_paypal_readiness_authenticates_without_a_webhook_or_token_disclosure(self):
+        client=api.PayPalSandboxAPI('client_fixture','secret_fixture',http=self.http)
+        result=client.check_credentials()
+        self.assertEqual(result,dict(provider='paypal',environment='sandbox',authenticated=True,webhook_configured=False))
+        self.assertNotIn(self.http.token,str(result))
+        self.assertEqual(len(self.http.calls),1)
+        self.assertEqual(self.http.calls[0][1],'https://api-m.sandbox.paypal.com/v1/oauth2/token')
+
+    def test_missing_webhook_cannot_verify_or_make_an_oauth_request(self):
+        client=api.PayPalSandboxAPI('client_fixture','secret_fixture',http=self.http)
+        raw,headers=self.paypal_event()
+        with self.assertRaises(PaymentError): client.verify_webhook(raw,headers)
+        self.assertEqual(self.http.calls,[])
+        for webhook in ('','short',True,'bad/key/long'):
+            with self.assertRaises(PaymentError): api.PayPalSandboxAPI('client_fixture','secret_fixture',webhook,http=self.http)
+
+    def test_paypal_readiness_with_webhook_still_does_not_verify_delivery(self):
+        result=self.paypal().check_credentials()
+        self.assertTrue(result['webhook_configured']);self.assertNotIn('verified',result)
+        self.assertEqual(len(self.http.calls),1)
+
+    def test_paypal_readiness_rejects_invalid_token_without_echoing_it(self):
+        self.http.token='private_fixture_token\r\nheader'
+        with self.assertRaises(api.ProviderUnavailable) as error: self.paypal().check_credentials()
+        self.assertNotIn('private_fixture_token',str(error.exception))
+
     def test_paypal_uses_only_sandbox_oauth_and_registered_webhook_id(self):
         raw,headers=self.paypal_event()
         result=self.paypal().verify_webhook(raw,headers)

@@ -633,3 +633,39 @@ before test execution. No dependencies, live app/data/settings, scheduler or
 provider operation changed. This is isolated host component acceptance using
 fixtures, not actual Stripe sandbox, scheduled-worker, full request/session/UI or
 financial release acceptance. The running Sandbox and Production remain unchanged.
+
+## Provider authentication and test-account setup
+
+`PayPalSandboxAPI` now supports an OAuth-only readiness check before a webhook is
+registered. `check_credentials` discards the access token and returns only sanitized
+provider/environment/authentication status and whether a webhook ID is configured.
+Webhook verification still fails before any network request when its registered ID
+is missing. An OAuth success is not signature verification or marketplace approval.
+
+`check_marketplace_sandbox.py` is an explicit server CLI for read-only authentication
+and optional test connected-account status. It accepts private server config paths,
+not secrets on command lines. It rejects symlinks, nonregular/wrong-owner files,
+public permissions, oversized or ambiguous JSON and live configuration. Independent
+provider results are redacted; no token, credential, customer data or provider error
+message is emitted. Stripe calls only platform/account GETs; PayPal calls only the
+sandbox OAuth token endpoint. No accounts, payments, refunds or webhooks are created.
+
+Validation: **242 tests and 38 money/shipping checks pass locally**. Nine new cases
+cover authentication without a webhook, refusal to verify missing-webhook deliveries,
+invalid/redacted token responses, strict private test configuration, live-mode and
+symlink rejection, sanitized provider/capability results and independent failure
+handling. The native full suite continues to use mocked HTTP.
+
+Provider dashboard setup has separately progressed: a test connected merchant
+account was created with direct-payment properties, full Stripe Dashboard access,
+and Stripe fee/loss handling. It remains restricted until the fictional seller's
+test onboarding requirements are completed; its existence is not seller consent,
+capability readiness or a trusted Neonrest account association. The dashboard-created
+account uses Accounts v2; Stripe documents compatibility with v1 account retrieval
+in its [Accounts v2 reference](https://docs.stripe.com/connect/accounts-v2).
+
+The PayPal Platform sandbox credentials were installed through the authenticated
+file editor in a private server file, never in source, shell history or chat.
+Saved JSON and file permissions were checked. No Marketplace webhook listener is
+registered yet. Provider-authentication evidence and remaining onboarding/event/
+checkout acceptance must remain distinct from live commerce readiness.
