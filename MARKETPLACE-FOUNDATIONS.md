@@ -739,3 +739,28 @@ commit `74672373509ab16c98d173bdbf1465081ea251d8`; harness
 489,438 bytes. Test execution recorded zero network, external SQLite, live path,
 live import or subprocess attempts. This is hosted component verification, not
 real provider webhook delivery or an end-to-end purchase/refund.
+
+### Webhook runtime validation — November 7, 2026
+
+The test-only runtime wrapper preserves unrelated routes and rejects invalid
+test configuration and unmarked databases. It performs no startup migration or
+automatic database creation. Nine added tests cover those boundaries, failure
+isolation and durable handling of a signed, unbound event.
+
+**267 tests plus 38 money/shipping checks pass locally and in hosted component
+verification**, with no failures, errors or skips. Component commit:
+`ddb8a17d4542e063ec3621f3797611ffd4419af6`; rehearsal driver:
+`591d0042d38162310cd9b05fa3bfb67a1c60e529`. All 32 source blobs were
+verified. Tests recorded no network, external SQLite, live-path/import or
+subprocess attempts. Negative probes also verify that existing-file SQLite URI
+support remains restricted to the isolated QA directory.
+
+A separate Stripe test transport check received a genuine creation event for an
+unconfirmed connected-account PaymentIntent. A signed duplicate returned 200
+while retaining one receipt, and a forged signature returned 400. The creation
+event is deliberately ignored for settlement; no payment was confirmed and
+amount received was zero. This proves event transport, not a completed purchase.
+
+Genuine PayPal capture delivery, canonical PayPal processing, checkout/refund
+creation and full purchase/refund acceptance remain incomplete. Live purchasing
+remains disabled.
