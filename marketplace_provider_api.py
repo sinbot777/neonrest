@@ -52,7 +52,7 @@ class TestProviderHTTP:
         if parts.scheme!='https' or parts.username or parts.password or port or parts.query or parts.fragment:
             return False
         if parts.netloc=='api.stripe.com' and method=='GET':
-            return bool(re.fullmatch(r'/v1/(?:account|accounts/acct_[A-Za-z0-9_]+|payment_intents/pi_[A-Za-z0-9_]+)',parts.path))
+            return bool(re.fullmatch(r'/v1/(?:account|accounts/acct_[A-Za-z0-9_]+|payment_intents/pi_[A-Za-z0-9_]+|refunds/re_[A-Za-z0-9_]+)',parts.path))
         return parts.netloc=='api-m.sandbox.paypal.com' and method=='POST' and parts.path in ('/v1/oauth2/token','/v1/notifications/verify-webhook-signature')
 
     def request(self,method,url,headers,body=None):
@@ -111,6 +111,18 @@ class StripeTestAPI:
         value=self._get('/v1/payment_intents/'+payment_ref,account_ref)
         if value.get('id')!=payment_ref or value.get('object')!='payment_intent' or value.get('livemode') is not False:
             raise PaymentError('canonical test payment mismatch')
+        return value
+
+    def fetch_refund(self,account_ref,refund_ref):
+        """Canonical read only; no refund creation or fee/transfer reversal."""
+        if not isinstance(refund_ref,str) or not re.fullmatch(r're_[A-Za-z0-9_]{1,150}',refund_ref):
+            raise PaymentError('invalid refund reference')
+        self._platform()
+        value=self._get('/v1/refunds/'+refund_ref,account_ref)
+        if value.get('id')!=refund_ref or value.get('object')!='refund':
+            raise PaymentError('canonical refund mismatch')
+        # Refund objects have no livemode field. The reconciliation adapter must
+        # additionally retrieve and validate the parent test PaymentIntent.
         return value
 
     def resolve_account(self,account_ref):

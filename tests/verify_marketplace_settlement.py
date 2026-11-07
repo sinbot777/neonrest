@@ -22,7 +22,7 @@ from verify_marketplace_payments import OnboardingFixture,canonical,signed_event
 from verify_marketplace_quotes import QuoteServices
 
 
-def prepare(db,key,waived=False):
+def prepare(db,key,waived=False,platform='platform_fixture'):
     sku,store,destination,origin,resolver=setup(db,key)
     payments.initialize(db);settlement.initialize(db)
     services=QuoteServices(db)
@@ -31,12 +31,12 @@ def prepare(db,key,waived=False):
     order=checkout.create_order(db,'test',2,'shop-a','order',[(sku,1,0)],100,FixturePolicy)
     quote=quotes.create_quote(db,2,order,destination['id'],'quote',resolver,services,services,101,FixturePolicy)
     quotes.accept_quote(db,2,quote,resolver,102,FixturePolicy)
-    scope=payments.Scope('stripe','platform_fixture')
+    scope=payments.Scope('stripe',platform)
     request=payments.begin_onboarding(db,1,'shop-a',scope,'onboard',102,FixturePolicy)
     account=payments.complete_onboarding(db,1,request,OnboardingFixture(scope),102,FixturePolicy)
     attempt=payments.track_quoted_test_payment(db,2,quote,account,'pi_fixture',resolver,103,FixturePolicy)
     payment=canonical(order,amount=1590,amount_received=1590,metadata={'neonrest_order':order,'neonrest_quote':quote})
-    adapter=payments.StripeTestWebhookAdapter('platform_fixture',[SECRET],lambda a,p:payment)
+    adapter=payments.StripeTestWebhookAdapter(platform,[SECRET],lambda a,p:payment)
     raw,sig=signed_event(now=104)
     receipt=payments.receive_stripe(db,adapter,raw,sig,104,FixturePolicy)['receipt_id']
     return dict(sku=sku,store=store,destination=destination,origin=origin,resolver=resolver,order=order,

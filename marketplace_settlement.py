@@ -107,16 +107,20 @@ def _allocation(order,quote):
         processor_cost_cents=None,provider_transfer_verified=False,tax_remittance_verified=False)
 
 
-def _journal_locked(db,order,account,attempt,allocation,now):
+def _ledger_definitions(order,account,allocation):
     # Separate scope-bound test clearing, seller obligation, fee and tax accounts.
     # This allocation does not claim the processor has transferred money or that
     # the eventual approved marketplace charge/tax model uses these accounts.
     scope=hashlib.sha256(json.dumps([account['provider'],account['platform_ref'],account['account_ref']],separators=(',',':')).encode()).hexdigest()
     seller=hashlib.sha256(json.dumps([order['seller_ref'],order['seller_owner_id']],separators=(',',':')).encode()).hexdigest()
-    definitions=[('qa-clearing-'+scope,'provider-'+scope,'asset',allocation['total_cents']),
+    return [('qa-clearing-'+scope,'provider-'+scope,'asset',allocation['total_cents']),
         ('qa-seller-'+seller,'seller-'+seller,'liability',-allocation['seller_obligation_cents']),
         ('qa-fee','platform','income',-allocation['platform_fee_cents']),
         ('qa-tax-'+scope,'unallocated-tax-'+scope,'liability',-allocation['tax_cents'])]
+
+
+def _journal_locked(db,order,account,attempt,allocation,now):
+    definitions=_ledger_definitions(order,account,allocation)
     entries=[]
     for ident,owner,kind,amount in definitions:
         expected=(ident,'test',owner,kind,'USD')

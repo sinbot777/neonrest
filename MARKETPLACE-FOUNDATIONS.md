@@ -545,3 +545,73 @@ network, external SQLite, live path/import or subprocess attempts. No dependenci
 were installed and no running application, real database, settings or scheduler
 was changed. This proves these test components on the host, not full Flask/session,
 provider sandbox, scheduled-worker, checkout UI or financial release acceptance.
+
+## Increment 8: canonical test refunds and reverse allocations
+
+`marketplace_refunds.py` adds immutable, owner-authorized test refund plans against
+an existing winning test settlement. Item, separately stated shipping and tax
+amounts are bounded independently against the original allocation. Unbound,
+pending, review and exhausted plans reserve remaining headroom; only an authorized
+withdrawal before any provider binding, or a canonical failed/canceled refund,
+releases it. Withdrawal never cancels a provider refund. Idempotency keys compare
+order and component amounts, and concurrent plans cannot exceed the original total.
+
+An internal server-created binding associates one provider refund with one plan
+and its historical payment account. It is not a browser-return API. The configured
+Stripe test reader retrieves both the parent PaymentIntent and the refund, outside
+write locks. Canonical account/platform, test parent, original order/quote, exact
+currency/amount, creation time and refund-plan metadata must match. Successful
+verification alone cannot initiate a refund. No refund-creation HTTP method exists.
+
+`StripeTestAPI.fetch_refund` adds only the pinned GET refund endpoint with the
+existing test-key, platform identity, connected-account and API-version checks.
+Refund objects have no native `livemode` attribute, so the adapter also verifies
+the parent canonical test PaymentIntent; an unexpected positive livemode value is
+rejected. The request shape follows Stripe's official
+[refund object](https://docs.stripe.com/api/refunds/object) and
+[retrieve endpoint](https://docs.stripe.com/api/refunds/retrieve) documentation.
+Configured callbacks remain trusted server code, never caller-supplied flags.
+
+A successful canonical refund appends a minimal observation and sealed reverse
+journal, applies the refund once, and completes its leased job in one transaction.
+It debits the original seller obligation, unallocated tax and platform-fee accounts
+and credits original test clearing. Commission credits use cumulative successfully
+refunded item amounts, preserving rounding and owner exemptions; shipping/tax do
+not generate platform commission credits. Processor fees remain unknown. This
+rehearsal does not establish an actual application-fee refund, transfer reversal,
+processor settlement, tax remittance adjustment or approved Connect funds flow.
+
+Pending/requires-action states and outages retry with 30-second exponential delay,
+capped at 15 minutes, and eight attempts. Claims have a 60-second fenced lease.
+Crashes before/during application can be recovered; stale/expired workers cannot
+post or replace a newer result. Canonical failed/canceled refunds release budget
+without posting. Reviews and exhaustion retain budget, preventing another refund
+while the original outcome is unresolved. Observations persist only status/time;
+provider error messages, raw responses and customer fields are not stored.
+
+New refund requests require the original current eligible shop owner. Internal
+reconciliation of an already-bound refund remains tied to the immutable historical
+account/owner even after suspension or shop transfer; changed permissions do not
+silently discard an external financial outcome. New owners cannot claim that
+history. `get_summary` supplies buyer/original-owner scoped aggregate test status,
+refunded amount and fee credit, without provider references or address data. The
+original checkout state remains `test_settled`; this separate refund summary derives
+`test_partially_refunded` or `test_refunded` for future integration.
+
+Validation: **233 tests plus 38 money/shipping checks pass locally**, including
+40 new cases for component caps, cumulative rounding, owner exemption, withdrawal,
+canonical binding/mode checks, historical ownership, pending/failed/outage outcomes,
+concurrent requests/claims, stale-worker fencing, final-write rollback, crash/retry
+caps, immutable history and migration/backup restore. One integrated contract test
+uses the credentialed native read client with mocked HTTP through the final atomic
+refund journal. No real credentials or provider API calls were used.
+
+Operational acceptance remains open: no UI/routes, scheduled refund worker, alerting,
+actual provider refund creation/consent, signed refund-webhook ingestion, external
+unplanned-refund discovery, review resolution or real provider sandbox proof has
+been introduced. Terminal failed/canceled, succeeded and reviewed records are not
+automatically reopened if a later provider state conflicts; that needs an audited
+canonical resolution workflow. Chargebacks, disputes, failed-refund reversals after
+application, actual fee/transfer recovery, duplicate-payment resolution, inventory
+returns and digital entitlement effects remain unfinished. Refunds never restock
+items or grant fulfillment permission. MP-06/08/10/16/20 remain in progress.
