@@ -40,7 +40,8 @@ def config():
     if mode not in ('test','live'):return None
     if mode=='live' and (request.script_root.startswith('/sandbox') or not (os.getenv('NEONREST_STRIPE_LIVE_CONFIRMED')=='1' or private.get('live_confirmed') is True)):return None
     if not key.startswith('sk_'+mode+'_') or not secret.startswith('whsec_') or not re.fullmatch(r'price_[A-Za-z0-9]+',price):return None
-    return {'mode':mode,'key':key,'webhook':secret,'price':price}
+    return {'mode':mode,'key':key,'webhook':secret,'price':price,
+            'complimentary_pages':private.get('complimentary_pages',{})}
 
 
 def api(cfg,method,path,data=None,idempotency=None):
@@ -58,8 +59,20 @@ def check_price(price):
         raise pages.PageError('The configured subscription does not match the approved $5 USD / three-month plan.',503)
 
 
+def complimentary(page,cfg):
+    """Explicit server grants are bound to this page's current owner.
+
+    No form field or checkout return can create a grant. Transfers invalidate
+    the old owner's grant without fabricating a paid Stripe subscription.
+    """
+    grants=(cfg or {}).get('complimentary_pages',{})
+    owner=grants.get(page['id']) if isinstance(grants,dict) else None
+    return page['kind']=='business' and type(owner) is int and owner>0 and owner==page['owner_id']
+
+
 def entitled(db,page):
     cfg=config()
+    if complimentary(page,cfg):return True
     if not cfg or cfg['mode']!='live':return False
     row=db.execute('SELECT * FROM page_subscriptions WHERE page_id=?',(page['id'],)).fetchone()
     return bool(row and row['live'] and row['owner_id']==page['owner_id'] and row['paid_until']>time.time()
@@ -162,6 +175,7 @@ def register(app,core):
                 api(cfg,'POST','subscriptions/'+row['subscription_id'],{'cancel_at_period_end':'true'},'neonrest-cancel-'+row['subscription_id'])
                 with db:db.execute('UPDATE page_subscriptions SET cancel_at_period_end=1,updated_at=? WHERE page_id=?',(int(time.time()),page_id))
                 return redirect(url_for('page_billing.manage',page_id=page_id))
+            if complimentary(page,cfg):raise pages.PageError('This page has complimentary activation. No subscription checkout is needed.',409)
             if request.form.get('accept_terms')!='yes':raise pages.PageError('Accept the recurring $5 USD charge every three months before checkout.')
             if row and row['review_required']:raise pages.PageError('Contact support to resolve the billing review before starting another subscription.',409)
             check_price(api(cfg,'GET','prices/'+cfg['price']))
@@ -190,8 +204,9 @@ def register(app,core):
             if not url.startswith('https://checkout.stripe.com/'):raise pages.PageError('Checkout is unavailable.',503)
             with db:db.execute('UPDATE page_subscriptions SET checkout_id=?,updated_at=? WHERE page_id=?',(checkout['id'],int(time.time()),page_id))
             return redirect(url,code=303)
-        can_checkout=not row or not row['subscription_id'] or (row['status'] in ('canceled','incomplete_expired') and row['paid_until']<=time.time() and not row['review_required'])
-        return render_template('page_billing.html',page=page,billing=row,configured=bool(cfg),mode=cfg['mode'] if cfg else 'off',entitled=entitled(db,page),can_checkout=can_checkout)
+        comp=complimentary(page,cfg)
+        can_checkout=not comp and (not row or not row['subscription_id'] or (row['status'] in ('canceled','incomplete_expired') and row['paid_until']<=time.time() and not row['review_required']))
+        return render_template('page_billing.html',page=page,billing=row,configured=bool(cfg),mode=cfg['mode'] if cfg else 'off',entitled=entitled(db,page),can_checkout=can_checkout,complimentary=comp)
     @bp.post('/billing/stripe/webhook')
     def webhook():
         cfg=config()
