@@ -615,3 +615,21 @@ canonical resolution workflow. Chargebacks, disputes, failed-refund reversals af
 application, actual fee/transfer recovery, duplicate-payment resolution, inventory
 returns and digital entitlement effects remain unfinished. Refunds never restock
 items or grant fulfillment permission. MP-06/08/10/16/20 remain in progress.
+
+### Refund hosted proof
+
+Component commit `091b48af5a9a4e94237cebafcd600d5d9fb11c58` also passed
+**233 tests and 38 money/shipping checks** on PythonAnywhere: Python 3.13.1,
+SQLite 3.37.2, cryptography 50.0.2. Zero failures, errors or skips.
+Run ID: `e7652d3d5baa40589d097cead2d93a4c`.
+The driver at `dc32b40b57b1efa3b45b4a5ed4f968d0224bf154` hash-verified
+26 files totaling 409,550 source bytes. The receipt reports 454,645 logical bytes
+(under 0.5 MiB) for source and evidence at
+`/home/sinbot/releases/T31-marketplace-qa-20261107-091b48a/`.
+
+Python execution guards recorded zero network, external SQLite, live path/import
+or subprocess attempts during tests. Only public committed source was downloaded
+before test execution. No dependencies, live app/data/settings, scheduler or
+provider operation changed. This is isolated host component acceptance using
+fixtures, not actual Stripe sandbox, scheduled-worker, full request/session/UI or
+financial release acceptance. The running Sandbox and Production remain unchanged.
