@@ -63,9 +63,11 @@ class ProfileTests(RouteTests):
             self.db.execute('UPDATE identity_pages SET avatar_file=? WHERE id=?',(name,self.page));self.db.commit()
             url='/pages/'+self.page+'/artwork/avatar/'+name
             self.login(2);self.assertEqual(self.client.get(url).status_code,404)
-            self.login(1);self.assertEqual(self.client.get(url).status_code,200)
+            self.login(1)
+            with self.client.get(url) as response:self.assertEqual(response.status_code,200)
             with self.db:pages.set_state(self.db,1,self.page,0,'published')
-            self.login(2);self.assertEqual(self.client.get(url).status_code,200)
+            self.login(2)
+            with self.client.get(url) as response:self.assertEqual(response.status_code,200)
             self.db.execute('INSERT INTO user_blocks VALUES (1,2)');self.db.commit()
             self.assertEqual(self.client.get(url).status_code,404)
             self.login(1)
@@ -80,6 +82,20 @@ class ProfileTests(RouteTests):
         self.assertEqual(picture.size,(512,410));self.assertEqual(picture.mode,'RGBA')
         for value in (b'not an image',b'x'*(1800*1024+1)):
             with self.assertRaises(ValueError):profile.prepare_picture(Upload(value),'avatar')
+
+    def test_actual_upload_round_trip_uses_private_storage_and_protected_route(self):
+        raw=io.BytesIO();Image.new('RGB',(40,30),(40,120,160)).save(raw,format='PNG');raw.seek(0)
+        with tempfile.TemporaryDirectory() as root,patch.object(self.app,'root_path',root):
+            response=self.appearance(avatar=(raw,'portrait.png'))
+            self.assertEqual(response.status_code,302)
+            name=pages.get(self.db,self.page)['avatar_file']
+            self.assertRegex(name,r'^[a-f0-9]{48}\.png$')
+            folder=profile.artwork_folder(self.app)
+            self.assertEqual(folder.stat().st_mode&0o777,0o700)
+            with self.client.get('/pages/'+self.page+'/artwork/avatar/'+name) as result:
+                self.assertEqual(result.status_code,200)
+                self.assertEqual(result.mimetype,'image/png')
+                self.assertTrue(result.data.startswith(b'\x89PNG'))
 
 
 if __name__=='__main__':unittest.main()
