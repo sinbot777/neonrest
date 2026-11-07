@@ -539,7 +539,7 @@ skips. The refreshed manifest driver at commit
 Run ID: `f9fa556292a54e76bf5a27c66460bbeb`.
 
 The isolated folder is
-`/home/sinbot/releases/T31-marketplace-qa-20261106-3e12cd0/` with result,
+an isolated server QA directory with result,
 manifest, test output and folder-status notes. Execution safeguards recorded zero
 network, external SQLite, live path/import or subprocess attempts. No dependencies
 were installed and no running application, real database, settings or scheduler
@@ -625,7 +625,7 @@ Run ID: `e7652d3d5baa40589d097cead2d93a4c`.
 The driver at `dc32b40b57b1efa3b45b4a5ed4f968d0224bf154` hash-verified
 26 files totaling 409,550 source bytes. The receipt reports 454,645 logical bytes
 (under 0.5 MiB) for source and evidence at
-`/home/sinbot/releases/T31-marketplace-qa-20261107-091b48a/`.
+an isolated server QA directory.
 
 Python execution guards recorded zero network, external SQLite, live path/import
 or subprocess attempts during tests. Only public committed source was downloaded
@@ -669,3 +669,27 @@ file editor in a private server file, never in source, shell history or chat.
 Saved JSON and file permissions were checked. No Marketplace webhook listener is
 registered yet. Provider-authentication evidence and remaining onboarding/event/
 checkout acceptance must remain distinct from live commerce readiness.
+
+### Hosted provider-readiness verification — November 7, 2026
+
+Component source `c19411c8f48428dceba97c9febfa58f3e50c3577`, exercised by
+harness `82fa7f9c3e0265350f61dbcf674ed483be85c407`, passed **242 unittest
+cases and 38 money/shipping checks** on PythonAnywhere's Python 3.13.1,
+SQLite 3.37.2 and cryptography 50.0.2. Run ID:
+`2a2fbd894ef640059c81ef7c620d9f6b`. All 28 source blobs matched the manifest;
+there were zero failures, errors, skips, network, external SQLite, live-path/import
+or subprocess attempts during the isolated component suite. Footprint: 467,752 bytes.
+
+A separate explicit credential check then used the private Sandbox configurations
+and actual provider APIs. Stripe test platform authentication and retrieval of the
+new test merchant account succeeded. That account reported `charges_enabled=false`
+and `payouts_enabled=false`; test onboarding is incomplete. PayPal sandbox OAuth
+authentication succeeded and reported `webhook_configured=false`. Only sanitized
+status was printed; no secret or access token entered source or evidence.
+
+These results verify server authentication, not end-to-end commerce. Next gates
+remain test seller onboarding and trusted seller association, a separate Marketplace
+webhook listener with verified delivery/recovery, actual test checkout/refund flows,
+PayPal canonical reconciliation and conflict handling, then full UI/privacy/release
+acceptance. No running application was deployed, no live database was opened, and
+no real payment, refund, payout or live seller account was created.
