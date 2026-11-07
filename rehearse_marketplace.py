@@ -18,6 +18,7 @@ import sys
 import tempfile
 import unittest
 import urllib.request
+from urllib.parse import urlsplit, unquote
 import uuid
 
 SOURCE_COMMIT='ddb8a17d4542e063ec3621f3797611ffd4419af6'
@@ -77,7 +78,12 @@ def _guards(destination):
             name=str(args[0])
             allowed=name==':memory:' or name.startswith('file::memory:')
             if not allowed:
-                allowed=not name.startswith('file:') and within(Path(name).resolve(),destination)
+                if name.startswith('file:'):
+                    uri=urlsplit(name)
+                    allowed=(uri.scheme=='file' and not uri.netloc and not uri.fragment
+                             and uri.query=='mode=rw' and within(Path(unquote(uri.path)).resolve(),destination))
+                else:
+                    allowed=within(Path(name).resolve(),destination)
             if not allowed:
                 counts['external_sqlite_attempts']+=1
                 raise PermissionError('only isolated QA databases may be opened')
