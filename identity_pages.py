@@ -88,6 +88,11 @@ def initialize(db):
     # No executescript/commit: the caller owns the startup transaction.
     for statement in statements:
         db.execute(statement)
+    if __package__:
+        from . import page_profile
+    else:
+        import page_profile
+    page_profile.initialize(db)
 
 
 def account_eligible(db, uid, kind, age, ready):
@@ -548,6 +553,9 @@ def register(app, core):
                 action = request.form.get('action')
                 if action == 'edit':
                     edit(db, uid, page_id, revision(), request.form.get('name', ''), request.form.get('description', ''))
+                elif action == 'profile':
+                    from . import page_profile
+                    page_profile.save(db, __import__(__name__, fromlist=['']), app, uid, page_id, revision(), request.form, request.files)
                 elif action == 'state':
                     set_state(db, uid, page_id, revision(), request.form.get('state'))
                 else:
@@ -595,4 +603,10 @@ def register(app, core):
         response.headers['X-Robots-Tag'] = 'noindex, nofollow'
         return response
 
+    if __package__:
+        from . import page_profile
+    else:
+        import page_profile
+    import sys
+    page_profile.register_artwork(bp, app, core, sys.modules[__name__])
     app.register_blueprint(bp)

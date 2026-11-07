@@ -2,15 +2,24 @@
 {% block title %}{{ page.handle }} - Neonrest{% endblock %}
 {% block content %}
 {% include 'partials/identity_page_styles.html' %}
-<main class="identity-page">
-  <h1>{{ page.name }}</h1>
+<main class="identity-page page-profile page-accent-{{ page.accent }}">
+  <header class="page-profile-header">
+    <div class="page-profile-cover">{% if page.cover_file %}<img src="{{ url_for('identity_pages.artwork',page_id=page.id,slot='cover',filename=page.cover_file) }}" alt="" fetchpriority="high">{% endif %}</div>
+    <div class="page-profile-heading">
+    {% if page.avatar_file %}<img class="page-profile-avatar" src="{{ url_for('identity_pages.artwork',page_id=page.id,slot='avatar',filename=page.avatar_file) }}" alt="{{ page.name }} portrait">{% else %}<span class="page-profile-avatar page-profile-initial" aria-hidden="true">{{ page.name[:1]|upper }}</span>{% endif %}
+    <div><h1>{{ page.name }}</h1><p class="page-handle">{{ page.handle }} · {{ page.kind|capitalize }} page</p>{% if page.tagline %}<p class="page-tagline">{{ page.tagline }}</p>{% endif %}</div>
+    </div><div class="page-profile-actions">
 {% if session.get('user_id') and page.state=='published' and not page_hidden %}<form method="post" action="{{ url_for('page_social.following',page_id=page.id) }}"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}"><button name="state" value="{{ 'unfollow' if page_is_followed(page) else 'follow' }}">{{ 'Unfollow page' if page_is_followed(page) else 'Follow page' }}</button></form>{% endif %}
-  <p class="page-handle">{{ page.handle }} · {{ page.kind|capitalize }} page</p>
+  </div></header>
+  <nav class="page-profile-tabs" aria-label="On this page"><a href="#page-about">About</a><a href="#page-updates">Updates</a>{% if page_role %}<a href="{{ url_for('identity_pages.manage',page_id=page.id) }}">Manage page</a>{% endif %}</nav>
   {% if page_hidden %}<p role="status">Staff have hidden this page from other readers. Contact <a href="mailto:ToS@neonrest.com">ToS@neonrest.com</a> to request review.</p>{% endif %}
   {% if page.state!='published' %}<p>{{ page.state|capitalize }} — visible only to eligible page managers.</p>{% endif %}
+  <div class="page-profile-layout"><aside class="page-profile-about" aria-labelledby="page-about"><h2 id="page-about">About</h2>
   <div class="page-description">{{ page.description }}</div>
+  {% if page.website %}<p><a href="{{ page.website }}" rel="nofollow noopener noreferrer" target="_blank">Visit website <span class="page-sr-only">(opens in a new tab)</span></a></p>{% endif %}
   {% if page_role %}<p><a href="{{ url_for('identity_pages.manage', page_id=page.id) }}">Manage this page</a></p>{% endif %}
   {% if session.get('user_id') and page.state=='published' and not page_hidden %}<p><a href="{{ url_for('identity_pages.report_page',page_id=page.id) }}">Report page</a></p>{% endif %}
+  </aside><div class="page-profile-feed">
   {% if page_role and page.state=='published' and not page_hidden %}
   <form method="post" action="{{ url_for('identity_pages.updates',page_id=page.id) }}">
     <input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
@@ -22,7 +31,7 @@
   {% endif %}
   <section aria-labelledby="page-updates"><h2 id="page-updates">Updates</h2>
     {% for post in posts %}
-    <article><p><strong>{{ page.handle }}</strong> · <time>{{ post.created_at|community_time }}</time></p>
+    <article class="page-update-card"><p><strong>{{ page.handle }}</strong> · <time>{{ post.created_at|community_time }}</time></p>
       <div class="page-description">{{ post.body }}</div>
       {% if session.get('user_id') %}<p><a href="{{ url_for('identity_pages.report_page',page_id=page.id,post_id=post.id) }}">Report update</a></p>{% endif %}
       {% if page_role and (session.get('user_id')==page.owner_id or session.get('user_id')==post.author_id) %}
@@ -34,5 +43,6 @@
     {% else %}<p>No updates are available.</p>{% endfor %}
   </section>
   {% if older_url %}<nav aria-label="Page updates"><a href="{{ older_url }}">Older updates</a></nav>{% endif %}
+  </div></div>
 </main>
 {% endblock %}
