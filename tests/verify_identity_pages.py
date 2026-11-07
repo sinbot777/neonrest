@@ -8,7 +8,7 @@ import unittest
 from unittest.mock import patch
 
 package = types.ModuleType('page_fixture')
-package.__path__ = []
+package.__path__ = [str(Path(__file__).parents[1])]
 sys.modules['page_fixture'] = package
 ages = types.ModuleType('page_fixture.age_policy')
 ages.contact = lambda db, a, b: True
@@ -21,6 +21,7 @@ sys.modules[ages.__name__] = ages
 sys.modules[community.__name__] = community
 spec = importlib.util.spec_from_file_location('page_fixture.identity_pages', Path(__file__).parents[1] / 'identity_pages.py')
 pages = importlib.util.module_from_spec(spec)
+sys.modules[spec.name] = pages
 spec.loader.exec_module(pages)
 
 

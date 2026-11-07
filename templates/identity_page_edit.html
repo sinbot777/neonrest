@@ -17,6 +17,23 @@
     <button>Save page</button>
   </form>
   {% endif %}
+  {% if page.state!='archived' %}
+  <details class="page-profile-settings"><summary>Page appearance and links</summary>
+  <p>Give your page its own identity. These settings do not change your personal profile.</p>
+  <form method="post" enctype="multipart/form-data">
+    <input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
+    <input type="hidden" name="revision" value="{{ page.revision }}"><input type="hidden" name="action" value="profile">
+    <label for="page-tagline">Short introduction</label><input id="page-tagline" name="tagline" maxlength="160" value="{{ page.tagline }}">
+    <label for="page-website">Website</label><input type="url" id="page-website" name="website" maxlength="500" placeholder="https://example.com" value="{{ page.website }}">
+    <label for="page-accent">Page color</label><select id="page-accent" name="accent">{% for color in ['teal','violet','rose','amber','blue','green'] %}<option value="{{ color }}" {% if page.accent==color %}selected{% endif %}>{{ color|capitalize }}</option>{% endfor %}</select>
+    <p>JPG, PNG, WebP or GIF; under 1.8 MB each. Animated images use their first frame. Page artwork follows the page’s visibility rules.</p>
+    <label for="page-avatar">Page portrait or logo</label><input type="file" id="page-avatar" name="avatar" accept="image/jpeg,image/png,image/webp,image/gif">
+    {% if page.avatar_file %}<img class="page-avatar-preview" src="{{ url_for('identity_pages.artwork',page_id=page.id,slot='avatar',filename=page.avatar_file) }}" alt="Current page portrait"><label><input type="checkbox" name="remove_avatar" value="yes">Remove current portrait</label>{% endif %}
+    <label for="page-cover">Cover artwork</label><input type="file" id="page-cover" name="cover" accept="image/jpeg,image/png,image/webp,image/gif">
+    {% if page.cover_file %}<img class="page-cover-preview" src="{{ url_for('identity_pages.artwork',page_id=page.id,slot='cover',filename=page.cover_file) }}" alt="Current cover artwork"><label><input type="checkbox" name="remove_cover" value="yes">Remove current cover</label>{% endif %}
+    <button>Save page appearance</button>
+  </form></details>
+  {% endif %}
   {% if page_role=='owner' %}
   <form method="post">
     <input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
