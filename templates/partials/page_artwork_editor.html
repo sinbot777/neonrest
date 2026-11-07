@@ -1,0 +1,30 @@
+<section class="artwork-editor" aria-labelledby="artwork-framing-title">
+  <h2 id="artwork-framing-title">Artwork framing</h2>
+  <p id="artwork-framing-help">Choose Logo to keep the whole design, or Portrait to fill the frame. Drag either preview to reposition it, use arrow keys when the preview is focused, or use the position sliders. Changes apply when you save. Original uploads are kept.</p>
+  <noscript><p>Enable JavaScript to adjust framing and preview changes. Existing framing is preserved when saving without JavaScript.</p></noscript>
+  {% for slot in ['avatar','cover'] %}{% set frame=page_frame(page,slot) %}
+  <fieldset class="artwork-controls" data-art-slot="{{ slot }}">
+    <legend>{{ 'Portrait or logo' if slot=='avatar' else 'Cover' }} framing</legend>
+    <input type="hidden" name="{{ slot }}_frame" value="{{ page[slot ~ '_frame'] }}" data-art-state>
+    {% if slot=='avatar' %}
+    <label for="art-avatar-mode">Image mode</label><select id="art-avatar-mode" data-art-setting="mode"><option value="logo" {% if frame.mode=='logo' %}selected{% endif %}>Logo — fit the whole design</option><option value="portrait" {% if frame.mode=='portrait' %}selected{% endif %}>Portrait — crop to fill</option></select>
+    <label for="art-avatar-shape">Frame shape</label><select id="art-avatar-shape" data-art-setting="shape">{% for value,label in [('rounded','Rounded square'),('square','Square'),('circle','Circle')] %}<option value="{{ value }}" {% if frame.shape==value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+    <label><input type="checkbox" data-art-setting="trim" {% if frame.trim %}checked{% endif %}>Trim transparent margins for display</label>
+    <label for="art-avatar-padding">Logo padding <output data-art-output="padding">{{ frame.padding }}%</output></label><input type="range" id="art-avatar-padding" data-art-setting="padding" min="0" max="24" step="1" value="{{ frame.padding }}">
+    <label><input type="checkbox" data-art-transparent {% if frame.background=='transparent' %}checked{% endif %}>Transparent frame background</label>
+    <label for="art-avatar-background">Frame background color</label><input type="color" id="art-avatar-background" data-art-setting="background" value="{{ frame.background if frame.background!='transparent' else '#ffffff' }}">
+    {% endif %}
+    {% for key,label,low,high,step in [('zoom','Zoom',1,4,0.05),('x','Horizontal position',0,100,1),('y','Vertical position',0,100,1)] %}
+    <label for="art-{{ slot }}-{{ key }}">{{ label }} <output data-art-output="{{ key }}">{{ frame[key] }}</output></label><input type="range" id="art-{{ slot }}-{{ key }}" data-art-setting="{{ key }}" min="{{ low }}" max="{{ high }}" step="{{ step }}" value="{{ frame[key] }}">
+    {% endfor %}
+    <button type="button" data-art-reset>Reset {{ 'portrait/logo' if slot=='avatar' else 'cover' }} framing</button>
+  </fieldset>{% endfor %}
+  <label for="art-preview-size">Header preview</label><select id="art-preview-size" data-art-size><option value="desktop">Desktop</option><option value="mobile">Mobile</option></select>
+  <p role="status" data-art-status aria-live="polite"></p>
+  <div class="art-preview-viewport"><div class="art-preview-stage page-profile" data-art-preview
+    data-avatar-source="{% if page.avatar_file %}{{ url_for('identity_pages.artwork',page_id=page.id,slot='avatar',filename=page.avatar_file) }}{% endif %}"
+    data-cover-source="{% if page.cover_file %}{{ url_for('identity_pages.artwork',page_id=page.id,slot='cover',filename=page.cover_file) }}{% endif %}">
+    <div class="page-profile-cover"><span class="page-artwork page-cover-artwork" data-art-target="cover" tabindex="0" role="group" aria-label="Cover preview: drag or use arrow keys to reposition" aria-describedby="artwork-framing-help"><img class="page-artwork-image" alt="Cover preview" hidden></span></div>
+    <div class="page-profile-heading"><span class="page-artwork page-profile-avatar" data-art-target="avatar" tabindex="0" role="group" aria-label="Portrait or logo preview: drag or use arrow keys to reposition" aria-describedby="artwork-framing-help"><img class="page-artwork-image" alt="Portrait or logo preview" hidden><span class="art-preview-initial" aria-hidden="true">{{ page.name[:1]|upper }}</span></span><div><h2>{{ page.name }}</h2><p>{{ page.handle }}</p><p data-art-tagline>{{ page.tagline }}</p></div></div>
+  </div></div>
+</section>

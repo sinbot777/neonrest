@@ -27,6 +27,54 @@ class ProfileTests(RouteTests):
         self.assertEqual((page['name'],page['description'],page['owner_id'],page['state']),
                          ('Example','Description',1,'draft'))
 
+    def test_framing_round_trip_preserves_master_and_other_page_content(self):
+        import json
+        frame=dict(mode='portrait',shape='circle',zoom=2.3,x=25,y=60,padding=0,background='#123456',trim=False)
+        response=self.appearance(avatar_frame=json.dumps(frame),cover_frame=json.dumps(dict(zoom=1.5,x=20,y=80)))
+        self.assertEqual(response.status_code,302)
+        page=pages.get(self.db,self.page)
+        self.assertEqual(json.loads(page['avatar_frame']),frame)
+        self.assertEqual(json.loads(page['cover_frame'])['zoom'],1.5)
+        self.assertEqual(page['description'],'Description')
+        self.assertEqual(page['avatar_file'],'')
+
+    def test_invalid_framing_never_persists(self):
+        import json
+        for frame in ({'zoom':True},{'zoom':0},{'x':-1},{'y':101},{'padding':25},
+                      {'zoom':float('nan')},{'background':'red;display:none'},
+                      {'shape':'triangle'},{'trim':'yes'},{'unknown':'anything'}):
+            self.assertEqual(self.appearance(avatar_frame=json.dumps(frame)).status_code,400)
+        self.assertEqual(self.appearance(avatar_frame='[1,2,3]').status_code,400)
+        self.assertEqual(self.appearance(avatar_frame='{bad json').status_code,400)
+        self.assertEqual(pages.get(self.db,self.page)['revision'],0)
+
+    def test_logo_trims_display_only_and_can_restore_full_source(self):
+        import json
+        name='b'*48+'.png'
+        with tempfile.TemporaryDirectory() as root,patch.object(self.app,'root_path',root):
+            folder=profile.artwork_folder(self.app);folder.mkdir(parents=True)
+            picture=Image.new('RGBA',(80,120),(0,0,0,0))
+            picture.paste((255,0,0,255),(10,15,70,75));picture.save(folder/name)
+            original=(folder/name).read_bytes()
+            self.db.execute('UPDATE identity_pages SET avatar_file=? WHERE id=?',(name,self.page));self.db.commit()
+            url='/pages/'+self.page+'/artwork/avatar/'+name
+            with self.client.get(url+'?framed=1') as response:
+                self.assertEqual(response.status_code,200)
+                self.assertEqual(Image.open(io.BytesIO(response.data)).size,(60,60))
+            with self.client.get(url) as response:self.assertEqual(response.data,original)
+            self.assertEqual((folder/name).read_bytes(),original)
+            self.appearance(avatar_frame=json.dumps(dict(mode='logo',trim=False)))
+            with self.client.get(url+'?framed=1') as response:
+                self.assertEqual(Image.open(io.BytesIO(response.data)).size,(80,120))
+            self.login(2)
+            self.assertEqual(self.client.get(url+'?framed=1').status_code,404)
+
+    def test_editor_exposes_framing_preview_reset_and_cancel(self):
+        response=self.client.get('/pages/'+self.page+'/edit')
+        self.assertEqual(response.status_code,200)
+        for text in (b'Artwork framing',b'Logo',b'Portrait',b'Trim transparent',b'Mobile',b'data-art-reset',b'Cancel changes',b'page_artwork_editor.js'):
+            self.assertIn(text,response.data)
+
     def test_stale_profile_and_untrusted_url_are_rejected(self):
         for website in ('javascript:alert(1)','//example.com','https://user:pass@example.com','https://example.com\\evil','https://example.com\n/secret'):
             self.assertEqual(self.appearance(website=website).status_code, 400)
