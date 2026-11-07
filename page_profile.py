@@ -1,5 +1,7 @@
 """Page presentation and bounded artwork; existing identity permissions apply."""
 from pathlib import Path
+import json
+import math
 import re
 import secrets
 from urllib.parse import urlsplit
@@ -8,12 +10,60 @@ ACCENTS = ('teal', 'violet', 'rose', 'amber', 'blue', 'green')
 FIELDS = ('tagline', 'website', 'accent', 'avatar_file', 'cover_file')
 
 
+def frame_defaults(slot):
+    return dict(mode='logo' if slot == 'avatar' else 'portrait', shape='rounded' if slot == 'avatar' else 'square',
+                zoom=1, x=50, y=50, padding=0, background='transparent', trim=slot == 'avatar')
+
+
+def frame_settings(value, slot):
+    if isinstance(value, str):
+        if len(value) > 2048:
+            raise ValueError('Artwork framing settings are too large.')
+        try:
+            value = json.loads(value)
+        except (ValueError, RecursionError):
+            raise ValueError('Invalid artwork framing settings.') from None
+    if not isinstance(value, dict) or set(value) - set(frame_defaults(slot)):
+        raise ValueError('Invalid artwork framing settings.')
+    result = dict(frame_defaults(slot), **value)
+    if result['mode'] not in ('logo', 'portrait') or result['shape'] not in ('square', 'rounded', 'circle'):
+        raise ValueError('Choose an available artwork mode and frame.')
+    if not isinstance(result['background'], str) or not re.fullmatch(r'transparent|#[0-9a-fA-F]{6}', result['background']):
+        raise ValueError('Choose a valid artwork background color.')
+    if type(result['trim']) is not bool:
+        raise ValueError('Invalid transparent margin setting.')
+    for name, low, high in (('zoom', 1, 4), ('x', 0, 100), ('y', 0, 100), ('padding', 0, 24)):
+        number = result[name]
+        if type(number) not in (int, float) or not math.isfinite(number) or not low <= number <= high:
+            raise ValueError('Artwork framing values are out of range.')
+        result[name] = round(number, 3)
+    if slot == 'cover':
+        result.update(mode='portrait', shape='square', padding=0, trim=False)
+    return result
+
+
+def page_frame(page, slot):
+    try:
+        frame = frame_settings(page[slot + '_frame'], slot)
+    except (ValueError, TypeError, KeyError, IndexError):
+        frame = frame_defaults(slot)
+    radius = dict(square='0', rounded='1rem', circle='50%')[frame['shape']]
+    padding = frame['padding'] if frame['mode'] == 'logo' else 0
+    frame['style'] = ('--art-fit:' + ('contain' if frame['mode'] == 'logo' else 'cover')
+        + ';--art-zoom:' + str(frame['zoom']) + ';--art-x:' + str(frame['x']) + '%;--art-y:' + str(frame['y'])
+        + '%;--art-padding:' + str(padding) + '%;--art-background:' + frame['background'] + ';border-radius:' + radius)
+    return frame
+
+
 def initialize(db):
     columns = {row[1] for row in db.execute('PRAGMA table_info(identity_pages)')}
     for name in FIELDS:
         if name not in columns:
             default = 'teal' if name == 'accent' else ''
             db.execute("ALTER TABLE identity_pages ADD COLUMN " + name + " TEXT NOT NULL DEFAULT '" + default + "'")
+    for name in ('avatar_frame', 'cover_frame'):
+        if name not in columns:
+            db.execute("ALTER TABLE identity_pages ADD COLUMN " + name + " TEXT NOT NULL DEFAULT '{}'")
 
 
 def details(tagline, website, accent):
@@ -69,6 +119,8 @@ def save(db, pages, app, uid, page_id, revision, form, files):
         raise pages.PageError('The page changed. Reload it before saving.', 409)
     try:
         tagline, website, accent = details(form.get('tagline', ''), form.get('website', ''), form.get('accent', 'teal'))
+        frames = {slot: json.dumps(frame_settings(form.get(slot + '_frame', page[slot + '_frame']), slot),
+                                  separators=(',', ':'), allow_nan=False) for slot in ('avatar', 'cover')}
         pictures = {}
         for slot in ('avatar', 'cover'):
             upload = files.get(slot)
@@ -87,16 +139,17 @@ def save(db, pages, app, uid, page_id, revision, form, files):
             for slot, picture in pictures.items():
                 names[slot] = secrets.token_hex(24) + '.png'
                 image(folder / names[slot], picture, 2 * 1024 * 1024, 'PNG', 'media')
-    result = db.execute('''UPDATE identity_pages SET tagline=?,website=?,accent=?,avatar_file=?,cover_file=?,
+    result = db.execute('''UPDATE identity_pages SET tagline=?,website=?,accent=?,avatar_file=?,cover_file=?,avatar_frame=?,cover_frame=?,
         revision=revision+1,updated_at=? WHERE id=? AND revision=?''',
-        (tagline, website, accent, names['avatar'], names['cover'], int(pages.time.time()), page_id, revision))
+        (tagline, website, accent, names['avatar'], names['cover'], frames['avatar'], frames['cover'], int(pages.time.time()), page_id, revision))
     if result.rowcount != 1:
         raise pages.PageError('The page changed. Reload it before saving.', 409)
     pages.event(db, page_id, uid, 'profile_edited')
 
 
 def register_artwork(bp, app, core, pages):
-    from flask import abort, send_from_directory, session
+    from flask import abort, request, send_file, send_from_directory, session
+    app.jinja_env.globals['page_frame'] = page_frame
 
     @bp.get('/pages/<page_id>/artwork/<slot>/<filename>')
     def artwork(page_id, slot, filename):
@@ -106,6 +159,24 @@ def register_artwork(bp, app, core, pages):
         page = pages.get(db, page_id)
         if not pages.visible(db, page, session.get('user_id')) or page[slot + '_file'] != filename:
             abort(404)
-        response = send_from_directory(artwork_folder(app), filename, mimetype='image/png')
+        frame = page_frame(page, slot)
+        if request.args.get('framed') == '1' and slot == 'avatar' and frame['mode'] == 'logo' and frame['trim']:
+            import io
+            from PIL import Image
+            # A display derivative only. The original selected file is never rewritten.
+            path = artwork_folder(app) / filename
+            if not path.is_file():
+                abort(404)
+            with Image.open(path) as picture:
+                picture = picture.convert('RGBA')
+                bounds = picture.getchannel('A').getbbox()
+                if bounds:
+                    picture = picture.crop(bounds)
+                output = io.BytesIO()
+                picture.save(output, format='PNG')
+                output.seek(0)
+            response = send_file(output, mimetype='image/png')
+        else:
+            response = send_from_directory(artwork_folder(app), filename, mimetype='image/png')
         response.headers['X-Content-Type-Options'] = 'nosniff'
         return response

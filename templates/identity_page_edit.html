@@ -20,7 +20,7 @@
   {% if page.state!='archived' %}
   <details class="page-profile-settings"><summary>Page appearance and links</summary>
   <p>Give your page its own identity. These settings do not change your personal profile.</p>
-  <form method="post" enctype="multipart/form-data">
+  <form method="post" enctype="multipart/form-data" id="page-artwork-editor">
     <input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
     <input type="hidden" name="revision" value="{{ page.revision }}"><input type="hidden" name="action" value="profile">
     <label for="page-tagline">Short introduction</label><input id="page-tagline" name="tagline" maxlength="160" value="{{ page.tagline }}">
@@ -31,8 +31,10 @@
     {% if page.avatar_file %}<img class="page-avatar-preview" src="{{ url_for('identity_pages.artwork',page_id=page.id,slot='avatar',filename=page.avatar_file) }}" alt="Current page portrait"><label><input type="checkbox" name="remove_avatar" value="yes">Remove current portrait</label>{% endif %}
     <label for="page-cover">Cover artwork</label><input type="file" id="page-cover" name="cover" accept="image/jpeg,image/png,image/webp,image/gif">
     {% if page.cover_file %}<img class="page-cover-preview" src="{{ url_for('identity_pages.artwork',page_id=page.id,slot='cover',filename=page.cover_file) }}" alt="Current cover artwork"><label><input type="checkbox" name="remove_cover" value="yes">Remove current cover</label>{% endif %}
-    <button>Save page appearance</button>
+    {% include 'partials/page_artwork_editor.html' %}
+    <button>Save page appearance</button><button type="button" data-art-cancel>Cancel changes</button>
   </form></details>
+  <script src="{{ url_for('static',filename='js/page_artwork_editor.js') }}" defer></script>
   {% endif %}
   {% if page_role=='owner' %}
   <form method="post">

@@ -4,9 +4,9 @@
 {% include 'partials/identity_page_styles.html' %}
 <main class="identity-page page-profile page-accent-{{ page.accent }}">
   <header class="page-profile-header">
-    <div class="page-profile-cover">{% if page.cover_file %}<img src="{{ url_for('identity_pages.artwork',page_id=page.id,slot='cover',filename=page.cover_file) }}" alt="" fetchpriority="high">{% endif %}</div>
+    <div class="page-profile-cover">{% if page.cover_file %}{% with slot='cover', frame=page_frame(page,'cover'), filename=page.cover_file %}{% include 'partials/page_artwork.html' %}{% endwith %}{% endif %}</div>
     <div class="page-profile-heading">
-    {% if page.avatar_file %}<img class="page-profile-avatar" src="{{ url_for('identity_pages.artwork',page_id=page.id,slot='avatar',filename=page.avatar_file) }}" alt="{{ page.name }} portrait">{% else %}<span class="page-profile-avatar page-profile-initial" aria-hidden="true">{{ page.name[:1]|upper }}</span>{% endif %}
+    {% if page.avatar_file %}{% with slot='avatar', frame=page_frame(page,'avatar'), filename=page.avatar_file %}{% include 'partials/page_artwork.html' %}{% endwith %}{% else %}<span class="page-profile-avatar page-profile-initial" aria-hidden="true">{{ page.name[:1]|upper }}</span>{% endif %}
     <div><h1>{{ page.name }}</h1><p class="page-handle">{{ page.handle }} · {{ page.kind|capitalize }} page</p>{% if page.tagline %}<p class="page-tagline">{{ page.tagline }}</p>{% endif %}</div>
     </div><div class="page-profile-actions">
 {% if session.get('user_id') and page.state=='published' and not page_hidden %}<form method="post" action="{{ url_for('page_social.following',page_id=page.id) }}"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}"><button name="state" value="{{ 'unfollow' if page_is_followed(page) else 'follow' }}">{{ 'Unfollow page' if page_is_followed(page) else 'Follow page' }}</button></form>{% endif %}
