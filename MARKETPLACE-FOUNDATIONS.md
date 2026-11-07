@@ -693,3 +693,40 @@ webhook listener with verified delivery/recovery, actual test checkout/refund fl
 PayPal canonical reconciliation and conflict handling, then full UI/privacy/release
 acceptance. No running application was deployed, no live database was opened, and
 no real payment, refund, payout or live seller account was created.
+
+### Sandbox HTTP webhook boundary — November 7, 2026
+
+`marketplace_webhooks.SandboxWebhookApplication` adds an explicit WSGI boundary
+for separately mounted test-only Stripe and PayPal deliveries. It does not register
+itself with either running application. Callers must supply a dedicated initialized
+database factory and explicitly configured verifiers; live configuration is refused.
+Routes require POST, bounded complete JSON bodies and supported content encoding.
+Responses are minimal, non-cacheable and redact exception/provider/database details.
+
+Stripe signatures are checked before opening a database. Existing receipt/job
+persistence and fenced canonical reconciliation are reused. A provider read outage
+can be acknowledged only after its durable retry job is saved; a persistence outage
+returns 503 so delivery is retried. Duplicate events cannot create another receipt
+or job. This receiver alone never settles or fulfills an order.
+
+PayPal verification uses the registered Sandbox app's remote signature check.
+Verified event/resource identities and hashes are persisted in a separate immutable
+review inbox. Raw customer fields, signatures and credentials are not stored.
+Duplicates are idempotent and identity conflicts are rejected. The inbox explicitly
+records `canonical_paypal_processing_pending`; it is not a payment or refund ledger.
+Missing PayPal webhook registration is refused at startup. Verification outages
+return 503 instead of acknowledging an unverified delivery.
+
+Validation: **258 unittest cases plus 38 money/shipping checks pass locally**,
+including 16 HTTP/durable-storage cases. Existing 242-case hosted evidence above
+predates this HTTP boundary. Real provider delivery, deployment/mounting, separate
+Marketplace signing configuration, refund-event dispatch, PayPal canonical jobs and
+actual Checkout/refund creation remain incomplete. Do not register an endpoint as
+working until its hosted delivery and durable processing have been verified.
+
+A real test Account Link was generated for the existing fictional merchant. The
+simple documented v2 request succeeds; adding `configurations` inside the onboarding
+options is rejected as an unknown field by the pinned API version. The hosted form
+now requires an account password after the fictional example email. No password,
+real identity/bank details or seller agreement was submitted. This browser step
+requires the owner's handoff; it does not establish seller consent or capabilities.
