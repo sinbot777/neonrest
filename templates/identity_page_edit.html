@@ -18,13 +18,16 @@
   </form>
   {% endif %}
   {% if page.state!='archived' %}
-  <details class="page-profile-settings"><summary>Page appearance and links</summary>
+  <details class="page-profile-settings"><summary>Page appearance, details and links</summary>
   <p>Give your page its own identity. These settings do not change your personal profile.</p>
   <form method="post" enctype="multipart/form-data" id="page-artwork-editor">
     <input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
     <input type="hidden" name="revision" value="{{ page.revision }}"><input type="hidden" name="action" value="profile">
     <label for="page-tagline">Short introduction</label><input id="page-tagline" name="tagline" maxlength="160" value="{{ page.tagline }}">
     <label for="page-website">Website</label><input type="url" id="page-website" name="website" maxlength="500" placeholder="https://example.com" value="{{ page.website }}">
+    <fieldset class="page-public-details-fields" id="page-public-details"><legend>Public Details box</legend><p>Optional information shown on this Page. Add only contact information you want readers to see.</p>{% set info=page_details(page) %}
+    {% for key,label,maximum in [('category','Category',80),('location','Location',120),('contact','Public contact',160)] %}<label for="page-detail-{{ key }}">{{ label }}</label><input id="page-detail-{{ key }}" name="detail_{{ key }}" maxlength="{{ maximum }}" value="{{ info[key] }}">{% endfor %}
+    <label for="page-detail-hours">Hours / availability</label><textarea id="page-detail-hours" name="detail_hours" maxlength="300" rows="3">{{ info.hours }}</textarea></fieldset>
     <label for="page-accent">Page color</label><select id="page-accent" name="accent">{% for color in ['teal','violet','rose','amber','blue','green'] %}<option value="{{ color }}" {% if page.accent==color %}selected{% endif %}>{{ color|capitalize }}</option>{% endfor %}</select>
     <p>JPG, PNG, WebP or GIF; under 1.8 MB each. Animated images use their first frame. Page artwork follows the page’s visibility rules.</p>
     <label for="page-avatar">Page portrait or logo</label><input type="file" id="page-avatar" name="avatar" accept="image/jpeg,image/png,image/webp,image/gif">
@@ -50,4 +53,5 @@
   {% endif %}
 </main>
 {% endblock %}
+
 
