@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}Page CSS · {{ page.handle }}{% endblock %}
+{% block content %}
+{% include 'partials/identity_page_styles.html' %}
+<main class="identity-page"><h1>Page CSS · {{ page.handle }}</h1>
+<nav><a href="{{ url_for('identity_pages.manage',page_id=page.id) }}">Manage Page</a><a href="{{ page_url(page) }}">View Page</a></nav>
+<p>Customize your Page's colors, typography, cards, and layout. Styles apply to Page content, not the site navigation or this editor. Use local CSS rules; imports, remote images/fonts, and embedded markup are not supported.</p>
+<p>Useful selectors: <code>.page-profile</code>, <code>.page-profile-cover</code>, <code>.page-profile-about</code>, <code>.page-product-card</code>, <code>.page-profile-feed</code>, and <code>.page-profile-layout</code>. Responsive <code>@media</code> rules are supported.</p>
+{% if error %}<p role="alert">{{ error }}</p>{% endif %}
+<form method="post" id="page-css-form"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}"><input type="hidden" name="revision" value="{{ page.revision }}">
+<label for="page-css-source">Custom CSS</label><textarea id="page-css-source" name="custom_css" maxlength="30000" rows="24" spellcheck="false" style="min-height:28rem;font-family:monospace;tab-size:2">{{ css }}</textarea>
+<p>Preview opens an unsaved version in a new tab. Your editor text stays here. Save applies the stylesheet to readers of this Page. Restore defaults removes your saved custom stylesheet.</p>
+<button name="action" value="save">Save CSS</button> <button name="action" value="preview" formtarget="_blank">Preview CSS</button> <button name="action" value="reset">Restore defaults</button>
+</form></main>
+{% endblock %}

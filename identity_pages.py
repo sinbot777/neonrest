@@ -93,6 +93,8 @@ def initialize(db):
     else:
         import page_profile
     page_profile.initialize(db)
+    from . import page_css
+    page_css.initialize(db)
 
 
 def account_eligible(db, uid, kind, age, ready):
@@ -564,7 +566,7 @@ def register(app, core):
             return redirect(url_for('identity_pages.manage', page_id=page_id))
         return render_template('identity_page_edit.html', page=page, page_role=role(db, page, uid), page_url=page_url,business_ready=business_entitled(db,page) if page['kind']=='business' else False)
 
-    def show(kind, slug):
+    def show(kind, slug, css_override=None):
         db = core.get_db()
         try:
             canonical = handle(kind, slug)
@@ -587,15 +589,47 @@ def register(app, core):
         older = rows[49]['id'] if len(rows) > 50 else None
         endpoint = 'identity_pages.creative' if kind == 'creative' else 'identity_pages.business'
         from . import page_products
+        from . import page_css
         try:
             products = page_products.browse(db, viewer, page, request.args.get('products_page', '1'))
         except ValueError as error:
             raise PageError(str(error)) from None
         return render_template('identity_page.html', page=page, page_role=role(db, page, viewer),
+            custom_page_css=page_css.rendered(page) if css_override is None else css_override,
+            css_preview=css_override is not None,
             products=products,
             products_previous=url_for(endpoint, slug=canonical[1:], before=before, products_page=products['page']-1, _anchor='page-products') if products['page']>1 else None,
             products_next=url_for(endpoint, slug=canonical[1:], before=before, products_page=products['page']+1, _anchor='page-products') if products['has_next'] else None,
             posts=posts, page_hidden=hidden(db,page['id']), older_url=url_for(endpoint, slug=canonical[1:], before=older, products_page=products['page'], _anchor='page-updates') if older else None)
+
+    @bp.route('/pages/<page_id>/style', methods=['GET', 'POST'])
+    def style(page_id):
+        import sys
+        from . import page_css
+        uid = actor(); db = core.get_db(); page = get(db, page_id)
+        require_role(db, page, uid, ('owner', 'manager', 'editor'))
+        if page['state'] == 'archived':
+            raise PageError('Restore this Page before editing its CSS.', 409)
+        css = page_css.rendered(page) or page_css.STARTER
+        error = None
+        if request.method == 'POST':
+            response = writing()
+            if response is not None: return response
+            css = request.form.get('custom_css', '')
+            action = request.form.get('action')
+            try:
+                if action not in ('save', 'preview', 'reset'): raise PageError('Choose a CSS action.')
+                css = page_css.validate('' if action == 'reset' else css)
+                if revision() != page['revision']: raise PageError('This Page changed. Reload before editing CSS.', 409)
+                if action == 'preview': return show(page['kind'], page['handle'][1:], css)
+                with db:
+                    db.execute('BEGIN IMMEDIATE')
+                    page_css.save(db, sys.modules[__name__], uid, page_id, revision(), css)
+                flash('Page CSS saved.' if action == 'save' else 'Default Page styling restored.', 'success')
+                return redirect(url_for('identity_pages.style', page_id=page_id))
+            except ValueError as exc:
+                error = str(exc)
+        return render_template('identity_page_style.html', page=page, css=css, error=error, page_url=page_url), (400 if error else 200)
 
     @bp.get('/_<slug>')
     def creative(slug):
@@ -618,4 +652,5 @@ def register(app, core):
     import sys
     page_profile.register_artwork(bp, app, core, sys.modules[__name__])
     app.register_blueprint(bp)
+
 
