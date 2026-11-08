@@ -8,6 +8,18 @@
   <nav aria-label="Pages"><a href="{{ url_for('identity_pages.mine') }}">Your pages</a><a href="{{ page_url(page) }}">View page</a></nav>
   <p>{{ page.kind|capitalize }} · {{ page.state|capitalize }} · Your role: {{ page_role }}</p>
   {% if page.state!='archived' %}<p><a class="button" href="{{ url_for('identity_pages.style',page_id=page.id) }}">Edit Page CSS</a></p>{% endif %}
+  {% if page.state!='archived' %}
+  <details class="page-profile-settings" id="page-layout"><summary>Layout</summary>
+  <form method="post"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}"><input type="hidden" name="revision" value="{{ page.revision }}"><input type="hidden" name="action" value="layout">
+  <label><input type="checkbox" name="products_enabled" value="1" {% if page_layout.products_enabled %}checked{% endif %}>Show product listings</label>
+  <p>Products are off by default. Enable them to show public listings from a shop linked to this Page. Private drafts stay private. With products off, Updates gets the main space.</p>
+  <label for="layout-main">Main column</label><select id="layout-main" name="layout_main"><option value="updates" {% if page_layout.main=='updates' %}selected{% endif %}>Updates</option><option value="products" {% if page_layout.main=='products' %}selected{% endif %}>Products (when enabled)</option></select>
+  <label for="layout-secondary">Other section</label><select id="layout-secondary" name="layout_secondary">{% for key,label in [('sidebar','Right sidebar'),('below','Below the main section'),('hidden','Hidden')] %}<option value="{{ key }}" {% if page_layout.secondary==key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+  <p>This places Updates when Products is the main section, or Products when Updates is the main section. It has no effect when products are off.</p>
+  <label for="layout-details">Details and About</label><select id="layout-details" name="layout_details">{% for key,label in [('left','Left sidebar'),('right','Right sidebar'),('hidden','Hidden')] %}<option value="{{ key }}" {% if page_layout.details==key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+  <p>On mobile, sections stack in their desktop reading order. Your custom CSS can override the layout.</p><button>Save layout</button>
+  </form></details>
+  {% endif %}
   {% if page.kind=='business' and not business_ready %}<p>Business activation requires a recurring subscription. The launch price is $5 USD per business page every three months, with no setup fee. Cancel anytime; the page stays active through the paid period. Open Subscription and billing from page management to check payment availability. This draft incurs no charge.</p>{% endif %}
   {% if page.state!='archived' %}
   <form method="post">
@@ -54,6 +66,7 @@
   {% endif %}
 </main>
 {% endblock %}
+
 
 
 

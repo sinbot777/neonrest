@@ -1,0 +1,12 @@
+<aside class="page-profile-sidebar page-layout-{{ panel.area }}">
+  <section class="page-profile-about" aria-labelledby="page-details"><h2 id="page-details">Details</h2>
+  {% set info=page_details(page) %}
+  <dl class="page-details-list"><dt>Page</dt><dd>{{ page.kind|capitalize }} · {{ page.handle }}</dd>
+  {% for key,label in [('category','Category'),('location','Location'),('contact','Contact'),('hours','Hours / availability')] %}{% if info[key] %}<dt>{{ label }}</dt><dd>{{ info[key] }}</dd>{% endif %}{% endfor %}
+  {% if page.website %}<dt>Website</dt><dd><a href="{{ page.website }}" rel="nofollow noopener noreferrer" target="_blank">Visit website <span class="page-sr-only">(opens in a new tab)</span></a></dd>{% endif %}</dl>
+  {% if page_role %}<p><a href="{{ url_for('identity_pages.manage',page_id=page.id,_anchor='page-public-details') }}">Edit details</a></p>{% endif %}</section>
+  <section class="page-profile-about" aria-labelledby="page-about"><h2 id="page-about">About</h2>
+  <div class="page-description">{{ page.description }}</div>
+  {% if page_role %}<p><a href="{{ url_for('identity_pages.manage', page_id=page.id) }}">Manage this page</a></p>{% endif %}
+  {% if session.get('user_id') and page.state=='published' and not page_hidden %}<p><a href="{{ url_for('identity_pages.report_page',page_id=page.id) }}">Report page</a></p>{% endif %}
+  </section></aside>
