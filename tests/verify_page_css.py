@@ -52,14 +52,26 @@ class CssTests(RouteTests):
         self.assertEqual(self.csspost(custom_css=value).status_code,302)
         self.assertEqual(pages.get(self.db,self.page)['custom_css'],value)
 
-    def test_missing_login_freshness_and_archived(self):
+    def test_missing_login_expired_confirmation_and_archived(self):
         self.login(None)
         self.assertEqual(self.client.get('/pages/'+self.page+'/style').status_code,401)
         self.login(1);self.fresh=False
         self.assertEqual(self.csspost().status_code,302)
-        self.assertEqual(pages.get(self.db,self.page)['custom_css'],'')
+        self.assertIn('hotpink',pages.get(self.db,self.page)['custom_css'])
         self.fresh=True
-        pages.set_state(self.db,1,self.page,0,'archived');self.db.commit()
+        pages.set_state(self.db,1,self.page,1,'archived');self.db.commit()
         self.assertEqual(self.csspost().status_code,409)
+
+    def test_routine_page_edits_do_not_require_repeat_confirmation(self):
+        self.fresh=False
+        response=self.post('/pages/'+self.page+'/edit',action='edit',revision='0',name='Edited without repeat confirmation',description='Fixture')
+        self.assertEqual(response.status_code,302)
+        self.assertNotIn('/reauth',response.location)
+        response=self.post('/pages/'+self.page+'/edit',action='profile',revision='1',tagline='Updated',website='',accent='teal')
+        self.assertEqual(response.status_code,302)
+        self.assertNotIn('/reauth',response.location)
+        response=self.post('/pages/'+self.page+'/edit',action='state',revision='2',state='published')
+        self.assertIn('/reauth',response.location)
+        self.assertEqual(pages.get(self.db,self.page)['state'],'draft')
 
 if __name__=='__main__':unittest.main()

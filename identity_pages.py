@@ -398,11 +398,11 @@ def register(app, core):
             abort(401)
         return uid
 
-    def writing():
+    def writing(require_fresh=False):
         actor()
         helpers = app.extensions['community_auth_helpers']
         helpers['csrf']()
-        if not helpers['fresh']():
+        if require_fresh and not helpers['fresh']():
             return redirect(url_for('community_reauth', next=request.path))
         return None
 
@@ -547,7 +547,7 @@ def register(app, core):
         page = get(db, page_id)
         require_role(db, page, uid, ('owner', 'manager', 'editor'))
         if request.method == 'POST':
-            response = writing()
+            response = writing(require_fresh=request.form.get('action') == 'state')
             if response is not None:
                 return response
             with db:
