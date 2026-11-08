@@ -1,5 +1,6 @@
 """Owner-specific Shippo test rates. No label, transaction or postage API exists here."""
 from dataclasses import asdict,replace
+from decimal import Decimal
 import hashlib
 import json
 import re
@@ -70,7 +71,7 @@ class ShippoTestRatesAPI:
             raise RateError('explicit package dimensions and weight required')
         if parcel['distance_unit']!='cm' or parcel['mass_unit']!='g':raise RateError('configured metric parcel required')
         for key in ('length','width','height','weight'):
-            if not isinstance(parcel[key],str) or not re.fullmatch(r'[0-9]{1,6}(?:\.[0-9])?',parcel[key]) or not 0<float(parcel[key])<=150000:
+            if not isinstance(parcel[key],str) or not re.fullmatch(r'[0-9]{1,6}(?:\.[0-9]{1,6})?',parcel[key]) or not 0<Decimal(parcel[key])<=150000:
                 raise RateError('bounded positive package measurements required')
         payload=dict(address_from=address(origin),address_to=address(destination),parcels=[parcel],**{'async':False})
         value=self._http.request('POST','https://api.goshippo.com/shipments/',
@@ -137,8 +138,14 @@ def save_parcel(db,owner,shop_id,revision,length_mm,width_mm,height_mm,packaging
 
 
 class CarrierResolver:
-    def __init__(self,addresses,selected_rate=None,clock=None):
-        self.addresses=addresses;self.selected_rate=selected_rate;self.clock=clock
+    def __init__(self,addresses,selected_rate=None,clock=None,settings=None):
+        self.addresses=addresses;self.selected_rate=selected_rate;self.clock=clock;self.settings=settings
+        if settings is not None:
+            if __package__:
+                from .marketplace_seller_shipping import SellerShipping
+            else:
+                from marketplace_seller_shipping import SellerShipping
+            if type(settings) is not SellerShipping or settings.db is not self.db:raise RateError("same-connection seller shipping settings required")
     @property
     def db(self):return self.addresses.store.db
     def profile(self,seller):
@@ -147,8 +154,9 @@ class CarrierResolver:
         if not row:raise RateError('seller package dimensions and item weight are required')
         return row
     def resolve_location(self,buyer,seller,reference):
-        native=self.addresses.resolve_location(buyer,seller,reference);profile=self.profile(seller)
-        version=hashlib.sha256(json.dumps([native.version,profile['id']],separators=(',',':')).encode()).hexdigest()
+        native=self.addresses.resolve_location(buyer,seller,reference)
+        binding=self.settings.fingerprint(seller) if self.settings is not None else self.profile(seller)['id']
+        version=hashlib.sha256(json.dumps([native.version,binding],separators=(',',':')).encode()).hexdigest()
         return replace(native,version=version)
     def assert_current_location(self,buyer,seller,location):
         if self.resolve_location(buyer,seller,location.reference)!=location:raise RateError('shipping address or parcel profile changed')
@@ -164,6 +172,7 @@ class CarrierResolver:
         result['location']=location
         return result
     def parcel(self,context):
+        if self.settings is not None:return self.settings.parcel(context)
         profile=self.profile(context['seller_ref']);count=0
         for line in context['lines']:
             if line['kind']!='physical' or type(line['quantity']) is not int or not 1<=line['quantity']<=99:raise RateError('physical parcel lines required')
@@ -208,3 +217,4 @@ def fetch_rates(db,buyer,order_id,destination,resolver,api,now,consent=False,pol
                        (ident,buyer,order_id,digest,location.version,rate['id'],rate['shipment'],rate['amount_cents'],rate['provider'],rate['service'],rate['service_token'],expiry,finished))
             result.append(dict(id=ident,amount_cents=rate['amount_cents'],provider=rate['provider'],service=rate['service'],expires_at=expiry))
     return result
+

@@ -32,12 +32,13 @@ class PilotServices:
     carrier_for_shop: object
     tax: object
     clock: object = lambda:int(time.time())
+    shipping_settings: object = None
 
     def now(self):
         value=self.clock();inventory.clock(value);return value
 
     def location(self,rate=None):
-        return carrier.CarrierResolver(self.address_resolver,rate,self.now)
+        return carrier.CarrierResolver(self.address_resolver,rate,self.now,self.shipping_settings)
 
     def refresh_order(self,uid,order_id):
         checkout.get_order(self.db,'test',uid,order_id,self.now(),self.policy)
@@ -154,6 +155,69 @@ def register(app,database_factory,services_factory,authorize,allowed_users,envir
             if not old:ctx.db.execute('INSERT INTO marketplace_pilot_destinations VALUES (?,?,?)',(order_id,g.pilot_uid,destination['id']))
         return redirect(url_for('marketplace_pilot.order',order_id=order_id))
 
+    def shipping_owner(shop_id):
+        ctx=g.pilot
+        if ctx.shipping_settings is None:abort(503)
+        ctx.shipping_settings.owner(g.pilot_uid,shop_id)
+        return ctx.shipping_settings
+
+    @bp.get('/seller/shipping')
+    def shipping_shops():
+        ctx=g.pilot
+        if ctx.shipping_settings is None:abort(503)
+        available=[]
+        for row in ctx.db.execute('SELECT page_id,name FROM seller_shops WHERE owner_id=? ORDER BY name LIMIT 100',(g.pilot_uid,)):
+            try:ctx.shipping_settings.owner(g.pilot_uid,row['page_id'])
+            except ValueError:continue
+            available.append(dict(row))
+        return render_template('marketplace_seller_shipping.html',view='shops',shops=available)
+
+    @bp.get('/seller/shipping/<shop_id>')
+    def shipping_settings(shop_id):
+        ctx=g.pilot;settings=shipping_owner(shop_id);data=settings.public(g.pilot_uid,shop_id)
+        origin=ctx.db.execute('SELECT book_id FROM marketplace_shop_origins WHERE shop_id=? AND owner_id=?',(shop_id,g.pilot_uid)).fetchone()
+        address=ctx.address_store.read(g.pilot_uid,origin[0],ctx.now())['address'] if origin else None
+        return render_template('marketplace_seller_shipping.html',view='settings',shop_id=shop_id,data=data,origin=address,request_key=uuid.uuid4().hex)
+
+    @bp.post('/seller/shipping/<shop_id>/connection')
+    def shipping_connect(shop_id):
+        ctx=g.pilot;settings=shipping_owner(shop_id)
+        if request.form.get('disconnect')=='yes':settings.disconnect(g.pilot_uid,shop_id,integer('revision',1000000),ctx.now())
+        else:
+            if request.form.get('consent')!='yes':raise ValueError('authorize verifying this shop connection with Shippo')
+            settings.save_connection(g.pilot_uid,shop_id,integer('revision',1000000),request.form.get('api_token',''),ctx.now())
+        return redirect(url_for('marketplace_pilot.shipping_settings',shop_id=shop_id))
+
+    @bp.post('/seller/shipping/<shop_id>/origin')
+    def shipping_origin(shop_id):
+        ctx=g.pilot;shipping_owner(shop_id)
+        address={k:request.form.get(k,'') for k in ('recipient','company','line1','line2','city','state','postal_code','country')}
+        created=ctx.address_store.create(g.pilot_uid,'origin',address,request.form.get('request_key',''),ctx.now(),shop_id=shop_id)
+        ctx.address_store.set_origin(g.pilot_uid,shop_id,created['id'],ctx.now())
+        return redirect(url_for('marketplace_pilot.shipping_settings',shop_id=shop_id))
+
+    @bp.post('/seller/shipping/<shop_id>/package')
+    def shipping_package(shop_id):
+        ctx=g.pilot;settings=shipping_owner(shop_id)
+        if __package__:
+            from .marketplace_seller_shipping import measurement
+        else:
+            from marketplace_seller_shipping import measurement
+        unit=request.form.get('distance_unit');mass_unit=request.form.get('mass_unit')
+        dimensions=[measurement(request.form.get(k),unit,'distance') for k in ('length','width','height')]
+        settings.save_preset(g.pilot_uid,shop_id,request.form.get('preset_key') or None,integer('revision',1000000),request.form.get('name'),*dimensions,measurement(request.form.get('packaging_weight'),mass_unit,'mass'),integer('max_units',5000),request.form.get('enabled')=='yes',ctx.now())
+        return redirect(url_for('marketplace_pilot.shipping_settings',shop_id=shop_id))
+
+    @bp.post('/seller/shipping/<shop_id>/weight')
+    def shipping_weight(shop_id):
+        ctx=g.pilot;settings=shipping_owner(shop_id)
+        if __package__:
+            from .marketplace_seller_shipping import measurement
+        else:
+            from marketplace_seller_shipping import measurement
+        settings.save_weight(g.pilot_uid,shop_id,request.form.get('sku'),integer('revision',1000000),measurement(request.form.get('weight'),request.form.get('mass_unit'),'mass'),ctx.now())
+        return redirect(url_for('marketplace_pilot.shipping_settings',shop_id=shop_id))
+
     @bp.get('/purchases')
     def queue():return order_queue(False)
 
@@ -186,7 +250,7 @@ def register(app,database_factory,services_factory,authorize,allowed_users,envir
         ctx=g.pilot;row=owned_order(order_id,buyer=True)
         destination=ctx.db.execute('SELECT destination_id FROM marketplace_pilot_destinations WHERE order_id=? AND buyer_id=?',(order_id,g.pilot_uid)).fetchone()
         if not destination:raise ValueError('buyer destination required')
-        api=ctx.carrier_for_shop(row['seller_ref'],row['seller_owner_id'])
+        api=ctx.shipping_settings.api(row['seller_ref'],row['seller_owner_id']) if ctx.shipping_settings is not None else ctx.carrier_for_shop(row['seller_ref'],row['seller_owner_id'])
         carrier.fetch_rates(ctx.db,g.pilot_uid,order_id,destination[0],ctx.location(),api,ctx.now(),request.form.get('share_address')=='yes',ctx.policy,clock=ctx.now)
         return redirect(url_for('marketplace_pilot.order',order_id=order_id))
 
@@ -266,3 +330,4 @@ def register(app,database_factory,services_factory,authorize,allowed_users,envir
         return render_template('marketplace_pilot.html',view='destination',address=address,order_id=order_id)
 
     app.register_blueprint(bp)
+
