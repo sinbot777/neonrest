@@ -12,7 +12,7 @@
 <label class="ship-check"><input type="checkbox" name="enabled" value="yes" {% if not p or p.enabled %}checked{% endif %}>Use this package for shipping quotes</label><button>{{ 'Save package changes' if p else 'Add package preset' }}</button></form>
 {% endmacro %}
 <main class="ship-shell"><header><p class="ship-eyebrow">NEONREST / SELLER STUDIO</p><h1>Shipping settings</h1><p class="ship-banner">Sandbox test setup. Each shop has its own connection, origin, packages and item weights. This does not purchase labels or activate live shipping.</p></header>
-<nav aria-label="Shipping navigation"><a href="{{ url_for('marketplace_pilot.index') }}">Test catalog</a><a href="{{ url_for('marketplace_pilot.shipping_shops') }}">Your shops</a><a href="{{ url_for('marketplace_pilot.seller_queue') }}">Seller orders</a></nav>
+<nav aria-label="Shipping navigation">{% if not shipping_settings_only %}<a href="{{ url_for('marketplace_pilot.index') }}">Test catalog</a>{% endif %}<a href="{{ url_for('marketplace_pilot.shipping_shops') }}">Your shops</a>{% if not shipping_settings_only %}<a href="{{ url_for('marketplace_pilot.seller_queue') }}">Seller orders</a>{% endif %}</nav>
 {% if view=='shops' %}<h2>Choose your shop</h2>{% for shop in shops %}<article><a href="{{ url_for('marketplace_pilot.shipping_settings',shop_id=shop.page_id) }}">{{ shop.name }}</a></article>{% else %}<p>No eligible shops are available. Shipping setup is managed by the shop owner.</p>{% endfor %}
 {% else %}
 <section><h2>Shippo test connection</h2><p role="status">{{ 'Connected in test mode' if data.connection.connected else 'Not connected' }}</p><p>Only this shop’s owner can change the connection. Saved keys are encrypted and are never shown again.</p>

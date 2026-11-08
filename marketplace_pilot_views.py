@@ -68,15 +68,17 @@ def initialize_marker(db):
     db.execute("INSERT INTO marketplace_pilot_marker VALUES ('isolated_test_pilot_v1')");db.commit()
 
 
-def register(app,database_factory,services_factory,authorize,allowed_users,environment):
+def register(app,database_factory,services_factory,authorize,allowed_users,environment,settings_only=False):
     if environment!='sandbox' or app.config.get('MARKETPLACE_TEST_PILOT') is not True:
         raise ValueError('explicit Sandbox-only pilot configuration required')
     if not callable(database_factory) or not callable(services_factory) or not callable(authorize):raise ValueError('configured pilot services required')
     if not isinstance(allowed_users,(tuple,list,set,frozenset)) or not allowed_users or any(type(uid) is not int or uid<=0 for uid in allowed_users):raise ValueError('explicit adult tester allowlist required')
+    if type(settings_only) is not bool:raise ValueError('explicit preview scope required')
     allowed=frozenset(allowed_users);bp=Blueprint('marketplace_pilot',__name__,url_prefix='/marketplace/pilot')
 
     @bp.before_request
     def gate():
+        if settings_only and request.endpoint!='marketplace_pilot.index' and not request.endpoint.startswith('marketplace_pilot.shipping_'):abort(404)
         uid=session.get('user_id')
         if type(uid) is not int:abort(401)
         if uid not in allowed or authorize(uid) is not True:abort(403)
@@ -95,6 +97,9 @@ def register(app,database_factory,services_factory,authorize,allowed_users,envir
             helpers=app.extensions['community_auth_helpers'];helpers['csrf']()
             limited=helpers['limited']('marketplace-test-pilot',60)
             if limited is not None:return limited
+
+    @bp.context_processor
+    def preview_scope():return dict(shipping_settings_only=settings_only)
 
     @bp.teardown_request
     def close(error):
@@ -130,6 +135,7 @@ def register(app,database_factory,services_factory,authorize,allowed_users,envir
     @bp.get('')
     @bp.get('/')
     def index():
+        if settings_only:return redirect(url_for('marketplace_pilot.shipping_shops'))
         ctx=g.pilot;items=[]
         rows=ctx.db.execute("SELECT l.*,s.name AS shop_name,s.owner_id FROM seller_listings l JOIN seller_shops s ON s.page_id=l.shop_id WHERE l.kind='physical' AND l.state='draft' ORDER BY l.id LIMIT 100").fetchall()
         for row in rows:
