@@ -43,6 +43,15 @@ class NeonrestPolicy:
         from .marketplace_catalog import fee_policy
         return fee_policy(db, shop)
 
+    @staticmethod
+    def published(db, listing_id, buyer):
+        from .marketplace_catalog import detail
+        try:
+            detail(db, buyer, listing_id)
+            return True
+        except ValueError:
+            return False
+
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS marketplace_checkout_skus (
@@ -297,6 +306,8 @@ def cancel_order(db, env, buyer, order_id, now, policy=NeonrestPolicy):
         order = db.execute('SELECT * FROM marketplace_checkout_orders WHERE id=? AND environment=? AND buyer_id=?', (order_id, env, buyer)).fetchone()
         if not order:
             raise CheckoutError('order unavailable')
+        if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='marketplace_test_payment_dispatches'").fetchone() and db.execute('SELECT 1 FROM marketplace_test_payment_dispatches WHERE order_id=?',(order_id,)).fetchone():
+            raise CheckoutError('payment may have been submitted; canonical recovery is required')
         if inventory.consumed(db,order['hold_id']):
             return 'test_settled'
         if order['state'] == 'awaiting_payment':
@@ -318,3 +329,4 @@ def expire_orders(db, env, now, limit=100):
             ORDER BY expires_at,id LIMIT ?''', (env, now, limit)).fetchall()
         db.executemany("UPDATE marketplace_inventory_holds SET state='expired' WHERE id=? AND state='reserved'", [(h[0],) for h in holds])
         return len(holds)
+

@@ -144,7 +144,14 @@ def settle_test_receipt(db,receipt_id,location_resolver,now,policy=checkout.Neon
     inventory.clock(now)
     if type(receipt_id) is not int or receipt_id<=0:
         raise SettlementError('internal receipt identifier required')
-    if type(location_resolver) is not addresses.AddressResolver or location_resolver.store.db is not db:
+    # Accept only the native resolver or our DB-local measured-parcel wrapper.
+    # An arbitrary caller-supplied resolver could bypass address freshness.
+    if __package__:
+        from .marketplace_carrier_rates import CarrierResolver
+    else:
+        from marketplace_carrier_rates import CarrierResolver
+    native=location_resolver.addresses if type(location_resolver) is CarrierResolver else location_resolver
+    if type(native) is not addresses.AddressResolver or native.store.db is not db:
         raise SettlementError('native same-connection address resolver required')
     with inventory.transaction(db):
         receipt=db.execute('SELECT * FROM marketplace_payment_events WHERE id=?',(receipt_id,)).fetchone()
@@ -233,3 +240,4 @@ def run_ready(db,location_resolver,now,limit=25,policy=checkout.NeonrestPolicy,c
             measured=clock();inventory.clock(measured);current=max(current,measured)
         results.append(settle_test_receipt(db,receipt['id'],location_resolver,current,policy))
     return results
+

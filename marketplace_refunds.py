@@ -192,6 +192,8 @@ def withdraw_unbound(db,uid,request_id,now,policy=checkout.NeonrestPolicy):
         if not request or now<request['created_at']: raise RefundError('test request unavailable')
         _,order,_,_,_=_historical(db,request['order_id']);_owner(db,uid,order,policy)
         if request['owner_id']!=uid: raise RefundError('original requesting owner required')
+        if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='marketplace_test_refund_dispatches'").fetchone() and db.execute('SELECT 1 FROM marketplace_test_refund_dispatches WHERE request_id=?',(request_id,)).fetchone():
+            raise RefundError('submitted refund requires canonical recovery, not withdrawal')
         old=db.execute('SELECT 1 FROM marketplace_test_refund_withdrawals WHERE request_id=?',(request_id,)).fetchone()
         if old: return request_id
         if db.execute('SELECT 1 FROM marketplace_test_refund_bindings WHERE request_id=?',(request_id,)).fetchone():
@@ -382,3 +384,4 @@ def get_summary(db,uid,order_id,now,policy=checkout.NeonrestPolicy):
         FROM marketplace_test_refund_applications a JOIN marketplace_test_refund_requests r ON r.id=a.request_id WHERE r.order_id=?''',(order_id,)).fetchone()
     return dict(state='test_refunded' if values[0]==allocation['total_cents'] else ('test_partially_refunded' if values[0] else 'test_settled'),
         total_cents=allocation['total_cents'],refunded_cents=values[0],platform_fee_credit_cents=values[1],fulfillment_enabled=False)
+
