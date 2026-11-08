@@ -8,6 +8,34 @@ from urllib.parse import urlsplit
 
 ACCENTS = ('teal', 'violet', 'rose', 'amber', 'blue', 'green')
 FIELDS = ('tagline', 'website', 'accent', 'avatar_file', 'cover_file')
+DETAIL_FIELDS = {'category': 80, 'location': 120, 'contact': 160, 'hours': 300}
+
+
+def public_details(value):
+    if isinstance(value, str):
+        if len(value) > 4096:
+            raise ValueError('Page details are too large.')
+        try:
+            value = json.loads(value)
+        except (ValueError, RecursionError):
+            raise ValueError('Invalid page details.') from None
+    if not isinstance(value, dict) or set(value) - set(DETAIL_FIELDS):
+        raise ValueError('Invalid page details.')
+    result = {}
+    for name, maximum in DETAIL_FIELDS.items():
+        text = value.get(name, '')
+        if (not isinstance(text, str) or len(text.strip()) > maximum
+                or any((ord(c) < 32 and not (name == 'hours' and c in '\n\r')) or ord(c) == 127 for c in text)):
+            raise ValueError('Check the public ' + name + ' field (maximum ' + str(maximum) + ' characters).')
+        result[name] = text.strip()
+    return result
+
+
+def page_details(page):
+    try:
+        return public_details(page['public_details'])
+    except (ValueError, KeyError, IndexError):
+        return dict.fromkeys(DETAIL_FIELDS, '')
 
 
 def frame_defaults(slot):
@@ -64,6 +92,8 @@ def initialize(db):
     for name in ('avatar_frame', 'cover_frame'):
         if name not in columns:
             db.execute("ALTER TABLE identity_pages ADD COLUMN " + name + " TEXT NOT NULL DEFAULT '{}'")
+    if 'public_details' not in columns:
+        db.execute("ALTER TABLE identity_pages ADD COLUMN public_details TEXT NOT NULL DEFAULT '{}'")
 
 
 def details(tagline, website, accent):
@@ -119,6 +149,9 @@ def save(db, pages, app, uid, page_id, revision, form, files):
         raise pages.PageError('The page changed. Reload it before saving.', 409)
     try:
         tagline, website, accent = details(form.get('tagline', ''), form.get('website', ''), form.get('accent', 'teal'))
+        visible_details = page_details(page)
+        visible_details.update({name: form['detail_' + name] for name in DETAIL_FIELDS if 'detail_' + name in form})
+        visible_details = json.dumps(public_details(visible_details), separators=(',', ':'))
         frames = {slot: json.dumps(frame_settings(form.get(slot + '_frame', page[slot + '_frame']), slot),
                                   separators=(',', ':'), allow_nan=False) for slot in ('avatar', 'cover')}
         pictures = {}
@@ -139,9 +172,9 @@ def save(db, pages, app, uid, page_id, revision, form, files):
             for slot, picture in pictures.items():
                 names[slot] = secrets.token_hex(24) + '.png'
                 image(folder / names[slot], picture, 2 * 1024 * 1024, 'PNG', 'media')
-    result = db.execute('''UPDATE identity_pages SET tagline=?,website=?,accent=?,avatar_file=?,cover_file=?,avatar_frame=?,cover_frame=?,
+    result = db.execute('''UPDATE identity_pages SET tagline=?,website=?,accent=?,avatar_file=?,cover_file=?,avatar_frame=?,cover_frame=?,public_details=?,
         revision=revision+1,updated_at=? WHERE id=? AND revision=?''',
-        (tagline, website, accent, names['avatar'], names['cover'], frames['avatar'], frames['cover'], int(pages.time.time()), page_id, revision))
+        (tagline, website, accent, names['avatar'], names['cover'], frames['avatar'], frames['cover'], visible_details, int(pages.time.time()), page_id, revision))
     if result.rowcount != 1:
         raise pages.PageError('The page changed. Reload it before saving.', 409)
     pages.event(db, page_id, uid, 'profile_edited')
@@ -150,6 +183,7 @@ def save(db, pages, app, uid, page_id, revision, form, files):
 def register_artwork(bp, app, core, pages):
     from flask import abort, request, send_file, send_from_directory, session
     app.jinja_env.globals['page_frame'] = page_frame
+    app.jinja_env.globals['page_details'] = page_details
 
     @bp.get('/pages/<page_id>/artwork/<slot>/<filename>')
     def artwork(page_id, slot, filename):
@@ -180,3 +214,4 @@ def register_artwork(bp, app, core, pages):
             response = send_from_directory(artwork_folder(app), filename, mimetype='image/png')
         response.headers['X-Content-Type-Options'] = 'nosniff'
         return response
+

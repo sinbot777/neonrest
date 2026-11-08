@@ -586,8 +586,16 @@ def register(app, core):
         posts = [post for post in rows[:50] if post_visible(db, page, post, viewer)]
         older = rows[49]['id'] if len(rows) > 50 else None
         endpoint = 'identity_pages.creative' if kind == 'creative' else 'identity_pages.business'
+        from . import page_products
+        try:
+            products = page_products.browse(db, viewer, page, request.args.get('products_page', '1'))
+        except ValueError as error:
+            raise PageError(str(error)) from None
         return render_template('identity_page.html', page=page, page_role=role(db, page, viewer),
-            posts=posts, page_hidden=hidden(db,page['id']), older_url=url_for(endpoint, slug=canonical[1:], before=older) if older else None)
+            products=products,
+            products_previous=url_for(endpoint, slug=canonical[1:], before=before, products_page=products['page']-1, _anchor='page-products') if products['page']>1 else None,
+            products_next=url_for(endpoint, slug=canonical[1:], before=before, products_page=products['page']+1, _anchor='page-products') if products['has_next'] else None,
+            posts=posts, page_hidden=hidden(db,page['id']), older_url=url_for(endpoint, slug=canonical[1:], before=older, products_page=products['page'], _anchor='page-updates') if older else None)
 
     @bp.get('/_<slug>')
     def creative(slug):
@@ -610,3 +618,4 @@ def register(app, core):
     import sys
     page_profile.register_artwork(bp, app, core, sys.modules[__name__])
     app.register_blueprint(bp)
+
