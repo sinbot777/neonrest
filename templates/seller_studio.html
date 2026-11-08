@@ -23,12 +23,14 @@
 {% elif view in ['new','identity'] %}
 <h2>{{ 'Create your shop' if view == 'new' else 'Shop identity link' }}</h2>
 <p>Shop ownership stays with your personal account. A Page link is optional. Linking a Page lets its current eligible adult editors and managers work on listing drafts; removing the link revokes that access. Page transfers never transfer your shop.</p>
-<form method="post"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
+<form method="post" data-shop-identity-form><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
 {% if view == 'new' %}<label>Shop name<input name="name" maxlength="80" required></label>{% else %}<input type="hidden" name="revision" value="{{ shop.revision }}">{% endif %}
 <label>Identity link<select name="identity_kind"><option value="personal" {{ 'selected' if view == 'new' or shop.identity_kind == 'personal' else '' }}>My personal @handle</option><option value="none" {{ 'selected' if view == 'identity' and shop.identity_kind == 'none' else '' }}>Independent shop, no identity link</option><option value="page" {{ 'selected' if view == 'identity' and shop.identity_kind == 'page' else '' }}>A creative _handle or business $handle Page I own</option></select></label>
 <label>Page to link (only for the Page option)<select name="linked_page_id"><option value="">No Page selected</option>{% for choice in choices %}<option value="{{ choice.id }}" {{ 'selected' if view == 'identity' and shop.linked_page_id == choice.id else '' }}>{{ choice.handle }} · {{ choice.name }}</option>{% endfor %}</select></label>
+<p data-shop-identity-help aria-live="polite">Choosing a Page switches the identity link to that Page. Choosing your personal profile or no identity clears the Page selection.</p>
 <p>A paid business Page is optional and does not grant marketplace privileges. No drafts, files or shop ownership move when an identity link changes.</p>
 <button>{{ 'Create private shop draft' if view == 'new' else 'Save identity link' }}</button></form>
+<script src="{{ url_for('static',filename='js/shop_identity.js') }}" defer></script>
 {% elif view == 'shop' %}
 <h2>{{ shop.name if shop else page.name }}</h2><p>Identity: {{ identity_label(page) }}</p>{% if shop and owner %}<p><a href="{{ url_for('seller_studio.identity',page_id=shop.page_id) }}">Manage identity link</a></p>{% endif %}
 {% if page.state == 'archived' %}<p>Restore the Page before editing this shop. Existing drafts are retained.</p>{% endif %}
