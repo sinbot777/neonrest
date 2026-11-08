@@ -17,7 +17,7 @@ class CssTests(RouteTests):
         self.assertEqual(response.status_code,200)
         self.assertIn(b'Preview CSS',response.data)
         self.assertEqual(self.csspost().status_code,302)
-        self.assertIn(b'@scope (.page-profile)',self.client.get('/_example').data)
+        self.assertIn(b'.identity-page.page-profile{ color: hotpink; }',self.client.get('/_example').data)
         self.assertIn('hotpink',str(pages.export_user(self.db,1)))
 
     def test_preview_is_private_and_does_not_save(self):
@@ -51,6 +51,15 @@ class CssTests(RouteTests):
         self.assertEqual(page_css.validate(value),value)
         self.assertEqual(self.csspost(custom_css=value).status_code,302)
         self.assertEqual(pages.get(self.db,self.page)['custom_css'],value)
+
+    def test_selector_compilation_cannot_reach_navigation(self):
+        css='body{display:none}.page-profile h2, .page-product-card{color:red}@media(max-width:700px){.page-profile{color:blue}}'
+        result=page_css.scoped(css)
+        self.assertIn('.identity-page.page-profile body{',result)
+        self.assertIn('.identity-page.page-profile h2, .identity-page.page-profile .page-product-card{',result)
+        self.assertIn('@media(max-width:700px){.identity-page.page-profile{',result)
+        for value in ('.page-profile + nav{display:none}', '.page-profile ~ *{display:none}', '.x{& .y{color:red}}', '.x; color:red'):
+            with self.subTest(value=value),self.assertRaises(ValueError):page_css.scoped(value)
 
     def test_missing_login_expired_confirmation_and_archived(self):
         self.login(None)

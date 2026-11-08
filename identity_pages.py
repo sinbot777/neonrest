@@ -595,7 +595,7 @@ def register(app, core):
         except ValueError as error:
             raise PageError(str(error)) from None
         return render_template('identity_page.html', page=page, page_role=role(db, page, viewer),
-            custom_page_css=page_css.rendered(page) if css_override is None else css_override,
+            custom_page_css=page_css.rendered(page) if css_override is None else page_css.scoped(css_override),
             css_preview=css_override is not None,
             products=products,
             products_previous=url_for(endpoint, slug=canonical[1:], before=before, products_page=products['page']-1, _anchor='page-products') if products['page']>1 else None,
@@ -610,7 +610,7 @@ def register(app, core):
         require_role(db, page, uid, ('owner', 'manager', 'editor'))
         if page['state'] == 'archived':
             raise PageError('Restore this Page before editing its CSS.', 409)
-        css = page_css.rendered(page) or page_css.STARTER
+        css = page['custom_css'] or page_css.STARTER
         error = None
         if request.method == 'POST':
             response = writing()
@@ -620,6 +620,7 @@ def register(app, core):
             try:
                 if action not in ('save', 'preview', 'reset'): raise PageError('Choose a CSS action.')
                 css = page_css.validate('' if action == 'reset' else css)
+                page_css.scoped(css)
                 if revision() != page['revision']: raise PageError('This Page changed. Reload before editing CSS.', 409)
                 if action == 'preview': return show(page['kind'], page['handle'][1:], css)
                 with db:

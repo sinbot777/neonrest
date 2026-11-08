@@ -2,7 +2,7 @@
 {% block title %}{{ page.handle }} - Neonrest{% endblock %}
 {% block content %}
 {% include 'partials/identity_page_styles.html' %}
-{% if custom_page_css %}<style>@scope (.page-profile) { {{ custom_page_css|safe }} }</style>{% endif %}
+{% if custom_page_css %}<style>{{ custom_page_css|safe }}</style>{% endif %}
 {% if css_preview %}<aside class="identity-page" role="status">Unsaved CSS preview. <a href="{{ url_for('identity_pages.style',page_id=page.id) }}">Return to CSS editor</a> · <a href="{{ url_for('identity_pages.creative' if page.kind=='creative' else 'identity_pages.business',slug=page.handle[1:]) }}">View saved Page</a></aside>{% endif %}
 <main class="identity-page page-profile page-accent-{{ page.accent }}">
   <header class="page-profile-header">
