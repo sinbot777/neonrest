@@ -54,7 +54,9 @@ class PilotTests(unittest.TestCase):
         r=self.post('/checkout',dict(ADDRESS,sku=self.sku,quantity='1',revision='0',request_key='ui-order'))
         self.assertEqual(r.status_code,302,r.data);self.order=r.location.rsplit('/',1)[1];return self.order
     def query(self,sql,args=()):
-        with self.connect() as db:return db.execute(sql,args).fetchall()
+        db=self.connect()
+        try:return db.execute(sql,args).fetchall()
+        finally:db.close()
     def quote(self):
         self.assertEqual(self.post('/orders/'+self.order+'/rates',{'share_address':'yes'}).status_code,302)
         rate=self.query('SELECT id FROM marketplace_test_carrier_rates')[0][0]
