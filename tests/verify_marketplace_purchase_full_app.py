@@ -34,7 +34,7 @@ seller=users['Owner'];buyer=users['Writer'];excluded=users['Regular']
 with app.app_context():
     db=core.get_db()
     shop=studio.create_independent(db,seller,'Fictional purchase QA only')
-    listing=studio.save_listing(db,seller,shop,MultiDict(kind='physical',title='Fictional QA item',price='10.00',quantity='3',description='Not for sale',returns='Fictional return terms'))
+    listing=studio.save_listing(db,seller,shop,MultiDict(dict(kind='physical',title='Fictional QA item',price='10.00',quantity='3',description='Not for sale',returns='Fictional return terms')))
     db.execute('INSERT INTO marketplace_publications(listing_id,listing_revision,published_at) VALUES (?,0,?)',(listing,now));db.commit()
 store_path=w/'purchase.sqlite';db=sqlite3.connect(store_path);db.row_factory=sqlite3.Row
 host.provision(db);db.close();store_path.chmod(0o600)
@@ -79,15 +79,18 @@ db=bridge['connect']();rate=db.execute('SELECT id FROM marketplace_test_carrier_
 check(post('Writer','/orders/'+order+'/quote',rate=rate,request_key='actual-app-quote').status_code==302,'Full fictional shipping/tax quote')
 db=bridge['connect']();q=db.execute('SELECT id FROM marketplace_checkout_quotes').fetchone()[0];db.close()
 check(post('Writer','/orders/'+order+'/pay',quote_id=q,accept_total='yes',test_card='pm_card_visa').status_code==302,'Actual app explicit total and fictional payment submission')
-with app.test_request_context('/fixture-worker'):
-    db=bridge['connect']();ctx=services(db,bridge['policy'])
-    check(db.execute('SELECT count(*) FROM marketplace_test_settlements').fetchone()[0]==0,'Browser submission alone never settles')
-    adapter=payments.StripeTestWebhookAdapter('acct_platform',[SECRET],ctx.stripe.fetch_payment)
-    raw,sig=signed_event(payment='pi_flow1',now=now,created=now)
-    payments.receive_stripe(db,adapter,raw,sig,now,ctx.policy)
-    host.recovery_tick(ctx);host.recovery_tick(ctx)
-    check(db.execute('SELECT count(*) FROM marketplace_test_settlements').fetchone()[0]==1,'Same-store worker settles once')
-    db.close()
+db=bridge['connect']()
+check(db.execute('SELECT count(*) FROM marketplace_test_settlements').fetchone()[0]==0,'Browser submission alone never settles');db.close()
+from werkzeug.test import Client
+from werkzeug.wrappers import Response
+receiver=Client(bridge['webhook']([SECRET]),Response)
+raw,sig=signed_event(payment='pi_flow1',now=now,created=now)
+check(receiver.post('/stripe',data=raw,content_type='application/json',headers={'Stripe-Signature':sig}).status_code==200,'Same-store signed WSGI receiver')
+check(receiver.post('/stripe',data=raw,content_type='application/json',headers={'Stripe-Signature':sig}).status_code==200,'Duplicate signature-verified delivery')
+check(receiver.post('/stripe',data=raw,content_type='application/json').status_code==400,'Unsigned delivery denied')
+bridge['worker_tick']();bridge['worker_tick']()
+db=bridge['connect']()
+check(db.execute('SELECT count(*) FROM marketplace_test_settlements').fetchone()[0]==1,'Same-store scheduled worker settles once');db.close()
 check(get('Owner','/marketplace/pilot/seller/orders').status_code==200,'Actual seller queue')
 check(post('Writer','/orders/'+order+'/destination').status_code==400,'Buyer cannot impersonate fulfillment seller')
 check(post('Owner','/orders/'+order+'/destination').status_code==200,'Original seller accesses paid encrypted destination')

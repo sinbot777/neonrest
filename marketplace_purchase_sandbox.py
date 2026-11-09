@@ -18,6 +18,7 @@ if __package__:
     from . import marketplace_purchase_flow as flow, marketplace_pilot_orders as orders
     from . import marketplace_pilot_views as views, marketplace_payment_jobs as jobs
     from .marketplace_test_checkout_api import StripeTestCheckoutAPI
+    from .marketplace_webhooks import SandboxWebhookApplication
 else:
     import marketplace_shipping_sandbox as shipping_host
     import marketplace_checkout as checkout, marketplace_addresses as addresses
@@ -26,6 +27,7 @@ else:
     import marketplace_purchase_flow as flow, marketplace_pilot_orders as orders
     import marketplace_pilot_views as views, marketplace_payment_jobs as jobs
     from marketplace_test_checkout_api import StripeTestCheckoutAPI
+    from marketplace_webhooks import SandboxWebhookApplication
 
 PURPOSE = 'isolated_sandbox_purchases_v1'
 LISTING_FIELDS = ('shop_id','kind','title','description','price_cents','quantity',
@@ -170,5 +172,25 @@ def register(app,core,database_path,allowed_users,sellers,services_factory,worke
     app.config['MARKETPLACE_TEST_PILOT']=True
     app.jinja_loader=ChoiceLoader([FileSystemLoader(str(Path(__file__).parent/'templates')),app.jinja_loader])
     views.register(app,factory,services,lambda uid:policy.adult(None,uid),allowed_users,'sandbox')
-    # The worker and webhook provisioning use this exact store and policy.
-    return dict(connect=connect,services=services,policy=policy)
+    def worker_tick(limit=25):
+        with app.app_context():
+            db=connect()
+            try:return recovery_tick(services(db),limit)
+            finally:db.close()
+    def webhook(signing_secrets):
+        # Signing configuration is supplied privately, never by an HTTP form.
+        # Build the adapter per delivery so its provider client and receipt
+        # connection have the same lifetime as the application context.
+        def receive(environ,start_response):
+            with app.app_context():
+                db=connect()
+                try:
+                    ctx=services(db)
+                    adapter=payments.StripeTestWebhookAdapter(ctx.stripe.scope.platform,signing_secrets,ctx.stripe.fetch_payment)
+                    receiver=SandboxWebhookApplication('test',lambda:db,stripe=adapter,policy=policy)
+                    return receiver(environ,start_response)
+                finally:db.close()
+        return receive
+    # Explicit host provisioning must mount/schedule these; registration never
+    # changes the existing webhook mount or installs a scheduled task itself.
+    return dict(connect=connect,services=services,policy=policy,worker_tick=worker_tick,webhook=webhook)
