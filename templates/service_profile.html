@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+{% block title %}{{ service_handle }} · Service · Neonrest{% endblock %}
+{% block content %}<main class="community-page" style="max-width:52rem;margin:1rem auto;padding:1rem;overflow-wrap:anywhere">
+<p><strong>Service</strong> · Official service identity operated through accountable human accounts.</p>
+<h1>{{ service_handle }}</h1><p>{{ service.purpose }}</p>
+<p>This identity publishes public guidance. It does not sign in, send messages, or read members' private content.</p>
+<p><a href="{{ url_for('user_guide') }}">User guide</a>{% if service_operator %} · <a href="{{ url_for('services.mine') }}">Your Service workspace</a>{% endif %}</p>
+{% for item in guidance %}<article><div>{{ item.html|safe }}</div><p><a href="{{ url_for('post_detail',post_id=item.ref) }}">Open guidance post</a></p></article>{% else %}<p>No guidance is currently available.</p>{% endfor %}
+</main>{% endblock %}

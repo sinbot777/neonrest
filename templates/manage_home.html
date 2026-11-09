@@ -9,6 +9,7 @@
   <section aria-labelledby="site-tools"><h2 id="site-tools">Site tools</h2>
     <div class="manage-grid">
 {% if 'manage_roles' in permissions %}
+<article><h3>Service identities</h3><p>Manage accountable owners, public guidance operators and service audits.</p><a href="{{ url_for('services.manage') }}">Service identities</a></article>
 <article><h3>Privacy requests and preservation</h3><p>Review requests, responses, appeals and preservation holds.</p><a href="{{ url_for('privacy_management') }}">Privacy requests</a></article>
 <article><h3>Family request review</h3><p>Review authority and the exact scope of family data requests.</p><a href="{{ url_for('family_data_review') }}">Review family requests</a></article>
 {% endif %}
@@ -64,3 +65,4 @@
 .manage-filter{display:flex;flex-wrap:wrap;gap:.75rem;align-items:end;margin:1rem 0}.manage-filter label{display:grid;gap:.3rem}.manage-filter input,.manage-filter select,.manage-filter button{font:inherit;padding:.55rem .7rem;border-radius:8px;border:1px solid #8198a3;background:#242e3e;color:#f5f0e8}.manage-filter button{cursor:pointer;background:#aee4d8;color:#17232b;font-weight:bold}.manage-filter a{padding:.55rem}
 </style>
 {% endblock %}
+
