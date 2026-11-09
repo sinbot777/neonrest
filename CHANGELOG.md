@@ -1,3 +1,26 @@
+# Service identities and HelpLine — November 8, 2026 (Pacific)
+
+- Add reusable Service identities with protected human owners/operators, revocable public-guidance publishing, explicit Service labels and per-human audits.
+- Service identities have no birthday or independent login and receive no messaging, private-reader or moderation authority. Guidance retains audience, block, mute, account-status and moderation checks.
+- Activate HelpLine through protected owner controls and publish its four approved Fresh Starts guidance posts transactionally and without duplicates.
+- Pass 71 isolated Service checks, 55 Page baseline checks, 39 growth-query checks, seven request-cache tests and 25 privacy-workflow tests. Production public links, profile and desktop/390px views verified.
+- Reconcile deployed source with GitHub, preserve private recovery checkpoints and keep the existing Last.fm credential outside source; four offline provider tests and live Last Played verified.
+
+# Page presentation — November 7, 2026 (Pacific)
+
+- Ship Page headers, protected logos/covers, introductions, website links, accents and About/Updates presentation. Existing ownership, age and billing rules remain authoritative.
+
+# Zines Production release — November 5, 2026 (Pacific)
+
+- Release collaborative Zines with Standard/Custom/Advanced composition, explicit artwork uploads, inline/wrapped art, linked text, styles/master elements, issue organization and three reader modes.
+- Offer Letter/A4 reading, booklet and mini8 PDFs; Production authoring and export acceptance completed and the owner confirmed physical booklet/mini8 prints.
+- Publish the Make Your First Zine field guide. See docs/ZINES_RELEASE.md for scope and professional-publishing follow-ups.
+
+# Reaction performance and attributed media exports — October 27, 2026 (Pacific)
+
+- Deploy page-scoped indexed reaction summaries, bounded reactor lookups and reply continuation.
+- Add bounded, fresh-authenticated ZIP export of personally attributed media with manifests/hashes, retaining JSON exports and existing privacy controls.
+
 # Attachment storage allowances — October 26, 2026 (Pacific)
 
 - Deploy cumulative ordinary-media admission: 16 MiB/account, 24 MiB shared across environments, plus separate provider headroom.
