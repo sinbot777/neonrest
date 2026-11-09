@@ -136,6 +136,9 @@ def erasure_blockers(db, uid):
     for table,column in [('page_followers','user_id'),('page_invitations','sender_id'),('page_invitations','recipient_id'),('calendar_events','creator_id'),('calendar_responses','user_id'),('calendar_reports','reporter_id'),('calendar_reports','reviewed_by'),('calendar_audit','actor_id'),('page_subscriptions','owner_id')]:
         if table in ts and db.execute('SELECT 1 FROM '+table+' WHERE '+column+'=? LIMIT 1',(uid,)).fetchone():
             result.append('Page, billing or calendar dependencies require reviewed disposal')
+    if 'service_accounts' in ts:
+        from .service_accounts import erasure_dependencies as service_dependencies
+        if service_dependencies(db,uid):result.append('Service ownership, operator or audit dependencies require reviewed transfer/disposal')
     pids=[]
     if 'posts' in ts:
         for row in db.execute('SELECT id,user_id,target_user_id FROM posts WHERE user_id=? OR target_user_id=?',(uid,uid)):
@@ -351,3 +354,4 @@ def register(app,core):
             response.headers['X-Content-Type-Options']='nosniff'
             response.headers['X-Neonrest-Privacy-Revision']='2026-10-14.7'
         return response
+

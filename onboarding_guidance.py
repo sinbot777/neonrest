@@ -15,6 +15,13 @@ def publish(db,identifiers,actor_id):
     if actor_id!=1 or not core.has_staff_permission(db,actor_id,'moderate_posts'):
         raise ValueError('Only the site owner can publish this maintenance batch.')
     author=db.execute("SELECT id,verified FROM users WHERE lower(handle)='@helpline'").fetchone()
+    from . import service_accounts as services
+    if author and services.get(db,author['id']):
+        from .utils.vibe_lifecycle import canonical_vibe
+        from .vibe_tools import state
+        vibe=canonical_vibe(db,'Fresh Starts')
+        if not vibe or state(db,vibe['id'])['archived'] or db.execute('SELECT 1 FROM pending_vibes WHERE vibe_id=?',(vibe['id'],)).fetchone():raise ValueError('Fresh Starts is unavailable.')
+        return [services.publish(db,identifiers,author['id'],actor_id,content,'onboarding-guidance-'+str(i),['Fresh Starts']) for i,content in enumerate(POSTS,1)]
     if not author or not author['verified'] or not ready(db,author['id']):raise ValueError('HelpLine must be verified and age-ready.')
     uid=author['id']
     for table,flag in [('account_safety','inactive'),('account_disables','disabled'),('user_moderation','banned'),('user_moderation','posting_restricted')]:
@@ -36,3 +43,4 @@ def publish(db,identifiers,actor_id):
             db.execute("INSERT INTO operations_events(kind,detail) VALUES('onboarding-guidance',?)",('owner:'+str(actor_id)+':HelpLine:'+str(pid),))
         result.append(identifiers.public(db,'post',pid))
     return result
+

@@ -1,5 +1,6 @@
 """Sandbox age boundaries. Parent approval is a reviewed consent record, not identity proof."""
 from .request_cache import request_lookup
+from . import service_accounts as services
 from datetime import date, datetime
 from neonrest import age_clock
 from flask import request, session, redirect, url_for, abort, render_template_string, flash, g
@@ -46,6 +47,8 @@ def family(db,a,b):
 @request_lookup
 def can_read(db,owner,viewer, protected=False, profile=False):
     from neonrest import welcome
+    if services.get(db,viewer): return False
+    if services.get(db,owner): return services.public_profile(db,owner,viewer) if profile else False
     if welcome.staff(db,viewer): return True
     oa=age(db,owner)
     if viewer==owner: return True
@@ -70,6 +73,7 @@ def comment_read(db,cid,viewer):
 
 @request_lookup
 def contact(db,a,b, invitation=False):
+    if services.get(db,a) or services.get(db,b): return False
     if not ready(db,a) or not ready(db,b): return False
     if family(db,a,b): return True
     if not band(db,a,b): return False
@@ -234,3 +238,4 @@ def register(app,core, fresh):
         return response
     @app.context_processor
     def age_links(): return {'age_policy_age':age(core.get_db(),session.get('user_id'))}
+
