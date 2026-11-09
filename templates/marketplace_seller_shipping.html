@@ -6,8 +6,8 @@
 <form method="post" action="{{ url_for('marketplace_pilot.shipping_package',shop_id=shop_id) }}">{{ csrf() }}
 <input type="hidden" name="preset_key" value="{{ p.preset_key if p else '' }}"><input type="hidden" name="revision" value="{{ p.revision if p else 0 }}">
 <label>Package name<input name="name" maxlength="80" value="{{ p.name if p else '' }}" placeholder="Small padded mailer" required></label>
-<div class="ship-grid">{% for key,label in [('length','Length'),('width','Width'),('height','Thickness / height')] %}<label>{{ label }}<input name="{{ key }}" type="number" min="0.000001" step="any" value="{{ p[key+'_um']/10000 if p else '' }}" required></label>{% endfor %}<label>Dimension unit<select name="distance_unit"><option value="cm">Centimetres</option><option value="in">Inches</option><option value="mm">Millimetres</option></select></label></div>
-<div class="ship-grid"><label>Empty packaging weight<input name="packaging_weight" type="number" min="0" step="any" value="{{ p.packaging_mg/1000 if p else '' }}" required></label><label>Weight unit<select name="mass_unit"><option value="g">Grams</option><option value="oz">Ounces</option><option value="lb">Pounds</option></select></label><label>Maximum items that fit<input name="max_units" type="number" min="1" max="5000" value="{{ p.max_units if p else '' }}" required></label></div>
+<div class="ship-grid">{% for key,label in [('length','Length'),('width','Width'),('height','Thickness / height')] %}<label>{{ label }}<input name="{{ key }}" data-unit-base="{{ p[key+'_um'] if p else '' }}" type="number" min="0.000001" step="any" value="{{ p[key+'_um']/10000 if p else '' }}" required></label>{% endfor %}<label>Dimension unit<select name="distance_unit"><option value="cm">Centimetres</option><option value="in">Inches</option><option value="mm">Millimetres</option></select></label></div>
+<div class="ship-grid"><label>Empty packaging weight<input name="packaging_weight" data-unit-base="{{ p.packaging_mg if p else '' }}" type="number" min="0" step="any" value="{{ p.packaging_mg/1000 if p else '' }}" required></label><label>Weight unit<select name="mass_unit"><option value="g">Grams</option><option value="oz">Ounces</option><option value="lb">Pounds</option></select></label><label>Maximum items that fit<input name="max_units" type="number" min="1" max="5000" value="{{ p.max_units if p else '' }}" required></label></div>
 <p class="ship-help">Include the empty mailer, order sheet and other fixed packing materials in packaging weight. Item weights are added separately. Capacity is your packing rule; Neonrest does not determine whether products physically fit.</p>
 <label class="ship-check"><input type="checkbox" name="enabled" value="yes" {% if not p or p.enabled %}checked{% endif %}>Use this package for shipping quotes</label><button>{{ 'Save package changes' if p else 'Add package preset' }}</button></form>
 {% endmacro %}
@@ -21,7 +21,72 @@
 <p class="ship-help">Public multi-seller onboarding will use a supported Shippo platform or OAuth connection. This test setup does not create a managed merchant account or establish carrier approval.</p></section>
 <section><h2>Shipping origin</h2><p>The address packages ship from. It is encrypted and kept out of public listings. Buyers authorize sharing their delivery address when requesting rates.</p><form method="post" action="{{ url_for('marketplace_pilot.shipping_origin',shop_id=shop_id) }}">{{ csrf() }}<input type="hidden" name="request_key" value="{{ request_key }}-origin"><div class="ship-grid">{% for key,label in [('recipient','Sender name'),('company','Company (optional)'),('line1','Street address'),('line2','Address line 2 (optional)'),('city','City'),('state','State abbreviation'),('postal_code','ZIP / ZIP+4')] %}<label>{{ label }}<input name="{{ key }}" maxlength="120" value="{{ origin[key] if origin else '' }}" {% if key not in ['company','line2'] %}required{% endif %}></label>{% endfor %}<label>Country<select name="country"><option value="US">United States</option></select></label></div><button>Save shipping origin</button></form></section>
 <section><h2>Package presets</h2><p>Save the mailers and boxes you use. Checkout chooses the smallest enabled preset that meets your item-count limit and weight limits. Confirm your actual packing dimensions and capacity before offering rates.</p>{% for p in data.presets %}<details><summary>{{ p.name }} · {{ 'Enabled' if p.enabled else 'Disabled' }} · up to {{ p.max_units }} items</summary>{{ package_form(p) }}</details>{% endfor %}<details {% if not data.presets %}open{% endif %}><summary>Add a package</summary>{{ package_form() }}</details></section>
-<section><h2>Item and variation weights</h2><p>Enter the weight of one item, including its backing or individual wrapping. Exclude the fixed packaging weight entered above. Every physical variation in an order needs a weight.</p>{% for item in data.weights %}<article><h3>{{ item.title }}</h3><p>{{ item.variant_key|replace('_',' ') }}</p><form method="post" action="{{ url_for('marketplace_pilot.shipping_weight',shop_id=shop_id) }}">{{ csrf() }}<input type="hidden" name="sku" value="{{ item.sku }}"><input type="hidden" name="revision" value="{{ item.revision }}"><div class="ship-grid"><label>Weight per item<input name="weight" type="number" min="0.000001" step="any" value="{{ item.weight_mg/1000 if item.weight_mg else '' }}" required></label><label>Weight unit<select name="mass_unit"><option value="g">Grams</option><option value="oz">Ounces</option><option value="lb">Pounds</option></select></label></div><button>Save item weight</button></form></article>{% else %}<p>No physical stock items are configured for this shop yet.</p>{% endfor %}</section>
+<section><h2>Item and variation weights</h2><p>Enter the weight of one item, including its backing or individual wrapping. Exclude the fixed packaging weight entered above. Every physical variation in an order needs a weight.</p>{% for item in data.weights %}<article><h3>{{ item.title }}</h3><p>{{ item.variant_key|replace('_',' ') }}</p><form method="post" action="{{ url_for('marketplace_pilot.shipping_weight',shop_id=shop_id) }}">{{ csrf() }}<input type="hidden" name="sku" value="{{ item.sku }}"><input type="hidden" name="revision" value="{{ item.revision }}"><div class="ship-grid"><label>Weight per item<input name="weight" data-unit-base="{{ item.weight_mg if item.weight_mg else '' }}" type="number" min="0.000001" step="any" value="{{ item.weight_mg/1000 if item.weight_mg else '' }}" required></label><label>Weight unit<select name="mass_unit"><option value="g">Grams</option><option value="oz">Ounces</option><option value="lb">Pounds</option></select></label></div><button>Save item weight</button></form></article>{% else %}<p>No physical stock items are configured for this shop yet.</p>{% endfor %}</section>
 {% endif %}</main>
 <style>.ship-shell{box-sizing:border-box;max-width:960px;margin:1.5rem auto;padding:1.5rem;background:#172032;color:#f3f4f6;border:1px solid #8191a8;border-radius:.8rem;overflow-wrap:anywhere}.ship-shell *{box-sizing:border-box}.ship-shell a{color:#d9f4ff}.ship-eyebrow{letter-spacing:.12em;color:#7dd3c7;font-size:.8rem}.ship-banner{padding:1rem;background:#283347;border-left:4px solid #fcd34d;line-height:1.6}.ship-shell nav{display:flex;flex-wrap:wrap;gap:1rem;margin:1.5rem 0}.ship-shell section,.ship-shell article{padding:1rem;margin:1rem 0;border:1px solid #607289;border-radius:.5rem}.ship-shell form{margin:1rem 0}.ship-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.75rem}.ship-shell label{display:block;margin:.8rem 0}.ship-shell input,.ship-shell select{display:block;width:100%;max-width:100%;padding:.65rem;margin-top:.4rem;background:#111827;color:#f3f4f6;border:1px solid #8793a8;border-radius:.3rem;font:inherit}.ship-shell button{min-height:44px;padding:.6rem .9rem;background:#d9f4ff;color:#122032;border:0;border-radius:.35rem;font:inherit;margin-top:.75rem;cursor:pointer}.ship-check{display:flex!important;align-items:flex-start;gap:.75rem;line-height:1.6}.ship-check input{width:1.1rem;flex:0 0 auto}.ship-shell details{padding:.8rem 0;border-top:1px solid #607289}.ship-shell summary{cursor:pointer;min-height:32px}.ship-help{font-size:.9rem;line-height:1.6}.ship-shell :focus-visible{outline:3px solid #7dd3c7;outline-offset:3px}@media(max-width:600px){.ship-shell{margin:.75rem 0;padding:1rem}.ship-shell input,.ship-shell select{font-size:16px}}</style>
+
+<script>
+(() => {
+  // Keep unit switches at the stored integer precision, including no-op saves.
+  const distance = {cm:[10000n,1n], in:[25400n,1n], mm:[1000n,1n]};
+  const mass = {g:[1000n,1n], oz:[226796185n,8000n], lb:[45359237n,100n]};
+  function decimal(value) {
+    if (value.length > 80) return null;
+    const m = /^\+?(\d*)(?:\.(\d*))?(?:e([+-]?\d+))?$/i.exec(value);
+    if (!m || !(m[1] || m[2])) return null;
+    const exponent = Number(m[3] || 0);
+    if (Math.abs(exponent) > 12) return null;
+    let n = BigInt((m[1] || '0') + (m[2] || ''));
+    let d = 10n ** BigInt((m[2] || '').length);
+    if (exponent > 0) n *= 10n ** BigInt(exponent);
+    if (exponent < 0) d *= 10n ** BigInt(-exponent);
+    return [n,d];
+  }
+  function format(n,d,places=12) {
+    const scale = 10n ** BigInt(places), scaled = n*scale/d;
+    const whole = scaled/scale, fraction = String(scaled%scale).padStart(places,'0').replace(/0+$/,'');
+    return String(whole) + (fraction ? '.'+fraction : '');
+  }
+  function bind(form, name, fields, factors, standard) {
+    const selector = form.elements.namedItem(name);
+    if (!selector) return;
+    let unit = selector.value;
+    const rows = fields.map(key => form.elements.namedItem(key)).filter(Boolean).map(input => ({
+      input, rendered:input.value,
+      base:input.dataset.unitBase ? BigInt(input.dataset.unitBase) : null
+    }));
+    function base(row) {
+      if (row.base !== null && row.input.value === row.rendered) return row.base;
+      const number = decimal(row.input.value);
+      if (!number) return null;
+      const factor = factors[unit], n=number[0]*factor[0], d=number[1]*factor[1];
+      return (n+d-1n)/d;
+    }
+    selector.addEventListener('change', () => {
+      const next = selector.value, factor=factors[next];
+      if (!factor) return;
+      for (const row of rows) {
+        const value=base(row);
+        row.base=value;
+        if (value !== null) row.input.value=format(value*factor[1],factor[0]);
+        row.rendered=row.input.value;
+      }
+      unit=next;
+    });
+    form.addEventListener('submit', () => {
+      const values=rows.map(base);
+      if (values.some(value => value === null)) return;
+      const factor=factors[standard];
+      rows.forEach((row,index) => {row.input.value=format(values[index]*factor[1],factor[0]);row.base=values[index];row.rendered=row.input.value;});
+      selector.value=standard;
+      unit=standard;
+    });
+  }
+  for (const form of document.querySelectorAll('.ship-shell form')) {
+    bind(form,'distance_unit',['length','width','height'],distance,'cm');
+    bind(form,'mass_unit',['packaging_weight','weight'],mass,'g');
+  }
+})();
+</script>
+
 {% endblock %}
