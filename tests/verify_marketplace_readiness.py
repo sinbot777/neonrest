@@ -1,3 +1,4 @@
+from urllib.parse import urlsplit
 """Private configuration and read-only authentication checks with mocked HTTP."""
 import json
 from pathlib import Path
@@ -55,7 +56,7 @@ class ReadinessTests(unittest.TestCase):
     def test_one_provider_failure_is_redacted_and_does_not_skip_other_provider(self):
         class HTTP:
             def request(inner,method,url,headers,body=None):
-                if 'stripe.com' in url: raise RuntimeError('private_fixture_request_data')
+                if urlsplit(url).hostname == 'api.stripe.com': raise RuntimeError('private_fixture_request_data')
                 return dict(access_token='private_fixture_token',token_type='Bearer')
         result=readiness.check(self.stripe,self.paypal,'acct_platform',http=HTTP())
         self.assertFalse(result['checks'][0]['authenticated']);self.assertTrue(result['checks'][1]['authenticated'])

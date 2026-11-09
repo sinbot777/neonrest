@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const template = fs.readFileSync(process.argv[2] || path.join(__dirname,'../templates/marketplace_seller_shipping.html'),'utf8');
-const script = [...template.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m=>m[1]).join('\n');
+const script = [...template.matchAll(/<script>([\s\S]*?)<\/script>/gi)].map(m=>m[1]).join('\n');
 assert.ok(script.includes('function decimal'), 'unit conversion script is present');
 function fixture(spec) {
   const nodes = Object.fromEntries(Object.entries(spec).map(([name,[value,base]]) => [name,{

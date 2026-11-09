@@ -38,7 +38,12 @@ with app.app_context():
     db.execute('INSERT INTO marketplace_publications(listing_id,listing_revision,published_at) VALUES (?,0,?)',(listing,now));db.commit()
 store_path=w/'purchase.sqlite';db=sqlite3.connect(store_path);db.row_factory=sqlite3.Row
 host.provision(db);db.close();store_path.chmod(0o600)
-key=Fernet.generate_key();provider=HTTP(None,None);carrier_http=CarrierHTTP(None)
+class NativeHTTP(HTTP):
+    def request(self,*args,**kwargs):
+        value=super().request(*args,**kwargs)
+        if value.get('object')=='refund':value['created']=int(time.time())
+        return value
+key=Fernet.generate_key();provider=NativeHTTP(None,None);carrier_http=CarrierHTTP(None)
 class Tax:
     def quote_tax(self,context,context_hash):return quotes.Assessment('tax','fictional-fixture','qa-tax',context_hash,90,now+300)
 class Verifier:
@@ -46,7 +51,7 @@ class Verifier:
 def services(db,policy):
     provider.db=db;carrier_http.db=db
     store=addresses.AddressStore(db,addresses.FernetVault([key]),policy)
-    return views.PilotServices(db,policy,store,addresses.AddressResolver(store),api_module.StripeTestCheckoutAPI('acct_platform','sk_test_fixture_only',provider),None,Tax(),lambda:now,shipping.SellerShipping(db,store.vault,policy,Verifier(),carrier_http))
+    return views.PilotServices(db,policy,store,addresses.AddressResolver(store),api_module.StripeTestCheckoutAPI('acct_platform','sk_test_fixture_only',provider),None,Tax(),lambda:int(time.time()),shipping.SellerShipping(db,store.vault,policy,Verifier(),carrier_http))
 bridge=host.register(app,core,str(store_path),[seller,buyer,users['Teen']],{shop:seller},services,worker_ready=True)
 with app.test_request_context('/fixture-setup'):
     db=bridge['connect']();host.refresh(db,bridge['policy'],now)
@@ -102,5 +107,7 @@ with app.test_request_context('/fixture-worker'):
     check(db.execute('SELECT count(*) FROM marketplace_test_refund_applications').fetchone()[0]==1,'Exactly one refund application')
     check(db.execute('PRAGMA foreign_key_check').fetchall()==[],'Separate-store foreign keys');db.close()
 change('INSERT INTO user_blocks(user_id,target_id) VALUES (?,?)',(buyer,seller))
-check(get('Writer','/marketplace/pilot/orders/'+order).status_code==400,'Actual blocking revokes order access')
+check(b'Fictional QA item' not in get('Writer','/marketplace/pilot/').data,'Actual block hides current catalog listing')
+check(post('Writer','/checkout',**destination,sku=sku,quantity='1',revision='0',request_key='blocked-new-order').status_code==400,'Actual blocking denies new checkout')
+check(get('Writer','/marketplace/pilot/orders/'+order).status_code==200,'Buyer retains own historical receipt after blocking seller')
 print(json.dumps(dict(passed=True,checks=checks,provider_calls='fictional only',running_sites_modified=False)))

@@ -44,6 +44,17 @@ class HostPolicyTests(unittest.TestCase):
         shop=self.db.execute('SELECT * FROM seller_shops').fetchone()
         self.live.execute("UPDATE seller_shops SET policies='changed' WHERE page_id='shop-a'");self.live.commit()
         self.assertFalse(policy.visible(self.db,shop,2))
+    def test_changed_listing_after_consumption_requires_explicit_stock_reconciliation(self):
+        policy=self.purchase_policy();host.refresh(self.db,policy,110)
+        sku=self.db.execute('SELECT id FROM marketplace_checkout_skus').fetchone()[0]
+        order=host.checkout.create_order(self.db,'test',2,'shop-a','consumption',[(sku,1,0)],110,policy)
+        hold=self.db.execute('SELECT hold_id FROM marketplace_checkout_orders WHERE id=?',(order,)).fetchone()[0]
+        self.db.execute('INSERT INTO marketplace_inventory_consumptions VALUES (?,111)',(hold,));self.db.commit()
+        before=self.db.execute('SELECT quantity FROM marketplace_inventory_stock').fetchone()[0]
+        self.live.execute("UPDATE seller_listings SET title='Edited after purchase',revision=1 WHERE id='a'");self.live.commit()
+        host.refresh(self.db,policy,112);host.refresh(self.db,policy,113)
+        self.assertEqual(self.db.execute('SELECT quantity FROM marketplace_inventory_stock').fetchone()[0],before)
+        self.assertEqual(self.db.execute('SELECT count(*) FROM marketplace_checkout_skus WHERE active=1').fetchone()[0],0)
     def test_purchase_provision_is_explicit_and_refuses_existing_shipping_store(self):
         with self.assertRaises(ValueError):host.provision(self.db)
         db=sqlite3.connect(':memory:')

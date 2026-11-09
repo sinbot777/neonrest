@@ -22,7 +22,7 @@ The isolated database marker is an additional deployment guard, not authorizatio
 
 ## Required host setup before activation
 
-1. Reconcile this draft branch with current main; preserve subsequent Page features. Do not deploy this branch's old complete app tree.
+1. DONE November 9: current main was merged into this draft with both parents retained; Page and Service releases are preserved. Deploy only the reviewed pilot package, never replace the running Sandbox app wholesale.
 2. Preserve the existing mounted webhook runtime and its DB. Provision an isolated pilot DB deliberately, with FK enforcement and native catalog/user fixture copies appropriate to approved testers. Never initialize a live application DB automatically. Initialize native checkout, addresses, quotes, payments, settlement, refunds, carrier, purchase-flow, order/audit schemas and marker in dependency order.
 3. Configure an explicit adult tester allowlist and real-session `authorize(uid)`. Set `MARKETPLACE_TEST_PILOT=True` only in Sandbox. Register the blueprint only after service factories, templates and existing CSRF/rate limiting are available. No fresh-auth demand is added to ordinary pilot operations.
 4. Retain encryption keys outside source/web roots. Configure owner-bound Stripe test account through trusted onboarding state and canonical owner/onboarding metadata, plus exact signed webhook scope. Do not fake account metadata to force an association.
@@ -43,3 +43,23 @@ The isolated database marker is an additional deployment guard, not authorizatio
 ## Validation
 
 Run individual `verify_marketplace_purchase_flow.py` (12), `verify_marketplace_carrier_rates.py` (9), `verify_marketplace_pilot_views.py` (8). The component suite adds 29 tests to the previous 275-test baseline: 304 tests plus 38 script money/shipping assertions. Four legacy host-stage CLI scripts are not unittest discovery modules; the guarded rehearsal manifest deliberately excludes them. Tests contact no external financial or shipping provider.
+
+## November 9 integration and acceptance checkpoint
+
+PR #124 now contains main `0e53b4c27c24845e5acc214e92de379ce59c6f57` as an ancestor. Main's Page and Service changes are preserved. The draft remains unmerged; Production and the running Sandbox purchase scope are unchanged.
+
+`marketplace_purchase_sandbox.register` provides an explicit host bridge for the existing Sandbox application. It refuses Production, the application database, missing purchase marker, missing configured tax/test providers, a missing recovery scheduling assertion, and unbound fixture policy. Its allowlisted native policy consults current adult eligibility, shop ownership, Page state, blocks/mutes, publication and exact listing contents. Only minimal IDs/catalog metadata are mirrored. Old buyers retain their own historical receipts after blocking a seller; blocks deny new checkout.
+
+The bridge exports a signature-verified webhook receiver and a scheduled worker function using exactly the same private order store and native policy. Operator provisioning must actually mount/schedule these; the functions do not install themselves. Recovery scans bounded rotating receipt batches, settles only signed/canonical successes, preserves review states, and retries already-authorized refund dispatches with their original identities. It never creates a payment automatically. A same-revision mirror refresh no longer resets consumed test inventory. A changed listing with previously consumed stock is deactivated until explicit stock reconciliation, rather than importing its original quantity again. No refund restock is inferred.
+
+Validation:
+
+- 345 component unittests and 38 money/shipping assertions pass locally. Thirteen new host-policy/recovery tests cover allowlists, current content, inventory refresh, exact-once worker settlement, missing signatures, lost payment/refund responses and bounded cursor progress.
+- 27 hosted checks pass against an isolated copy of the actual Sandbox application and a disposable database. The complete route/session/CSRF/native-age flow covers reservation, fictional carrier/tax quote, explicit total acceptance, fictional payment creation, same-store signed WSGI receipt and duplicate delivery, unsigned rejection, scheduled settlement without browser refresh, seller queue, encrypted historical address, tracking, full refund, no stock replenishment and actual block denial of new checkout. Provider HTTP is deliberately fictional: this is not genuine provider acceptance.
+- Seven Node unit-conversion checks and five provider-readiness tests pass after fixing both CodeQL test-helper findings (case-insensitive script matching and parsed exact hostname comparison). Alerts were not dismissed.
+- The actual shipping-settings preview passes a 390px layout check (375px document width), programmatic label inspection and initial keyboard Skip to content focus. This does not complete purchase-screen visual, physical-device or assistive-technology acceptance.
+- Staging initially exhausted the hosting quota. Only this task's temporary copied stage was removed and replaced by read-only source links plus private candidate files. Existing releases, recovery records, application data and uploads were retained.
+
+Read-only provider inspection confirms the existing Stripe test account has charges/payouts enabled but lacks canonical Neonrest owner/onboarding metadata. An arbitrary account ID or newly invented metadata must not establish merchant authority. A private Shippo test configuration exists, but the QA shop remains disconnected; no other shop's token was copied. Genuine bound purchase/refund remains blocked on trusted seller onboarding, the shop's explicitly verified test connection, actual origin/measured packing, an explicit tax/responsibility model, same-store provider endpoint provisioning and scheduled recovery. Live commerce remains disabled.
+
+Operational evidence is retained privately on the host; no database, credential, customer payload, signing secret or private configuration is part of this PR.

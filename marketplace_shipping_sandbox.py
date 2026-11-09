@@ -95,7 +95,19 @@ def refresh_mirror(db,uid,policy,now):
                 # never restore units already consumed by a settled test order.
                 known=db.execute('SELECT 1 FROM marketplace_checkout_skus WHERE listing_id=? AND listing_revision=? AND active=1',
                                  (listing['id'],listing['revision'])).fetchone()
-                if not known:checkout.sync_listing(db,'test',uid,shop['page_id'],listing['id'],listing['revision'],now,policy)
+                if not known:
+                    consumed=db.execute('''SELECT 1 FROM marketplace_inventory_consumptions c
+                      JOIN marketplace_inventory_hold_lines h ON h.hold_id=c.hold_id
+                      JOIN marketplace_checkout_skus s ON s.id=h.sku WHERE s.listing_id=? LIMIT 1''',
+                      (listing['id'],)).fetchone()
+                    if consumed:
+                        # The native catalog does not yet receive pilot stock
+                        # decrements. A later title/price edit must not silently
+                        # import its original quantity again. Explicit stock
+                        # reconciliation is required before re-enabling it.
+                        with checkout.inventory.transaction(db):
+                            db.execute('UPDATE marketplace_checkout_skus SET active=0 WHERE listing_id=?',(listing['id'],))
+                    else:checkout.sync_listing(db,'test',uid,shop['page_id'],listing['id'],listing['revision'],now,policy)
 
 
 def register(app,core,database_path,key_path,allowed_users):
