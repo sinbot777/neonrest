@@ -399,7 +399,7 @@ def register(app,core):
         return render_template('seller_studio.html',view='preview',page=page,shop=shop,item=item,variants=json.loads(item['variations']),assets=visible_assets(core.get_db(),listing_id))
     @bp.after_request
     def private(response):
-        response.headers.update({'Cache-Control':'private, no-store','X-Robots-Tag':'noindex, nofollow','Referrer-Policy':'no-referrer'})
+        response.headers.update({'Cache-Control':'private, no-store','X-Robots-Tag':'noindex, nofollow','Referrer-Policy':'same-origin'})
         return response
     app.register_blueprint(bp)
 

@@ -34,7 +34,7 @@ class PilotTests(unittest.TestCase):
         payments.complete_onboarding(db,1,onboarding,OnboardingFixture(scope),100,Policy)
         self.http=HTTP(db,onboarding);self.carrier_http=CarrierHTTP(db);db.close()
         self.app=Flask(__name__,template_folder=str(Path(__file__).resolve().parents[1]/'templates'));self.app.config.update(TESTING=True,SECRET_KEY='fixture',MARKETPLACE_TEST_PILOT=True)
-        self.app.jinja_loader=ChoiceLoader([self.app.jinja_loader,DictLoader({'base.html':'<!doctype html><title>{% block title %}{% endblock %}</title>{% block content %}{% endblock %}'})]);self.app.jinja_env.globals['community_token']=lambda:'fixture-csrf'
+        self.app.jinja_loader=ChoiceLoader([DictLoader({'base.html':'<!doctype html><title>{% block title %}{% endblock %}</title>{% block content %}{% endblock %}'}),self.app.jinja_loader]);self.app.jinja_env.globals['community_token']=lambda:'fixture-csrf'
         def csrf():
             if request.form.get('theme_csrf_token')!='fixture-csrf':abort(403)
         self.app.extensions['community_auth_helpers']={'csrf':csrf,'limited':lambda *args:None}

@@ -108,6 +108,8 @@ def member_visible(db, owner, viewer):
 
 
 def visible_post(db, pid, viewer, muted=True, include_circle_removed=False, external_circle_share=False):
+    from . import service_accounts as services
+    if services.get(db,viewer): return False
     post = db.execute('SELECT user_id,target_user_id FROM posts WHERE id=?', (pid,)).fetchone()
     if not post: return False
     from neonrest.circles import post_allowed
@@ -126,7 +128,8 @@ def visible_post(db, pid, viewer, muted=True, include_circle_removed=False, exte
         return False
     protected=bool(db.execute('SELECT 1 FROM protected_age_posts WHERE post_id=?',(pid,)).fetchone())
     announcement=not protected and welcome.announcement(db,pid) and viewer and ages.ready(db,viewer)
-    if not ages.can_read(db,owner,viewer,protected=protected) and not announcement:
+    service_guidance = not protected and bool(services.get(db,owner)) and services.public_post(db,pid,viewer)
+    if not ages.can_read(db,owner,viewer,protected=protected) and not announcement and not service_guidance:
         return False
     if post['target_user_id'] and not member_visible(db, post['target_user_id'], viewer):
         return False
@@ -947,6 +950,8 @@ def register(app, core):
         export['vibe_atmosphere']=export_atmosphere(db,uid)
         from .identity_pages import export_user as export_pages
         export['identity_pages']=export_pages(db,uid)
+        from .service_accounts import export_user as export_services
+        export['services']=export_services(db,uid)
         from .page_social import export_user as export_page_social
         from .events import export_user as export_events
         export['page_social']=export_page_social(db,uid)
@@ -1082,4 +1087,5 @@ def register(app, core):
     app.extensions["privileged_fresh"]=fresh
     app.jinja_env.globals["authorization_post_draft"]=welcome.post_draft
     ages.register(app,core,fresh)
+
 

@@ -678,6 +678,15 @@ def user_page_test(user_id):
         flash('User not found.', 'error')
         return redirect('/')
 
+    from . import service_accounts as services
+    service = services.get(db,user_id)
+    if service:
+        from .community_features import visible_post
+        if not services.public_profile(db,user_id,session.get('user_id')): abort(404)
+        rows=db.execute('SELECT p.* FROM posts p JOIN service_publications sp ON sp.post_id=p.id WHERE sp.service_id=? ORDER BY p.id DESC LIMIT 100',(user_id,)).fetchall()
+        guidance=[{'ref':identifiers.public(db,'post',r['id']), 'html':markdown2.markdown(r['content'],safe_mode='escape')} for r in rows if visible_post(db,r['id'],session.get('user_id'))]
+        return render_template('service_profile.html',service=service,service_handle=user['handle'],guidance=guidance,service_operator=services.can_publish(db,user_id,session.get('user_id')))
+
     viewer = get_logged_in_user()
     viewer_id = viewer['id'] if viewer and session.get('user_id') == viewer['id'] else None
     from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -2738,3 +2747,8 @@ register_marketplace_orders(app,sys.modules[__name__])
 # Collaborative Zines.
 from .zines import register as register_zines
 register_zines(app,sys.modules[__name__])
+
+
+# Human-operated service identities; registered last so its login guard runs first.
+from .service_accounts import register as register_service_accounts
+register_service_accounts(app,sys.modules[__name__])

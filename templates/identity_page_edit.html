@@ -7,7 +7,20 @@
 {% if page_role=='owner' %}<p><a href="{{ url_for('page_social.team',page_id=page.id) }}">Team and ownership</a>{% if page.kind=='business' %} · <a href="{{ url_for('page_billing.manage',page_id=page.id) }}">Subscription and billing</a>{% endif %}</p>{% endif %}
   <nav aria-label="Pages"><a href="{{ url_for('identity_pages.mine') }}">Your pages</a><a href="{{ page_url(page) }}">View page</a></nav>
   <p>{{ page.kind|capitalize }} · {{ page.state|capitalize }} · Your role: {{ page_role }}</p>
-  {% if page.kind=='business' %}<p>Business activation requires a recurring subscription. The launch price is $5 USD per business page every three months, with no setup fee. Cancel anytime; the page stays active through the paid period. Open Subscription and billing from page management to check payment availability. This draft incurs no charge.</p>{% endif %}
+  {% if page.state!='archived' %}<p><a class="button" href="{{ url_for('identity_pages.style',page_id=page.id) }}">Edit Page CSS</a></p>{% endif %}
+  {% if page.state!='archived' %}
+  <details class="page-profile-settings" id="page-layout"><summary>Layout</summary>
+  <form method="post"><input type="hidden" name="theme_csrf_token" value="{{ community_token() }}"><input type="hidden" name="revision" value="{{ page.revision }}"><input type="hidden" name="action" value="layout">
+  <label><input type="checkbox" name="products_enabled" value="1" {% if page_layout.products_enabled %}checked{% endif %}>Show product listings</label>
+  <p>Products are off by default. Enable them to show public listings from a shop linked to this Page. Private drafts stay private. With products off, Updates gets the main space.</p>
+  <label for="layout-main">Main column</label><select id="layout-main" name="layout_main"><option value="updates" {% if page_layout.main=='updates' %}selected{% endif %}>Updates</option><option value="products" {% if page_layout.main=='products' %}selected{% endif %}>Products (when enabled)</option></select>
+  <label for="layout-secondary">Other section</label><select id="layout-secondary" name="layout_secondary">{% for key,label in [('sidebar','Right sidebar'),('below','Below the main section'),('hidden','Hidden')] %}<option value="{{ key }}" {% if page_layout.secondary==key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+  <p>This places Updates when Products is the main section, or Products when Updates is the main section. It has no effect when products are off.</p>
+  <label for="layout-details">Details and About</label><select id="layout-details" name="layout_details">{% for key,label in [('left','Left sidebar'),('right','Right sidebar'),('hidden','Hidden')] %}<option value="{{ key }}" {% if page_layout.details==key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+  <p>On mobile, sections stack in their desktop reading order. Your custom CSS can override the layout.</p><button>Save layout</button>
+  </form></details>
+  {% endif %}
+  {% if page.kind=='business' and not business_ready %}<p>Business activation requires a recurring subscription. The launch price is $5 USD per business page every three months, with no setup fee. Cancel anytime; the page stays active through the paid period. Open Subscription and billing from page management to check payment availability. This draft incurs no charge.</p>{% endif %}
   {% if page.state!='archived' %}
   <form method="post">
     <input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
@@ -16,6 +29,28 @@
     <label for="page-description">Description</label><textarea name="description" id="page-description" maxlength="4000">{{ page.description }}</textarea>
     <button>Save page</button>
   </form>
+  {% endif %}
+  {% if page.state!='archived' %}
+  <details class="page-profile-settings"><summary>Page appearance, details and links</summary>
+  <p>Give your page its own identity. These settings do not change your personal profile.</p>
+  <form method="post" enctype="multipart/form-data" id="page-artwork-editor">
+    <input type="hidden" name="theme_csrf_token" value="{{ community_token() }}">
+    <input type="hidden" name="revision" value="{{ page.revision }}"><input type="hidden" name="action" value="profile">
+    <label for="page-tagline">Short introduction</label><input id="page-tagline" name="tagline" maxlength="160" value="{{ page.tagline }}">
+    <label for="page-website">Website</label><input type="url" id="page-website" name="website" maxlength="500" placeholder="https://example.com" value="{{ page.website }}">
+    <fieldset class="page-public-details-fields" id="page-public-details"><legend>Public Details box</legend><p>Optional information shown on this Page. Add only contact information you want readers to see.</p>{% set info=page_details(page) %}
+    {% for key,label,maximum in [('category','Category',80),('location','Location',120),('contact','Public contact',160)] %}<label for="page-detail-{{ key }}">{{ label }}</label><input id="page-detail-{{ key }}" name="detail_{{ key }}" maxlength="{{ maximum }}" value="{{ info[key] }}">{% endfor %}
+    <label for="page-detail-hours">Hours / availability</label><textarea id="page-detail-hours" name="detail_hours" maxlength="300" rows="3">{{ info.hours }}</textarea></fieldset>
+    <label for="page-accent">Page color</label><select id="page-accent" name="accent">{% for color in ['teal','violet','rose','amber','blue','green'] %}<option value="{{ color }}" {% if page.accent==color %}selected{% endif %}>{{ color|capitalize }}</option>{% endfor %}</select>
+    <p>JPG, PNG, WebP or GIF; under 1.8 MB each. Animated images use their first frame. Page artwork follows the page’s visibility rules.</p>
+    <label for="page-avatar">Page portrait or logo</label><input type="file" id="page-avatar" name="avatar" accept="image/jpeg,image/png,image/webp,image/gif">
+    {% if page.avatar_file %}<img class="page-avatar-preview" src="{{ url_for('identity_pages.artwork',page_id=page.id,slot='avatar',filename=page.avatar_file) }}" alt="Current page portrait"><label><input type="checkbox" name="remove_avatar" value="yes">Remove current portrait</label>{% endif %}
+    <label for="page-cover">Cover artwork</label><input type="file" id="page-cover" name="cover" accept="image/jpeg,image/png,image/webp,image/gif">
+    {% if page.cover_file %}<img class="page-cover-preview" src="{{ url_for('identity_pages.artwork',page_id=page.id,slot='cover',filename=page.cover_file) }}" alt="Current cover artwork"><label><input type="checkbox" name="remove_cover" value="yes">Remove current cover</label>{% endif %}
+    {% include 'partials/page_artwork_editor.html' %}
+    <button>Save page appearance</button><button type="button" data-art-cancel>Cancel changes</button>
+  </form></details>
+  <script src="{{ url_for('static',filename='js/page_artwork_editor.js') }}" defer></script>
   {% endif %}
   {% if page_role=='owner' %}
   <form method="post">
@@ -31,4 +66,7 @@
   {% endif %}
 </main>
 {% endblock %}
+
+
+
 

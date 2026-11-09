@@ -29,6 +29,10 @@ class RouteTests(foundation.PagesTests):
             'base.html': '<!doctype html><html><head><title>{% block title %}{% endblock %}</title></head><body>{% block content %}{% endblock %}</body></html>'}), self.app.jinja_loader])
         self.app.add_url_rule('/account', 'account', lambda: 'Account')
         self.app.add_url_rule('/reauth', 'community_reauth', lambda: 'Reauthenticate')
+        self.app.add_url_rule('/marketplace/studio', 'seller_studio.index', lambda: 'Isolated seller navigation stub')
+        self.app.add_url_rule('/marketplace', 'seller_studio.marketplace', lambda: 'Isolated marketplace navigation stub')
+        self.app.add_url_rule('/marketplace/listings/<listing_id>', 'seller_studio.public_listing', lambda **kw: 'Isolated listing stub')
+        self.app.add_url_rule('/marketplace/listings/<listing_id>/images/<asset_id>', 'seller_studio.public_image', lambda **kw: 'Isolated image stub')
         for path,endpoint in [('/pages/explore','page_social.explore'),('/pages/feed','page_social.feed'),('/pages/invitations','page_social.invitations'),('/events','events.calendar'),('/pages/<page_id>/team','page_social.team'),('/pages/<page_id>/follow','page_social.following'),('/pages/<page_id>/billing','page_billing.manage')]:
             self.app.add_url_rule(path,endpoint,lambda **kw:'Isolated navigation stub')
         self.app.jinja_env.globals['page_is_followed']=lambda page:False
@@ -134,3 +138,4 @@ class RouteTests(foundation.PagesTests):
 
 if __name__ == '__main__':
     unittest.main()
+

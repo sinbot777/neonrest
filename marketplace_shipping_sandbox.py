@@ -90,7 +90,12 @@ def refresh_mirror(db,uid,policy,now):
                 listing=db.execute('SELECT listing_id FROM marketplace_checkout_skus WHERE id=?',(row[0],)).fetchone()[0]
                 if listing not in current:db.execute('UPDATE marketplace_checkout_skus SET active=0 WHERE id=?',(row[0],))
         for listing in db.execute("SELECT id,revision FROM seller_listings WHERE shop_id=? AND kind='physical'",(shop['page_id'],)).fetchall():
-            if listing['id'] in current:checkout.sync_listing(db,'test',uid,shop['page_id'],listing['id'],listing['revision'],now,policy)
+            if listing['id'] in current:
+                # A request refresh is not an inventory adjustment. In particular,
+                # never restore units already consumed by a settled test order.
+                known=db.execute('SELECT 1 FROM marketplace_checkout_skus WHERE listing_id=? AND listing_revision=? AND active=1',
+                                 (listing['id'],listing['revision'])).fetchone()
+                if not known:checkout.sync_listing(db,'test',uid,shop['page_id'],listing['id'],listing['revision'],now,policy)
 
 
 def register(app,core,database_path,key_path,allowed_users):

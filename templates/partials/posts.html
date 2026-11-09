@@ -75,6 +75,7 @@
     <div class="post-user-meta">
       <a href="{{ url_for('user_by_handle', handle=post.author_handle.lstrip('@')) }}">
         <strong>@{{ post.author_handle }}</strong>
+        {% if is_service_account is defined and is_service_account(post.user_id) %}<span class="service-category" aria-label="Service identity">Service</span>{% endif %}
       </a>
       {% if post.target_handle %}&rarr; <a class="user-handle" href="{{ url_for('user_by_handle', handle=post.target_handle.lstrip('@')) }}">@{{ post.target_handle.lstrip('@') }}</a>{% endif %}
       <small><a class="post-permalink" href="{{ url_for('post_detail', post_id=post.id) }}" aria-label="Open this post">{{ display_post_time(post.created_at) }}</a></small>
@@ -253,4 +254,5 @@ window.addEventListener('DOMContentLoaded', () => {
   });
 });
 </script>
+
 

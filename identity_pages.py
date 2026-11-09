@@ -88,6 +88,15 @@ def initialize(db):
     # No executescript/commit: the caller owns the startup transaction.
     for statement in statements:
         db.execute(statement)
+    if __package__:
+        from . import page_profile
+    else:
+        import page_profile
+    page_profile.initialize(db)
+    from . import page_css
+    page_css.initialize(db)
+    from . import page_layout
+    page_layout.initialize(db)
 
 
 def account_eligible(db, uid, kind, age, ready):
@@ -391,11 +400,11 @@ def register(app, core):
             abort(401)
         return uid
 
-    def writing():
+    def writing(require_fresh=False):
         actor()
         helpers = app.extensions['community_auth_helpers']
         helpers['csrf']()
-        if not helpers['fresh']():
+        if require_fresh and not helpers['fresh']():
             return redirect(url_for('community_reauth', next=request.path))
         return None
 
@@ -540,7 +549,7 @@ def register(app, core):
         page = get(db, page_id)
         require_role(db, page, uid, ('owner', 'manager', 'editor'))
         if request.method == 'POST':
-            response = writing()
+            response = writing(require_fresh=request.form.get('action') == 'state')
             if response is not None:
                 return response
             with db:
@@ -548,15 +557,23 @@ def register(app, core):
                 action = request.form.get('action')
                 if action == 'edit':
                     edit(db, uid, page_id, revision(), request.form.get('name', ''), request.form.get('description', ''))
+                elif action == 'profile':
+                    from . import page_profile
+                    page_profile.save(db, __import__(__name__, fromlist=['']), app, uid, page_id, revision(), request.form, request.files)
                 elif action == 'state':
                     set_state(db, uid, page_id, revision(), request.form.get('state'))
+                elif action == 'layout':
+                    import sys
+                    from . import page_layout
+                    page_layout.save(db, sys.modules[__name__], uid, page_id, revision(), request.form)
                 else:
                     raise PageError('Choose a page action.')
             flash('Page updated.', 'success')
             return redirect(url_for('identity_pages.manage', page_id=page_id))
-        return render_template('identity_page_edit.html', page=page, page_role=role(db, page, uid), page_url=page_url,business_ready=business_entitled(db,page) if page['kind']=='business' else False)
+        from . import page_layout
+        return render_template('identity_page_edit.html', page=page, page_layout=page_layout.read(page), page_role=role(db, page, uid), page_url=page_url,business_ready=business_entitled(db,page) if page['kind']=='business' else False)
 
-    def show(kind, slug):
+    def show(kind, slug, css_override=None):
         db = core.get_db()
         try:
             canonical = handle(kind, slug)
@@ -568,6 +585,8 @@ def register(app, core):
         if slug != canonical[1:]:
             return redirect(page_url(page), code=308)
         viewer = session.get('user_id')
+        from . import page_layout
+        layout = page_layout.presentation(page)
         before = request.args.get('before', type=int)
         if before is not None and not 0 < before < 2**63:
             abort(400)
@@ -578,8 +597,50 @@ def register(app, core):
         posts = [post for post in rows[:50] if post_visible(db, page, post, viewer)]
         older = rows[49]['id'] if len(rows) > 50 else None
         endpoint = 'identity_pages.creative' if kind == 'creative' else 'identity_pages.business'
+        from . import page_products
+        from . import page_css
+        try:
+            products = page_products.browse(db, viewer, page, request.args.get('products_page', '1')) if layout['show_products'] else dict(items=[], page=1, has_next=False)
+        except ValueError as error:
+            raise PageError(str(error)) from None
         return render_template('identity_page.html', page=page, page_role=role(db, page, viewer),
-            posts=posts, page_hidden=hidden(db,page['id']), older_url=url_for(endpoint, slug=canonical[1:], before=older) if older else None)
+            layout=layout,
+            custom_page_css=page_css.rendered(page) if css_override is None else page_css.scoped(css_override),
+            css_preview=css_override is not None,
+            products=products,
+            products_previous=url_for(endpoint, slug=canonical[1:], before=before, products_page=products['page']-1, _anchor='page-products') if products['page']>1 else None,
+            products_next=url_for(endpoint, slug=canonical[1:], before=before, products_page=products['page']+1, _anchor='page-products') if products['has_next'] else None,
+            posts=posts, page_hidden=hidden(db,page['id']), older_url=url_for(endpoint, slug=canonical[1:], before=older, products_page=products['page'], _anchor='page-updates') if older else None)
+
+    @bp.route('/pages/<page_id>/style', methods=['GET', 'POST'])
+    def style(page_id):
+        import sys
+        from . import page_css
+        uid = actor(); db = core.get_db(); page = get(db, page_id)
+        require_role(db, page, uid, ('owner', 'manager', 'editor'))
+        if page['state'] == 'archived':
+            raise PageError('Restore this Page before editing its CSS.', 409)
+        css = page['custom_css'] or page_css.STARTER
+        error = None
+        if request.method == 'POST':
+            response = writing()
+            if response is not None: return response
+            css = request.form.get('custom_css', '')
+            action = request.form.get('action')
+            try:
+                if action not in ('save', 'preview', 'reset'): raise PageError('Choose a CSS action.')
+                css = page_css.validate('' if action == 'reset' else css)
+                page_css.scoped(css)
+                if revision() != page['revision']: raise PageError('This Page changed. Reload before editing CSS.', 409)
+                if action == 'preview': return show(page['kind'], page['handle'][1:], css)
+                with db:
+                    db.execute('BEGIN IMMEDIATE')
+                    page_css.save(db, sys.modules[__name__], uid, page_id, revision(), css)
+                flash('Page CSS saved.' if action == 'save' else 'Default Page styling restored.', 'success')
+                return redirect(url_for('identity_pages.style', page_id=page_id))
+            except ValueError as exc:
+                error = str(exc)
+        return render_template('identity_page_style.html', page=page, css=css, error=error, page_url=page_url), (400 if error else 200)
 
     @bp.get('/_<slug>')
     def creative(slug):
@@ -595,4 +656,13 @@ def register(app, core):
         response.headers['X-Robots-Tag'] = 'noindex, nofollow'
         return response
 
+    if __package__:
+        from . import page_profile
+    else:
+        import page_profile
+    import sys
+    page_profile.register_artwork(bp, app, core, sys.modules[__name__])
     app.register_blueprint(bp)
+
+
+
