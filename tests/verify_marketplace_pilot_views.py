@@ -89,6 +89,23 @@ class PilotTests(unittest.TestCase):
         self.assertEqual(self.post(url+'/quote',{'rate':'anything','request_key':'bad'}).status_code,400)
         self.tax_enabled=True;q=self.quote()
         self.assertEqual(self.post(url+'/pay',{'quote_id':q}).status_code,400);self.assertEqual(self.http.created,0)
+    def test_partial_refund_defaults_only_to_unreserved_components(self):
+        self.paid();self.login(1);url='/orders/'+self.order
+        self.assertEqual(self.post(url+'/refund',dict(request_key='partial',item_cents='500',shipping_cents='0',tax_cents='0')).status_code,302)
+        db=self.connect();data=orders.receipt(db,1,self.order,self.clock,Policy);db.close()
+        self.assertEqual(data['refund_remaining'],dict(item_cents=500,shipping_cents=525,tax_cents=90))
+        self.assertEqual(data['display_state'],'test_partially_refunded')
+        self.assertEqual(self.post(url+'/refund',dict(request_key='remainder',item_cents='500',shipping_cents='525',tax_cents='90')).status_code,302)
+        page=self.client.get('/marketplace/pilot'+url)
+        self.assertNotIn(b'Submit test refund',page.data)
+        self.assertIn(b'No unreserved refund amount remains',page.data)
+        self.assertIn(b'test refunded',self.client.get('/marketplace/pilot/seller/orders').data)
+    def test_pending_refund_reserves_default_budget_without_claiming_refunded(self):
+        self.paid();db=self.connect()
+        refunds.request_test_refund(db,1,self.order,'pending-budget',400,0,0,self.clock,Policy)
+        data=orders.receipt(db,1,self.order,self.clock,Policy);db.close()
+        self.assertEqual(data['refund_remaining']['item_cents'],600)
+        self.assertEqual(data['display_state'],'test_settled')
     def test_private_session_csrf_underage_and_unpaid_fulfillment(self):
         self.start();url='/orders/'+self.order
         self.assertEqual(self.client.post('/marketplace/pilot'+url+'/cancel').status_code,403)

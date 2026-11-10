@@ -50,7 +50,18 @@ def receipt(db,uid,order_id,now,policy=checkout.NeonrestPolicy):
         quote=db.execute('SELECT snapshot FROM marketplace_checkout_quotes WHERE order_id=? ORDER BY created_at DESC,id DESC LIMIT 1',(order_id,)).fetchone()
     import json
     result=dict(order=order,buyer=uid==row['buyer_id'],seller=uid==row['seller_owner_id'],quote=json.loads(quote[0]) if quote else None,refund=None,shipment=None)
+    result['payment_status']=None
+    attempt=db.execute('SELECT observed_status FROM marketplace_payment_test_attempts WHERE order_id=? ORDER BY created_at DESC LIMIT 1',(order_id,)).fetchone()
+    if attempt:result['payment_status']=attempt[0]
     if order['state']=='test_settled':result['refund']=refunds.get_summary(db,uid,order_id,now,policy)
+    result['display_state']=result['refund']['state'] if result['refund'] else ('test_payment_failed' if result['payment_status']=='failed' else order['state'])
+    result['refund_remaining']={}
+    if result['refund']:
+        reserved=db.execute("""SELECT COALESCE(SUM(r.item_cents),0),COALESCE(SUM(r.shipping_cents),0),COALESCE(SUM(r.tax_cents),0)
+          FROM marketplace_test_refund_requests r JOIN marketplace_test_refund_jobs j ON j.request_id=r.id
+          WHERE r.order_id=? AND j.state NOT IN ('failed','withdrawn')""",(order_id,)).fetchone()
+        for key,total,used in zip(('item_cents','shipping_cents','tax_cents'),(result['quote']['subtotal_cents'],result['quote']['shipping_cents'],result['quote']['tax_cents']),reserved):
+            result['refund_remaining'][key]=max(0,total-used)
     shipment=db.execute('SELECT carrier,tracking,shipped_at FROM marketplace_pilot_shipments WHERE order_id=?',(order_id,)).fetchone()
     if shipment:result['shipment']=dict(shipment)
     return result
