@@ -1,6 +1,27 @@
 # Stripe and carrier-rate Sandbox pilot
 
-Status: implementation candidate; not mounted on either running site. No public or live checkout.
+Status: restricted Sandbox QA pilot mounted November 9, 2026 (Pacific). No public or live checkout. The current checkpoint below supersedes older dated observations.
+
+
+## Current checkpoint — November 9, 2026 (Pacific)
+
+The isolated restricted pilot is mounted at `/sandbox/marketplace/pilot/` for the explicitly approved seller and test buyer. A private revision-bound listing grant permits the QA draft only for those eligible testers; the grant does not publish it into the native public catalog. Current native adult, shop, Page and block/mute policy remains authoritative. No additional fresh-auth requirement was introduced.
+
+The purchase database was provisioned from a copy of the previously approved shipping settings store. The old shipping and webhook stores were retained. The new signed Connect test endpoint and bounded recovery command use that same purchase store. Recovery is scheduled hourly at minute 15; manual execution of the identical worker command passed. Normal signed receipts attempt immediate DB-local settlement. An event arriving before payment binding is recovered by the scheduled worker or verified order refresh; immediate settlement is not guaranteed in that race. Existing retention and mail tasks remain intact.
+
+The operator runtime is `marketplace_pilot_runtime`: `register(app, core, private_config_path)` returns the bridge and receiver; `mount(application, bridge['receiver'])` adds only `/sandbox/marketplace/pilot/provider-events`. The CLI takes that same private config path. Config requires `environment=test`, `worker_scheduled=true` only after a task actually exists, private database/vault/Stripe key/owner approval/hook paths, explicit `allowed_users`, one approved `sellers` mapping, and explicit `tax={kind: simulation_only, basis_points: 700}` for this QA run. Keep all config, keys, stores and recovery records outside source and served directories. Replace the old shipping-only registration rather than registering a duplicate blueprint.
+
+Genuine provider/application acceptance completed:
+
+- Two accepted 769-cent application orders used genuine Shippo test rates (11 returned; selected 619-cent shipping), 100-cent items and explicitly simulated 50-cent tax. Stripe's fictional Visa token created actual test-mode PaymentIntents on the approved connected account. Real signed events and canonical reads settled exactly those orders.
+- The first event arrived before the creation response was bound. The worker recovered it and settled without a browser refresh. Repeating recovery did not add settlements or refund applications.
+- The normal signed-in seller UI exercised queue, receipt, audited historical destination access, fictional manual tracking, a 50-cent partial refund and a 719-cent remainder. A second successful order proved deliberate lost payment/refund response recovery reused original provider identities, then fully refunded 769 cents.
+- A genuine declined test card produced canonical failed status, no settlement and no fulfillment. Its original reservation deadline remains authoritative; failure does not grant a local early-cancel bypass.
+- Final totals: two settlements, three applied refunds, all test ledger balances zero; SQLite quick_check is ok and foreign-key checks are empty. No live funds, payouts or labels were involved. Only published provider-example addresses were sent to Shippo.
+- 360 component tests plus 38 money/shipping assertions pass locally and on the host. CodeQL and Python/JavaScript analyses pass on the reviewed application commit. Refund UI now uses unreserved component balances, hides an exhausted refund form, and displays refund/failure state consistently in queues and receipts.
+- Actual seller queue, refunded/failed receipt and fulfillment screens were reviewed on desktop and at 390px; checked narrow layouts have a 375px document width. Visible fields have labels and keyboard focus reaches the next fulfillment control with a visible outline. Anonymous pilot requests return 401, new hook GET returns 405 and Production has no pilot route (404). Unsigned new and old hook requests remain rejected.
+
+Remaining acceptance: a real separately signed-in approved buyer must complete the hosted buyer catalog/address/rate/quote/payment walkthrough, including narrow-screen and keyboard checks. Physical-device and assistive-technology review remain open. This is a QA pilot with provider-example addresses, provisional single-unit packing and simulated tax; actual shipping origin/measurements and a real tax/merchant responsibility model are still required for a real-goods pilot. Public merchant onboarding, live payment entry, fees/disputes, notifications/capacity/recovery operations, PayPal, digital delivery, commissions/memberships and controlled Production release remain separate unfinished scope. PR #124 remains draft/unmerged.
 
 ## Implemented
 
@@ -14,13 +35,13 @@ Status: implementation candidate; not mounted on either running site. No public 
 
 ## Boundaries
 
-The Flask integration tests use deterministic provider HTTP, fictional addresses and an explicit fixture policy. These prove request/database integration, not real Stripe/Shippo acceptance or visual browser quality. The older provider-only Stripe test payment/refund proof is separate and does not establish this application flow.
+The component integration tests use deterministic provider HTTP and fixture policy. Genuine provider/native-policy and signed-in seller acceptance are separately recorded above; component results alone do not establish them.
 
-The first shipping pilot supports domestic USD, one shop and one package per order, a measured package and uniform per-unit item weight with a maximum quantity. It is not a general bin-packing or per-variant-weight implementation. Actual seller measurements must be supplied; fixture dimensions are not production defaults. No Shippo transaction/label API exists.
+The first shipping pilot supports domestic USD, one shop and one package per order, explicit package presets and per-SKU/variant weights with a maximum quantity. It is not a general bin-packing implementation. Actual seller measurements must be supplied; fixture dimensions are not production defaults. No Shippo transaction/label API exists.
 
 The isolated database marker is an additional deployment guard, not authorization. Host wiring must use actual site session, age, moderation, block/mute, publication, Page ownership and seller policy. Do not use test policy fixtures in a hosted authenticated pilot or claim a seller account by accepting a browser-supplied provider ID.
 
-## Required host setup before activation
+## Host setup checklist (initial design; current QA completion above)
 
 1. DONE November 9: current main was merged into this draft with both parents retained; Page and Service releases are preserved. Deploy only the reviewed pilot package, never replace the running Sandbox app wholesale.
 2. Preserve the existing mounted webhook runtime and its DB. Provision an isolated pilot DB deliberately, with FK enforcement and native catalog/user fixture copies appropriate to approved testers. Never initialize a live application DB automatically. Initialize native checkout, addresses, quotes, payments, settlement, refunds, carrier, purchase-flow, order/audit schemas and marker in dependency order.
@@ -35,7 +56,7 @@ The isolated database marker is an additional deployment guard, not authorizatio
 
 - Approved live charge model, platform fee collection, provider fees, disputes, tax, refund policy and merchant responsibilities.
 - Hosted/Elements customer payment collection and required authentication flows (this adapter accepts fictional tokens only).
-- Genuine seller onboarding association and webhook/worker operational wiring; PayPal is not checkout-ready.
+- Public/live seller onboarding and production-grade webhook/worker operations; the isolated QA association and hourly worker are already installed. PayPal is not checkout-ready.
 - Product-specific dimensions/weight data and packing rules beyond the restricted first pilot.
 - Buyer/seller notifications, fulfillment correction workflow, customer help, monitoring and operational recovery/review queues.
 - Explicit live activation approval and owner-performed real purchase/refund acceptance.
@@ -44,7 +65,7 @@ The isolated database marker is an additional deployment guard, not authorizatio
 
 Run individual `verify_marketplace_purchase_flow.py` (12), `verify_marketplace_carrier_rates.py` (9), `verify_marketplace_pilot_views.py` (8). The component suite adds 29 tests to the previous 275-test baseline: 304 tests plus 38 script money/shipping assertions. Four legacy host-stage CLI scripts are not unittest discovery modules; the guarded rehearsal manifest deliberately excludes them. Tests contact no external financial or shipping provider.
 
-## November 9 integration and acceptance checkpoint
+## Historical November 9 integration checkpoint (before QA mount)
 
 PR #124 now contains main `0e53b4c27c24845e5acc214e92de379ce59c6f57` as an ancestor. Main's Page and Service changes are preserved. The draft remains unmerged; Production and the running Sandbox purchase scope are unchanged.
 
