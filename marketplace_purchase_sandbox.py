@@ -37,6 +37,15 @@ LISTING_FIELDS = ('shop_id','kind','title','description','price_cents','quantity
 def provision(db):
     """Explicit fresh-store setup; refuses existing shipping or application DBs."""
     shipping_host.provision(db)
+    initialize_purchase_store(db)
+
+
+def initialize_purchase_store(db):
+    """Explicit upgrade of an isolated shipping-store COPY, never app startup."""
+    if db.in_transaction:raise ValueError('dedicated provisioning connection required')
+    marker=db.execute('SELECT purpose FROM marketplace_shipping_host_marker').fetchone()
+    if not marker or marker[0]!='sandbox_shipping_settings_only_v1':raise ValueError('isolated shipping marker required')
+    if db.execute('SELECT count(*) FROM marketplace_checkout_orders').fetchone()[0]:raise ValueError('empty purchase history required for provisioning')
     quotes.initialize(db)
     payments.initialize(db)
     settlement.initialize(db)
@@ -46,6 +55,10 @@ def provision(db):
     db.execute('CREATE TABLE marketplace_purchase_host_marker(purpose TEXT PRIMARY KEY)')
     db.execute('INSERT INTO marketplace_purchase_host_marker VALUES (?)',(PURPOSE,))
     db.execute('CREATE TABLE marketplace_purchase_worker_cursor(platform TEXT PRIMARY KEY,receipt_id INTEGER NOT NULL)')
+    db.execute('''CREATE TABLE marketplace_pilot_listing_grants(
+      listing_id TEXT PRIMARY KEY REFERENCES seller_listings(id),shop_id TEXT NOT NULL REFERENCES seller_shops(page_id),
+      owner_id INTEGER NOT NULL REFERENCES users(id),listing_revision INTEGER NOT NULL,approved_at INTEGER NOT NULL,
+      active INTEGER NOT NULL CHECK(active IN (0,1)))''')
     db.commit()
 
 
@@ -74,7 +87,13 @@ class LivePurchasePolicy(shipping_host.LivePolicy):
         shop=db.execute('SELECT * FROM seller_shops WHERE page_id=?',(local['shop_id'],)).fetchone()
         if not shop or not self.visible(db,shop,buyer):return False
         try:current=self.catalog.detail(self.core.get_db(),buyer,listing_id)
-        except ValueError:return False
+        except ValueError:
+            # A private pilot grant never publishes a QA item to the site catalog.
+            try:grant=db.execute('SELECT * FROM marketplace_pilot_listing_grants WHERE listing_id=? AND active=1',(listing_id,)).fetchone()
+            except sqlite3.OperationalError:return False
+            if not grant or (grant['shop_id'],grant['owner_id'],grant['listing_revision'])!=(local['shop_id'],shop['owner_id'],local['revision']):return False
+            current=self.core.get_db().execute('SELECT * FROM seller_listings WHERE id=?',(listing_id,)).fetchone()
+            if not current or current['state']!='draft':return False
         return all(current[k]==local[k] for k in LISTING_FIELDS)
 
 
