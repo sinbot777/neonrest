@@ -1,0 +1,11 @@
+# Sign-in confirmation policy
+
+A successful sign-in or password/authenticator confirmation grants a fixed 24-hour confirmation window within the current signed-in session. Reading pages does not extend it. All existing protected actions use this same window; ordinary writing, including Zines, adds no periodic confirmation requirement.
+
+For accounts with two-factor authentication, a different verified client IP interrupts normal authenticated requests and requires confirmation before proceeding. Returning to a previously used IP also requires confirmation after confirming on another network. Only the trusted ClientAddress middleware supplies the address. Caller-supplied forwarding headers cannot establish trust. The session stores a keyed IP digest, never a plaintext address. Missing/unverifiable addresses fail closed.
+
+New sign-ins continue to require the configured authenticator or recovery code. Logout clears the confirmation. Existing sessions without a network binding need one real confirmation after rollout. The change does not add a cross-session “remember this device” cookie, remove CSRF, bypass account permissions or change session revocation. TOTP replay protection and single-use recovery codes remain in place. A POST interrupted by network change must be submitted again after confirmation; it is never silently replayed.
+
+Validation: `python -m unittest discover -s tests -p verify_auth_confirmation.py` exercises the exact 24-hour boundary, unchanged timestamps, stale factors, future/invalid clocks, IPv4/IPv6 normalization, unavailable addresses, proxy-header source selection, extracted native Flask login/confirmation/network guards with disposable SQLite, real TOTP checks, invalid password/factor/CSRF refusal, recovery-code single use and logout. `python tests/verify_reauth_feedback.py .` covers the existing five feedback branches.
+
+Release must install the helper together with the reviewed community authentication changes in each environment, preserve unrelated Sandbox changes, and retain source rollback copies. Review the actual trusted proxy mode before deployment. Test actual confirmation and navigation after release without manufacturing a real user session. Do not copy Production's full community file over a diverged Sandbox file.
