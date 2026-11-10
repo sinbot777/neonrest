@@ -1,9 +1,27 @@
 {% extends 'base.html' %}
 {% block title %}{{ service_handle }} · Service · Neonrest{% endblock %}
-{% block content %}<main class="community-page" style="max-width:52rem;margin:1rem auto;padding:1rem;overflow-wrap:anywhere">
+{% block content %}
+<style>
+#main-content .service-profile{box-sizing:border-box;width:calc(100% - 1rem);max-width:54rem;margin:1rem auto;padding:clamp(1rem,3vw,2rem);background:#101c2f;color:#e8edf6;border:1px solid #465773;border-radius:16px;line-height:1.65;text-align:left;overflow-wrap:anywhere}
+#main-content .service-profile *{box-sizing:border-box}
+#main-content .service-profile h1,#main-content .service-profile h2{color:#ffe0c2;line-height:1.25}
+#main-content .service-profile h1{margin:.5rem 0 1rem}
+#main-content .service-profile a:link,#main-content .service-profile a:visited{color:#9eeaff;text-decoration:underline;text-underline-offset:.2em;text-decoration-thickness:.1em}
+#main-content .service-profile a:hover{color:#fff0dc}
+#main-content .service-profile a:focus-visible{outline:3px solid #ffd67d;outline-offset:4px;border-radius:3px}
+#main-content .service-profile .service-actions{display:flex;flex-wrap:wrap;gap:.75rem;margin:1.25rem 0 1.5rem}
+#main-content .service-profile a.service-action{display:inline-flex;align-items:center;justify-content:center;max-width:100%;min-height:44px;padding:.6rem 1rem;border:1px solid #c1e6ff;border-radius:8px;background:#c1e6ff;color:#102239;font:inherit;font-weight:650;line-height:1.4;text-align:center;text-decoration:none}
+#main-content .service-profile a.service-action:hover{background:#e3f4ff;border-color:#e3f4ff;color:#102239}
+#main-content .service-profile article{min-width:0;margin:1.25rem 0 0;padding:clamp(1rem,3vw,1.5rem);background:#15243a;border:1px solid #465773;border-radius:12px}
+#main-content .service-profile article h2{margin-top:0;font-size:1.4rem}
+#main-content .service-profile article p:last-child{margin-bottom:0}
+#main-content .service-profile .service-post-link{margin-top:1.25rem;padding-top:1rem;border-top:1px solid #465773}
+@media(forced-colors:active){#main-content .service-profile,#main-content .service-profile article{border-color:CanvasText}#main-content .service-profile a:link,#main-content .service-profile a:visited{color:LinkText}#main-content .service-profile a.service-action{background:ButtonFace;color:ButtonText;border-color:ButtonText}}
+</style>
+<main class="community-page service-profile">
 <p><strong>Service</strong> · Official service identity operated through accountable human accounts.</p>
 <h1>{{ service_handle }}</h1><p>{{ service.purpose }}</p>
 <p>This identity publishes public guidance. It does not sign in, send messages, or read members' private content.</p>
-<p><a href="{{ url_for('user_guide') }}">User guide</a>{% if service_operator %} · <a href="{{ url_for('services.mine') }}">Your Service workspace</a>{% endif %}</p>
-{% for item in guidance %}<article><div>{{ item.html|safe }}</div><p><a href="{{ url_for('post_detail',post_id=item.ref) }}">Open guidance post</a></p></article>{% else %}<p>No guidance is currently available.</p>{% endfor %}
+<nav class="service-actions" aria-label="Service resources"><a class="service-action" href="{{ url_for('user_guide') }}">User guide</a>{% if service_operator %}<a class="service-action" href="{{ url_for('services.mine') }}">Your Service workspace</a>{% endif %}</nav>
+{% for item in guidance %}<article><div>{{ item.html|safe }}</div><p class="service-post-link"><a class="service-action" href="{{ url_for('post_detail',post_id=item.ref) }}">Open guidance post</a></p></article>{% else %}<p>No guidance is currently available.</p>{% endfor %}
 </main>{% endblock %}
