@@ -9,7 +9,7 @@
 {% if page == 'factor' %}
 <form method="post">{{ csrf() }}<label>Authenticator or recovery code <input name="code" autocomplete="one-time-code" maxlength="30" required autofocus></label><button>Verify</button></form>
 {% elif page == 'reauth' %}
-<p>Confirm your identity before making sensitive changes. Confirmation lasts 30 minutes. After confirming, you will return to the page you were using; submit your action again.</p>
+<p>Confirm your identity before making sensitive changes. Confirmation lasts up to 24 hours on this network. An IP address change requires confirmation again. After confirming, you will return to the page you were using; submit your action again.</p>
 <form method="post">{{ csrf() }}<label>Password <input type="password" name="password" autocomplete="current-password" maxlength="128" required></label>{% if needs_factor %}<label>Authenticator or recovery code <input name="code" autocomplete="one-time-code" maxlength="30" required></label>{% endif %}<button>Confirm</button></form>
 {% elif page == 'reset_request' %}
 <form method="post">{{ csrf() }}<label>Account email <input type="email" name="email" autocomplete="email" required></label><button>Request reset link</button></form><p>Reset links expire in one hour and can be used once. Check spam too. If no email arrives, wait a minute and try again; a failed send keeps a previously received link usable.</p>
