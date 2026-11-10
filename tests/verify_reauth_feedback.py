@@ -2,12 +2,14 @@ from pathlib import Path
 import ast,textwrap,time,sys
 from types import SimpleNamespace
 p=Path(sys.argv[1])/'community_features.py'
+sys.path.insert(0,str(p.parent))
+import auth_confirmation
 candidate=p.read_text()
 node=next(n for n in ast.walk(ast.parse(candidate)) if isinstance(n,ast.FunctionDef) and n.name=='community_reauth')
 fn=textwrap.dedent(ast.get_source_segment(candidate,node))
 for password,factor,code,expected in [('bad',True,True,'password'),('ok',True,False,'code'),('ok',True,True,'success'),('ok',False,False,'success'),('x'*129,True,True,'password')]:
  flashes=[]; calls=[]; session={}
- env=dict(current_user=lambda:dict(id=1,password_hash='fake'),request=SimpleNamespace(args={},method='POST',form=dict(password=password,code='synthetic'),script_root=''),csrf=lambda:calls.append('csrf'),check_password_hash=lambda h,v:v=='ok',second_factor=lambda uid:factor,verify_second_factor=lambda *args:calls.append('factor') or code,get_db=lambda:None,session=session,time=time,redirect=lambda x:('redirect',x),flash=lambda msg,cat:flashes.append(msg),render=lambda *args,**kw:'render')
+ env=dict(current_user=lambda:dict(id=1,password_hash='fake'),request=SimpleNamespace(args={},method='POST',form=dict(password=password,code='synthetic'),script_root='',environ={'neonrest.client_ip':'203.0.113.10'}),current_app=SimpleNamespace(secret_key='fixture-secret'),auth_confirmation=auth_confirmation,abort=lambda *a,**kw:(_ for _ in ()).throw(AssertionError('unexpected abort')),csrf=lambda:calls.append('csrf'),check_password_hash=lambda h,v:v=='ok',second_factor=lambda uid:factor,verify_second_factor=lambda *args:calls.append('factor') or code,get_db=lambda:None,session=session,time=time,redirect=lambda x:('redirect',x),flash=lambda msg,cat:flashes.append(msg),render=lambda *args,**kw:'render')
  exec(fn,env); result=env['community_reauth']()
  assert calls[0]=='csrf'
  if expected=='password': assert flashes==['Your password does not match.'] and 'factor' not in calls and not session

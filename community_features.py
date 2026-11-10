@@ -17,6 +17,7 @@ from flask_mail import Message
 import posixpath
 from neonrest import age_policy as ages
 from neonrest import welcome
+from . import auth_confirmation
 
 KINDS = ('friends', 'comments', 'replies', 'circles', 'circle_posts', 'moderation', 'appeals', 'reports')
 FIELDS = ('bio', 'dob', 'pronouns', 'location', 'pets', 'relationship_status', 'timezone', 'lastfm_username', 'mood', 'frequent_haunts')
@@ -415,20 +416,19 @@ def register(app, core):
         return bool(row and row['totp_secret'])
 
     def fresh():
-        # Ordinary staff sessions confirm at most once per 24 hours.
-        staff_surface=request.path.startswith(('/manage','/staff')) or request.endpoint=='edit_theme'
-        max_age=86400 if staff_surface else 1800
-        if time.time()-session.get('fresh_at',0)>max_age:
-            return False
-        return not second_factor(session.get('user_id')) or time.time()-session.get('factor_at',0)<=max_age
+        return auth_confirmation.is_fresh(session, request.environ, current_app.secret_key,
+                                          time.time(), second_factor(session.get('user_id')))
 
     def start_session(user, factor=False):
         session.clear()
         raw = secrets.token_urlsafe(32)
         now = int(time.time())
         session.update(user_id=user['id'],user_email=user['email'],user_handle=user['handle'],sid=raw,fresh_at=now)
-        if factor:
-            session['factor_at']=now
+        try:
+            auth_confirmation.confirm(session, request.environ, current_app.secret_key, now, factor)
+        except ValueError:
+            session.clear()
+            abort(503, description='Your network address could not be verified. Please try signing in again.')
         get_db().execute('INSERT INTO active_sessions VALUES (?,?,?,?,?,?,0)',(digest(raw),user['id'],now,now,now+30*86400,(request.user_agent.string or 'Unknown device')[:200]))
         get_db().commit()
 
@@ -475,6 +475,13 @@ def register(app, core):
             elif active['seen_at']<time.time()-300:
                 db.execute('UPDATE active_sessions SET seen_at=? WHERE token_hash=?',(int(time.time()),digest(sid)))
                 db.commit()
+        # An address change interrupts an existing MFA session before any write.
+        # Older sessions bind once through real confirmation, never implicitly.
+        if (uid and second_factor(uid)
+                and request.endpoint not in ('login','community_login_factor','community_reauth','logout')
+                and not auth_confirmation.network_matches(session, request.environ, current_app.secret_key)):
+            flash('Confirm your sign-in for this network before continuing. If you were saving changes, submit them again afterward.','info')
+            return redirect(url_for('community_reauth', next=request.path))
         state=db.execute('SELECT inactive FROM account_safety WHERE user_id=?',(uid,)).fetchone() if uid else None
         if state and state['inactive'] and request.endpoint not in ('community_data','community_export','community_reactivate','logout','community_reauth'):
             return redirect(url_for('community_data'))
@@ -697,9 +704,11 @@ def register(app, core):
             elif second_factor(user['id']) and not verify_second_factor(get_db(),user['id'],request.form.get('code','')):
                 flash('Your authenticator or recovery code was not accepted. Try a new authenticator code or an unused recovery code.','error')
             else:
-                session['fresh_at']=int(time.time())
-                if second_factor(user['id']):
-                    session['factor_at']=int(time.time())
+                try:
+                    auth_confirmation.confirm(session, request.environ, current_app.secret_key,
+                                              int(time.time()), second_factor(user['id']))
+                except ValueError:
+                    abort(503, description='Your network address could not be verified. Please try again.')
                 return redirect(request.script_root+next_path)
         return render('reauth','Confirm your sign-in',needs_factor=second_factor(user['id']))
 
