@@ -16,6 +16,9 @@ styling.
 - Check text/link contrast (4.5:1 for normal text, 3:1 for large text), form labels,
   visible keyboard focus and usable navigation order. Review forced-colors rules
   and both supported Day/Night themes when the surface follows those themes.
+- Inspect final computed styles with the real shared stylesheets loaded, including
+  button colors, background, height and focus outline. A component selector can
+  lose to a broader shared rule even when its own declarations look correct.
 - Check the live deployed page after reload; template compilation and HTTP 200
   alone do not prove correct styling. Save a screenshot without private content
   and record the views/sizes actually reviewed in the release or PR evidence.
