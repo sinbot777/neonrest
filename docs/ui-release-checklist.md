@@ -35,3 +35,10 @@ GitHub Actions runs that regression on pull requests and main-branch changes to
 Service/base templates, CSS, the check or its dependency/workflow files. The
 workflow can also be run manually. Its scope is the Service/shared-settings
 collision; it does not certify every page's appearance.
+
+The Services browser check renders the full base template, including the staff
+account shell on the management route. Staff actions use peach on charcoal,
+with inverted colors on hover. Blue links open destinations, including the
+guidance editor. The public-guidance submit button follows the editor palette.
+Explicit action labels and a visible keyboard outline carry meaning independently
+of color. The check exercises 390 px and 1280 px viewports in Chromium.
