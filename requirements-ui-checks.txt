@@ -1,0 +1,3 @@
+# Optional developer-only CSS cascade checks; install alongside app dependencies.
+tinycss2==1.5.1
+cssselect2==0.10.1

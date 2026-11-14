@@ -24,3 +24,9 @@ styling.
   and record the views/sizes actually reviewed in the release or PR evidence.
 - Keep actual-device and assistive-technology checks distinct from viewport and
   DOM checks. Document any acceptance still pending instead of marking it done.
+
+For the Service workspace/shared-settings cascade regression, install the optional
+`requirements-ui-checks.txt` alongside app dependencies and run
+`python -m unittest discover -s tests -p verify_service_style_cascade.py`.
+This models the actual selectors and normal-state declarations; it supplements,
+and does not replace, rendered browser checks for layout and interactive states.
