@@ -16,8 +16,22 @@ styling.
 - Check text/link contrast (4.5:1 for normal text, 3:1 for large text), form labels,
   visible keyboard focus and usable navigation order. Review forced-colors rules
   and both supported Day/Night themes when the surface follows those themes.
+- Inspect final computed styles with the real shared stylesheets loaded, including
+  button colors, background, height and focus outline. A component selector can
+  lose to a broader shared rule even when its own declarations look correct.
 - Check the live deployed page after reload; template compilation and HTTP 200
   alone do not prove correct styling. Save a screenshot without private content
   and record the views/sizes actually reviewed in the release or PR evidence.
 - Keep actual-device and assistive-technology checks distinct from viewport and
   DOM checks. Document any acceptance still pending instead of marking it done.
+
+For the Service workspace/shared-settings cascade regression, install the optional
+`requirements-ui-checks.txt` alongside app dependencies and run
+`python -m unittest discover -s tests -p verify_service_style_cascade.py`.
+This models the actual selectors and normal-state declarations; it supplements,
+and does not replace, rendered browser checks for layout and interactive states.
+
+GitHub Actions runs that regression on pull requests and main-branch changes to
+Service/base templates, CSS, the check or its dependency/workflow files. The
+workflow can also be run manually. Its scope is the Service/shared-settings
+collision; it does not certify every page's appearance.
