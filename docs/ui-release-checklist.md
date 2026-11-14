@@ -30,3 +30,8 @@ For the Service workspace/shared-settings cascade regression, install the option
 `python -m unittest discover -s tests -p verify_service_style_cascade.py`.
 This models the actual selectors and normal-state declarations; it supplements,
 and does not replace, rendered browser checks for layout and interactive states.
+
+GitHub Actions runs that regression on pull requests and main-branch changes to
+Service/base templates, CSS, the check or its dependency/workflow files. The
+workflow can also be run manually. Its scope is the Service/shared-settings
+collision; it does not certify every page's appearance.
