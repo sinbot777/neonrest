@@ -10,8 +10,7 @@ from playwright.sync_api import expect, sync_playwright
 
 ROOT = Path(__file__).resolve().parents[1]
 PEACH = "rgb(252, 181, 163)"
-BLUE = "rgb(193, 230, 255)"
-INK = "rgb(16, 34, 57)"
+
 
 
 def render(path, view, services, error=None):
@@ -80,9 +79,8 @@ class BrowserStyles(unittest.TestCase):
         else:
             self.assertEqual(len(buttons), int(view == "compose"))
         for control in links + buttons:
-            staff = view == "manage" and control in buttons
-            normal = ["rgb(51, 51, 51)", PEACH] if staff else [BLUE, INK]
-            hover = [PEACH, "rgb(28, 28, 28)"] if staff else ["rgb(227, 244, 255)", INK]
+            normal = ["rgb(51, 51, 51)", PEACH]
+            hover = [PEACH, "rgb(28, 28, 28)"]
             page.mouse.move(0, 0)
             expect(control).to_have_css("background-color", normal[0])
             expect(control).to_have_css("color", normal[1])
