@@ -84,8 +84,8 @@ class ServiceCascadeTests(unittest.TestCase):
                 self.assertTrue(buttons)
                 for style in buttons:
                     self.assertEqual(style['min-height'],'44px')
-                    self.assertEqual(style['background'],'#c1e6ff')
-                    self.assertEqual(style['color'],'#102239')
+                    self.assertEqual(style['background'],'#333')
+                    self.assertEqual(style['color'],'#fcb5a3')
 
     def test_previous_selector_reproduces_observed_shared_css_regression(self):
         previous = SERVICE.replace('.community-page.service-workspace','.service-workspace')

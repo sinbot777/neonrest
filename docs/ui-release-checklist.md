@@ -37,8 +37,9 @@ workflow can also be run manually. Its scope is the Service/shared-settings
 collision; it does not certify every page's appearance.
 
 The Services browser check renders the full base template, including the staff
-account shell on the management route. Staff actions use peach on charcoal,
-with inverted colors on hover. Blue links open destinations, including the
-guidance editor. The public-guidance submit button follows the editor palette.
+account shell on the management route. Neonrest’s default accent is peach (#fcb5a3). Use peach lettering and borders
+on charcoal for action controls, with a peach fill and dark text on hover.
+This applies to Services navigation, publishing and staff actions. Preserve
+intentional Vibe palettes and system colors in forced-colors mode.
 Explicit action labels and a visible keyboard outline carry meaning independently
 of color. The check exercises 390 px and 1280 px viewports in Chromium.
